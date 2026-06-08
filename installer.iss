@@ -1,6 +1,6 @@
 ; Inno Setup script — PulseBar
 #define AppName "PulseBar"
-#define AppVer "2.3"
+#define AppVer "2.4"
 #define AppPublisher "Fokion Papanikolaou"
 #define AppExe "PulseBar.exe"
 

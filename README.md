@@ -12,7 +12,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D6?logo=windows&logoColor=white" alt="Windows">
-  <img src="https://img.shields.io/badge/version-2.3-3fb950" alt="v2.3">
+  <img src="https://img.shields.io/badge/version-2.4-3fb950" alt="v2.4">
   <img src="https://img.shields.io/badge/price-Free-brightgreen" alt="Free">
 </p>
 
@@ -26,17 +26,24 @@
 ## ✨ Features
 
 ### Live metrics
-- **CPU** — usage % (+ optional clock speed in GHz)
-- **RAM** — usage % (+ optional used GB)
-- **GPU** — usage % + dedicated VRAM used (GB) *(via Windows performance counters — no extra tools)*
+- **CPU** — usage % (+ clock speed in GHz)
+- **RAM** — usage % and **used / total GB**
+- **GPU** — usage % + **VRAM used / total GB** *(via Windows performance counters — no extra tools)*
 - **Network** — real-time upload ▲ / download ▼ (MB/s **or** Mbps)
-- **Disk** — read **R** / write **W** speed
+- **Disk** — read **R** / write **W** speed, **+ per-drive space %** (C:, D: …)
 - **Battery** — % with ⚡ charging indicator (laptops only)
+
+### 🆕 Hover details (v2.4)
+Point at any metric for a popup panel:
+- **CPU** → top processes + per-core bars · **RAM** → top processes (GB)
+- **GPU** → VRAM used / total · **Network** → session ↑↓ totals
+- **Disk** → read/write **per physical disk** · **Drives** → used / free / total
+- Toggle it on/off from the menu (**Hover details**)
 
 ### Layout
 - **Horizontal** (on the taskbar) or **Vertical** (stacked panel above the taskbar)
 - **Two-row mode** — each metric shows its detail on top (e.g. `3.3 GHz`) and % below
-- Adjustable **position** (left / center / right), **size**, **transparency**, **refresh rate**
+- **Drag anywhere** (free positioning, lockable), adjustable **size**, **transparency**, **refresh rate**
 
 ### Smart display
 - **Color warnings** — values go white → orange → red as load climbs

@@ -15,7 +15,7 @@ import traceback
 import faulthandler
 
 APP_NAME = 'PulseBar'
-VERSION  = '2.3'
+VERSION  = '2.4'
 
 # ── Crash logging (enabled when NETCPURAM_DEBUG=1) ─────────────────────
 def _debug_log_path():
@@ -167,6 +167,16 @@ ONTASKBAR_LABEL = {
  'de':'Auf der Taskleiste','fr':'Sur la barre des tâches','it':'Sulla barra',
  'pt':'Na barra de tarefas','ru':'На панели задач',
 }
+DISKS_LABEL = {
+ 'en':'Disks (space)','el':'Δίσκοι (χώρος)','es':'Discos (espacio)',
+ 'de':'Laufwerke (Platz)','fr':'Disques (espace)','it':'Dischi (spazio)',
+ 'pt':'Discos (espaço)','ru':'Диски (место)',
+}
+TOOLTIPS_LABEL = {
+ 'en':'Hover details','el':'Λεπτομέρειες (hover)','es':'Detalles al pasar',
+ 'de':'Hover-Details','fr':'Détails au survol','it':'Dettagli al passaggio',
+ 'pt':'Detalhes ao passar','ru':'Подсказки при наведении',
+}
 BG_TRANSP = {
  'en':'Transparent','el':'Διάφανο','es':'Transparente','de':'Transparent',
  'fr':'Transparent','it':'Trasparente','pt':'Transparente','ru':'Прозрачный',
@@ -220,6 +230,53 @@ def get_taskbar_info():
     screen_w = ctypes.windll.user32.GetSystemMetrics(0)
     taskbar_h = screen_h - rect.bottom
     return rect.bottom, max(taskbar_h, 40), screen_w
+
+def list_drives():
+    """Fixed drive letters with a filesystem, e.g. ['C:', 'D:']."""
+    out = []
+    try:
+        for p in psutil.disk_partitions(all=False):
+            dev = (p.device or '').rstrip('\\')
+            if dev and p.fstype and 'cdrom' not in (p.opts or ''):
+                out.append(dev)
+    except Exception:
+        pass
+    return out
+
+def get_total_vram_gb():
+    """Total dedicated VRAM of the discrete GPU (GB), read from the display
+    adapter registry keys. Returns the largest adapter's memory. None if absent."""
+    base = r'SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}'
+    best = 0
+    try:
+        k = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, base)
+        i = 0
+        while True:
+            try:
+                sub = winreg.EnumKey(k, i); i += 1
+            except OSError:
+                break
+            if not sub.isdigit():
+                continue
+            try:
+                sk = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, base + '\\' + sub)
+                for name in ('HardwareInformation.qwMemorySize',
+                             'HardwareInformation.MemorySize'):
+                    try:
+                        val, _ = winreg.QueryValueEx(sk, name)
+                        if isinstance(val, bytes):
+                            val = int.from_bytes(val, 'little')
+                        best = max(best, int(val))
+                        break
+                    except (FileNotFoundError, OSError, ValueError):
+                        continue
+                winreg.CloseKey(sk)
+            except OSError:
+                pass
+        winreg.CloseKey(k)
+    except OSError:
+        pass
+    return (best / 1073741824) if best else None
 
 # ── paths ──────────────────────────────────────────────────────────────
 TRANSPARENT = '#010101'
@@ -292,6 +349,8 @@ DEFAULTS = {
     'language':  None,       # None = auto-detect from Windows
     'theme':     'default',  # see THEMES
     'sparklines':False,      # mini history graphs
+    'disks':     [],         # drive letters to show space % for, e.g. ['C:']
+    'tooltips':  True,       # hover a metric -> details popup
 }
 
 # Color themes — 'accent' tints icons-divider, 'val' is the calm value color
@@ -595,9 +654,20 @@ class Widget:
             self._prev_disk = psutil.disk_io_counters()
         except Exception:
             self._prev_disk = None
+        # tooltip + per-disk + process-sampler state
+        self._perdisk_prev = None
+        self._perdisk_rates = {}        # {disk: (read_bytes_s, write_bytes_s)}
+        self._net_session = {'up': 0, 'dn': 0}
+        self._percpu = []
+        self._proc_top = {'cpu': [], 'mem': []}
+        self._tip = None
+        self._tip_hide_job = None
+        self._tip_cells = []            # [(frame, kind, extra), ...]
+        self._disk_lbls = {}            # {drive: label}
         self._has_batt = psutil.sensors_battery() is not None
         self._gpu = None
         self._gpu_mem = None
+        self._vram_total = get_total_vram_gb()   # total dedicated VRAM (GB) or None
         self._gpu_counter = None
         self._gpu_running = False
         self._cpufreq = CpuFreq()
@@ -623,6 +693,7 @@ class Widget:
         self._animate()
         self._foreground_loop()
         self._setup_tray()
+        threading.Thread(target=self._proc_sampler, daemon=True).start()
 
         # First launch: a Windows tray notification points to the settings icon.
         if self._first_run:
@@ -704,9 +775,12 @@ class Widget:
     def _act_toggle(self, key):
         self._set(key, not self.cfg.get(key)); self._rebuild()
 
-    def _act_align(self, v):
-        self.cfg['free_pos'] = False        # picking a preset cancels free drag
-        self.cfg['align'] = v
+    def _act_reposition(self):
+        """Snap back to the default spot (handy after a stray drag)."""
+        self.cfg['free_pos'] = False
+        self.cfg['pos_x'] = 0
+        self.cfg['pos_y'] = 0
+        self.cfg['align'] = 'left'
         save_config(self.cfg)
         self._position()
 
@@ -802,8 +876,6 @@ class Widget:
             radio('orientation', 'vertical', t('vertical')),
             Menu.SEPARATOR, toggle('stacked', t('stacked')),
         )
-        position = Menu(radio('align','left',t('left')), radio('align','center',t('center')),
-                        radio('align','right',t('right')))
         size = Menu(radio('font_scale','small',t('small')), radio('font_scale','normal',t('normal')),
                     radio('font_scale','large',t('large')))
         def bg_op_item(v):
@@ -837,18 +909,32 @@ class Widget:
         theme = Menu(*[th_item(n) for n in THEMES])
         language = Menu(*[lng_item(code) for code in LANGS])
 
+        def disk_toggle(drive):
+            def act():
+                ds = list(self.cfg.get('disks', []))
+                if drive in ds: ds.remove(drive)
+                else: ds.append(drive)
+                self.cfg['disks'] = ds; save_config(self.cfg)
+                self._rebuild()
+            return MI(drive, lambda i, it: self._ui(act),
+                      checked=lambda it, d=drive: d in self.cfg.get('disks', []))
+        disks_menu = Menu(*[disk_toggle(d) for d in list_drives()])
+
         return Menu(
             MI(t('metrics'), metrics),
+            MI(DISKS_LABEL.get(self.lang, DISKS_LABEL['en']), disks_menu),
             MI(t('weather'), weather),
-            MI(t('layout'), layout), MI(t('position'), position),
+            MI(t('layout'), layout),
             MI(t('size'), size), MI(BG_LABEL.get(self.lang, BG_LABEL['en']), background),
             MI(t('refresh'), refresh), MI(t('netunit'), netunit),
             MI(t('theme'), theme), MI(t('language'), language),
             Menu.SEPARATOR,
             toggle('sparklines', t('sparklines')),
+            toggle('tooltips', TOOLTIPS_LABEL.get(self.lang, TOOLTIPS_LABEL['en'])),
             MI(LOCK_LABEL.get(self.lang, LOCK_LABEL['en']),
                lambda i, it: self._ui(self._act_lock),
                checked=lambda it: bool(self.cfg.get('locked'))),
+            MI(t('reposition'), lambda i, it: self._ui(self._act_reposition)),
             MI(t('startup'),
                lambda i, it: self._ui(lambda: (set_startup(not is_startup_enabled()))),
                checked=lambda it: is_startup_enabled()),
@@ -1032,6 +1118,8 @@ class Widget:
         for w in self.root.winfo_children():
             w.destroy()
         self._imgs = []
+        self._tip_cells = []     # [(frame, kind, extra)] for hover tooltips
+        self._disk_lbls = {}     # {drive: label} for per-drive space %
         self._rgb_targets = []   # value labels recolored by RGB animation
         self._sep_labels = []    # separators recolored by RGB animation
         th = self.theme
@@ -1102,12 +1190,13 @@ class Widget:
         sw = 7   # stacked column width fits "4.0 GHz" / "15.1 GB" / "100%"
         if self.cfg['show_cpu']:
             f, self.lbl_cpu, self.lbl_cpu_top = stat('cpu.png', sw if stacked else cpu_w, True)
-            self.spark_cpu = spark(f)
+            self.spark_cpu = spark(f); self._tip_cells.append((f, 'cpu', None))
         if self.cfg['show_ram']:
             f, self.lbl_ram, self.lbl_ram_top = stat('ram.png', sw if stacked else ram_w, True)
-            self.spark_ram = spark(f)
+            self.spark_ram = spark(f); self._tip_cells.append((f, 'ram', None))
         if self.cfg.get('show_gpu'):
             f, self.lbl_gpu, self.lbl_gpu_top = stat('gpu.png', sw if stacked else 4, stacked)
+            self._tip_cells.append((f, 'gpu', None))
         if self.cfg['show_net']:
             f = new_cell(); icon('net.png', f)
             nfr = tk.Frame(f, bg=self.bg); nfr.pack(side='left', padx=2)
@@ -1119,6 +1208,7 @@ class Widget:
                 v.pack(side='left'); self._rgb_targets.append(v); return v
             self.lbl_up = net_row('▲', self.COLORS['up'])
             self.lbl_dn = net_row('▼', self.COLORS['dn'])
+            self._tip_cells.append((f, 'net', None))
         if self.cfg.get('show_disk'):
             f = new_cell(); icon('disk.png', f)
             dfr = tk.Frame(f, bg=self.bg); dfr.pack(side='left', padx=2)
@@ -1130,8 +1220,18 @@ class Widget:
                 v.pack(side='left'); self._rgb_targets.append(v); return v
             self.lbl_disk_r = disk_row('R', self.COLORS['dn'])
             self.lbl_disk_w = disk_row('W', self.COLORS['up'])
+            self._tip_cells.append((f, 'disk', None))
+        # per-drive space % cells (e.g. C: 60%)
+        for drive in self.cfg.get('disks', []):
+            f = new_cell(); icon('disk.png', f)
+            lbl = tk.Label(f, text=f'{drive[0]} ..', fg=valcol, bg=self.bg,
+                           font=nf if stacked else vf, width=6, anchor='w', padx=2)
+            lbl.pack(side='left'); self._rgb_targets.append(lbl)
+            self._disk_lbls[drive] = lbl
+            self._tip_cells.append((f, 'diskspace', drive))
         if self.cfg.get('show_batt') and self._has_batt:
             f, self.lbl_batt, _ = stat('battery.png', sw if stacked else 5, stacked)
+            self._tip_cells.append((f, 'batt', None))
         self.lbl_wx = self.lbl_wx_icon = None
         if self.cfg.get('show_weather'):
             f = new_cell()
@@ -1141,6 +1241,7 @@ class Widget:
             self.lbl_wx = tk.Label(f, text='', fg=valcol, bg=self.bg,
                                    font=(vf if not stacked else nf), width=5, anchor='w', padx=2)
             self.lbl_wx.pack(side='left'); self._rgb_targets.append(self.lbl_wx)
+            self._tip_cells.append((f, 'weather', None))
 
         # place cells according to orientation
         for i, f in enumerate(cells):
@@ -1152,6 +1253,11 @@ class Widget:
                                  font=('Consolas', big+1), padx=3)
                     s.pack(side='left'); self._sep_labels.append(s)
                 f.pack(side='left')
+
+        # hover tooltips with details
+        if self.cfg.get('tooltips'):
+            for frame, kind, extra in self._tip_cells:
+                self._bind_hover(frame, kind, extra)
 
         # (re)bind drag + right-click to all the new widgets
         if hasattr(self, '_show_menu'):
@@ -1301,11 +1407,207 @@ class Widget:
         elif self._visible:
             self._keep_on_top()
 
+    # ── process sampler (feeds the tooltips) ───────────────────────────
+    def _proc_sampler(self):
+        try:
+            for p in psutil.process_iter():
+                try: p.cpu_percent()
+                except Exception: pass
+        except Exception:
+            pass
+        ncpu = psutil.cpu_count() or 1
+        while True:
+            time.sleep(2.0)
+            procs = []
+            try:
+                for p in psutil.process_iter(['name', 'memory_info']):
+                    try:
+                        nm = p.info.get('name') or '?'
+                        if nm in ('System Idle Process', 'Idle') or p.pid == 0:
+                            continue
+                        mi = p.info.get('memory_info')
+                        procs.append((nm, p.cpu_percent(), mi.rss if mi else 0))
+                    except Exception:
+                        continue
+            except Exception:
+                continue
+            tc = sorted(procs, key=lambda x: x[1], reverse=True)[:3]
+            tm = sorted(procs, key=lambda x: x[2], reverse=True)[:3]
+            self._proc_top = {'cpu': [(n, c / ncpu) for n, c, m in tc],
+                              'mem': [(n, m) for n, c, m in tm]}
+
+    # ── hover tooltips ─────────────────────────────────────────────────
+    def _all_widgets(self, w):
+        out = [w]
+        for c in w.winfo_children():
+            out += self._all_widgets(c)
+        return out
+
+    def _bind_hover(self, frame, kind, extra):
+        def on_enter(_e, k=kind, x=extra, fr=frame):
+            if self._tip_hide_job:
+                try: self.root.after_cancel(self._tip_hide_job)
+                except Exception: pass
+                self._tip_hide_job = None
+            self._show_tip(k, x, fr)
+        def on_leave(_e):
+            self._tip_hide_job = self.root.after(180, self._hide_tip)
+        for w in self._all_widgets(frame):
+            w.bind('<Enter>', on_enter, add='+')
+            w.bind('<Leave>', on_leave, add='+')
+
+    def _hide_tip(self):
+        self._tip_hide_job = None
+        if self._tip is not None:
+            try: self._tip.destroy()
+            except Exception: pass
+            self._tip = None
+
+    @staticmethod
+    def _hb(n):
+        n = float(n)
+        for u in ('B', 'KB', 'MB', 'GB', 'TB'):
+            if n < 1024: return (f'{n:.0f} {u}' if u == 'B' else f'{n:.1f} {u}')
+            n /= 1024
+        return f'{n:.1f} PB'
+
+    @staticmethod
+    def _used_total(used, total):
+        """Compact 'used/total' GB string that fits a 7-char column."""
+        if not total:
+            return f'{used:.1f}'
+        if total >= 100:
+            return f'{used:.0f}/{total:.0f}'
+        return f'{used:.1f}/{total:.0f}'
+
+    def _tip_content(self, kind, extra):
+        GREEN='#3fb950'; ORANGE='#ffa657'; BLUE='#58a6ff'; PURPLE='#a371f7'
+        rows = []; bars = []; title = ('', '')
+        try:
+            if kind == 'cpu':
+                cpu = sum(self._percpu)/len(self._percpu) if self._percpu else psutil.cpu_percent()
+                ghz = self._cpufreq.read_ghz()
+                title = ('CPU', f'{cpu:.0f}%' + (f'  ·  {ghz:.1f} GHz' if ghz else ''))
+                rows.append(('Top processes', '', None))
+                for n, c in self._proc_top.get('cpu', []) or [('sampling…', None)]:
+                    rows.append((n[:18], (f'{c:.1f}%' if c is not None else ''), ORANGE))
+                bars = list(self._percpu)
+            elif kind == 'ram':
+                vm = psutil.virtual_memory()
+                title = ('RAM', f'{vm.used/1073741824:.1f} / {vm.total/1073741824:.1f} GB')
+                rows.append((f'{vm.percent:.0f}% used · {vm.available/1073741824:.1f} GB free', '', None))
+                rows.append(('Top processes', '', None))
+                for n, m in self._proc_top.get('mem', []) or [('sampling…', None)]:
+                    rows.append((n[:18], (self._hb(m) if m is not None else ''), GREEN))
+            elif kind == 'gpu':
+                title = ('GPU', (f'{self._gpu:.0f}%' if self._gpu is not None else 'n/a'))
+                if self._gpu_mem is not None and self._vram_total:
+                    rows.append(('VRAM', f'{self._gpu_mem:.1f} / {self._vram_total:.1f} GB', GREEN))
+                    rows.append(('VRAM used', f'{self._gpu_mem / self._vram_total * 100:.0f}%', ORANGE))
+                elif self._gpu_mem is not None:
+                    rows.append(('VRAM used', f'{self._gpu_mem:.1f} GB', GREEN))
+                elif self._vram_total:
+                    rows.append(('VRAM total', f'{self._vram_total:.1f} GB', GREEN))
+                rows.append(('Source', 'Windows counters', None))
+            elif kind == 'net':
+                title = ('Network', '')
+                rows.append(('Session ↑', self._hb(self._net_session['up']), BLUE))
+                rows.append(('Session ↓', self._hb(self._net_session['dn']), GREEN))
+                io = psutil.net_io_counters()
+                rows.append(('Total ↑', self._hb(io.bytes_sent), None))
+                rows.append(('Total ↓', self._hb(io.bytes_recv), None))
+            elif kind == 'disk':
+                title = ('Disk I/O', '')
+                rows.append(('Per-disk · read / write', '', None))
+                if self._perdisk_rates:
+                    for d, (rd, wr) in self._perdisk_rates.items():
+                        rows.append((d[:14], f'{self._hb(rd)}/s · {self._hb(wr)}/s', PURPLE))
+                else:
+                    rows.append(('sampling…', '', None))
+            elif kind == 'diskspace':
+                u = psutil.disk_usage(extra + '\\')
+                title = (extra, f'{u.percent:.0f}%')
+                rows.append(('Used', self._hb(u.used), ORANGE))
+                rows.append(('Free', self._hb(u.free), GREEN))
+                rows.append(('Total', self._hb(u.total), None))
+            elif kind == 'batt':
+                b = psutil.sensors_battery()
+                if b:
+                    title = ('Battery', f'{int(b.percent)}%')
+                    rows.append(('Status', 'Charging' if b.power_plugged else 'On battery', None))
+                    if b.secsleft and b.secsleft > 0 and not b.power_plugged:
+                        rows.append(('Time left', f'{b.secsleft//3600}h {(b.secsleft%3600)//60}m', None))
+            elif kind == 'weather':
+                title = ('Weather', '')
+                w = self._weather or {}
+                if w:
+                    if w.get('city'): rows.append((str(w.get('city')), '', None))
+                    rows.append(('Now', f"{w.get('temp','?')}°{self.cfg.get('weather_unit','C')}", ORANGE))
+                else:
+                    rows.append(('loading…', '', None))
+        except Exception:
+            rows.append(('—', '', None))
+        return title, rows, bars
+
+    def _show_tip(self, kind, extra, frame):
+        if not self.cfg.get('tooltips') or not self._visible:
+            return
+        title, rows, bars = self._tip_content(kind, extra)
+        self._hide_tip()
+        PANEL='#161b22'; LINE='#2d333b'; GREY='#8b96a2'; WHITE='#ecf2f8'
+        tcol = {'cpu':'#58a6ff','ram':'#3fb950','gpu':'#39d3c3','net':'#58a6ff',
+                'disk':'#a371f7','diskspace':'#a371f7','batt':'#3fb950',
+                'weather':'#ffa657'}.get(kind, '#58a6ff')
+        tip = tk.Toplevel(self.root)
+        tip.overrideredirect(True); tip.attributes('-topmost', True)
+        try: tip.attributes('-alpha', 0.97)
+        except Exception: pass
+        outer = tk.Frame(tip, bg=LINE); outer.pack()
+        inner = tk.Frame(outer, bg=PANEL); inner.pack(padx=1, pady=1)
+        hdr = tk.Frame(inner, bg=PANEL); hdr.pack(fill='x', padx=12, pady=(9, 5))
+        tk.Label(hdr, text=title[0], fg=tcol, bg=PANEL,
+                 font=('Segoe UI', 10, 'bold')).pack(side='left')
+        if title[1]:
+            tk.Label(hdr, text='   '+title[1], fg=WHITE, bg=PANEL,
+                     font=('Segoe UI', 10, 'bold')).pack(side='right')
+        tk.Frame(inner, bg=LINE, height=1).pack(fill='x', padx=10)
+        for label, value, vcol in rows:
+            r = tk.Frame(inner, bg=PANEL); r.pack(fill='x', padx=12, pady=1)
+            is_hdr = (value == '' or value is None)
+            tk.Label(r, text=label, fg=(GREY if is_hdr else WHITE), bg=PANEL,
+                     font=('Segoe UI', 9, 'bold' if is_hdr else 'normal')).pack(side='left')
+            if not is_hdr:
+                tk.Label(r, text=value, fg=vcol or WHITE, bg=PANEL,
+                         font=('Segoe UI', 9, 'bold')).pack(side='right')
+        if bars:
+            bf = tk.Frame(inner, bg=PANEL); bf.pack(fill='x', padx=12, pady=(3, 9))
+            tk.Label(bf, text='Cores', fg=GREY, bg=PANEL,
+                     font=('Segoe UI', 9)).pack(side='left', padx=(0, 8))
+            cv = tk.Canvas(bf, width=len(bars)*9, height=18, bg=PANEL, highlightthickness=0)
+            cv.pack(side='left')
+            for i, v in enumerate(bars):
+                h = max(1, int(16 * v / 100.0))
+                cv.create_rectangle(i*9, 17-h, i*9+6, 17,
+                                    fill=('#58a6ff' if v > 50 else '#2d5a96'), outline='')
+        else:
+            tk.Frame(inner, bg=PANEL, height=7).pack()
+        tip.update_idletasks()
+        tw = tip.winfo_reqwidth(); th = tip.winfo_reqheight()
+        sw = self.root.winfo_screenwidth()
+        fx, fy = frame.winfo_rootx(), frame.winfo_rooty()
+        x = min(max(2, fx - 6), sw - tw - 4)
+        y = fy - th - 6
+        if y < 0: y = fy + frame.winfo_height() + 6
+        tip.geometry(f'+{x}+{y}')
+        self._tip = tip
+
     # ── update loop ────────────────────────────────────────────────────
     def _update(self):
         self._follow_taskbar()
         # CPU% is always sampled so history stays continuous for sparklines
-        cpu = psutil.cpu_percent()
+        per = psutil.cpu_percent(percpu=True)
+        self._percpu = per
+        cpu = (sum(per) / len(per)) if per else psutil.cpu_percent()
         self._hist['cpu'].append(cpu)
         if self.lbl_cpu:
             ghz = self._cpufreq.read_ghz()
@@ -1332,7 +1634,7 @@ class Widget:
             self._hist['ram'].append(ram)
             used_gb = vm.used / 1073741824
             if self.lbl_ram_top is not None:
-                self.lbl_ram_top.config(text=f'{used_gb:.1f} GB')
+                self.lbl_ram_top.config(text=self._used_total(used_gb, vm.total / 1073741824))
                 self.lbl_ram.config(text=f'{ram:3.0f}%', fg=self._load_color(ram))
             else:
                 txt = f'{ram:3.0f}%'
@@ -1345,6 +1647,8 @@ class Widget:
             up = net.bytes_sent - self._prev_net.bytes_sent
             dn = net.bytes_recv - self._prev_net.bytes_recv
             self._prev_net = net
+            self._net_session['up'] += max(0, up)
+            self._net_session['dn'] += max(0, dn)
             self.lbl_up.config(text=f'{self._fmt(up):>6}')
             self.lbl_dn.config(text=f'{self._fmt(dn):>6}')
         if self.lbl_disk_r:
@@ -1356,6 +1660,29 @@ class Widget:
                     self.lbl_disk_r.config(text=f'{self._fmt(rd):>6}')
                     self.lbl_disk_w.config(text=f'{self._fmt(wr):>6}')
                 self._prev_disk = d
+            except Exception:
+                pass
+        # per-disk I/O rates (for the disk tooltip)
+        if self.cfg.get('tooltips') and (self.lbl_disk_r or self._disk_lbls):
+            try:
+                pd = psutil.disk_io_counters(perdisk=True)
+                if self._perdisk_prev:
+                    secs = max(0.001, self.cfg['interval'] / 1000.0)
+                    rates = {}
+                    for k, v in pd.items():
+                        p = self._perdisk_prev.get(k)
+                        if p:
+                            rates[k] = ((v.read_bytes - p.read_bytes) / secs,
+                                        (v.write_bytes - p.write_bytes) / secs)
+                    self._perdisk_rates = rates
+                self._perdisk_prev = pd
+            except Exception:
+                pass
+        # per-drive space %
+        for drive, lbl in self._disk_lbls.items():
+            try:
+                u = psutil.disk_usage(drive + '\\')
+                lbl.config(text=f'{drive[0]} {u.percent:.0f}%', fg=self._load_color(u.percent))
             except Exception:
                 pass
         if self.lbl_batt:
@@ -1370,8 +1697,9 @@ class Widget:
             self.lbl_gpu.config(text=(f'{g:3.0f}%' if g is not None else '  —'),
                                 fg=self._load_color(g if g is not None else 0))
             if getattr(self, 'lbl_gpu_top', None) is not None:
-                self.lbl_gpu_top.config(text=(f'{self._gpu_mem:.1f} GB'
-                                              if self._gpu_mem else ''))
+                self.lbl_gpu_top.config(
+                    text=(self._used_total(self._gpu_mem, self._vram_total)
+                          if self._gpu_mem is not None else ''))
         if getattr(self, 'lbl_wx', None):
             w = self._weather
             sym = '°' + (self.cfg.get('weather_unit', 'C'))
@@ -1429,9 +1757,6 @@ class Widget:
 
     def _set_opacity(self, v):
         self._set('opacity', v); self.root.attributes('-alpha', v)
-
-    def _set_align(self, v):
-        self._set('align', v); self._position()
 
     def _set_scale(self, v):
         self._set('font_scale', v); self._pending_rebuild = True
@@ -1512,13 +1837,6 @@ class Widget:
                         command=lambda: self._toggle_detail('stacked'))
         cascade('position', t('layout'), lay)
 
-        # Position
-        pos = self._submenu(m)
-        for key in ('left','center','right'):
-            pos.add_command(label=('● ' if c['align']==key else '○ ')+t(key),
-                            command=lambda k=key: self._set_align(k))
-        cascade('position', t('position'), pos)
-
         # Size
         sz = self._submenu(m)
         for key in ('small','normal','large'):
@@ -1572,7 +1890,7 @@ class Widget:
         otb = ('☑ ' if c.get('on_taskbar') else '☐ ') + ONTASKBAR_LABEL.get(self.lang, ONTASKBAR_LABEL['en'])
         m.add_command(label='  '+otb, image=ic.get('position'),
                       compound='left', command=self._toggle_on_taskbar)
-        item('refresh', t('reposition'), self._position)
+        item('refresh', t('reposition'), self._act_reposition)
         ft = ('☑ ' if c['follow_taskbar'] else '☐ ') + t('fullscreen')
         m.add_command(label='  '+ft, image=ic.get('fullscreen'),
                       compound='left', command=self._toggle_follow)
