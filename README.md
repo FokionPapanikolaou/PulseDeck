@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/pulsebar_emblem.png" width="120" alt="PulseBar">
+  <img src="assets/pulsebar_emblem.png" width="140" alt="PulseBar">
 </p>
 
 <h1 align="center">PulseBar</h1>
@@ -11,15 +11,29 @@
 </p>
 
 <p align="center">
+  <a href="https://apps.microsoft.com/detail/9P128R4SVXLC">
+    <img src="https://img.shields.io/badge/Microsoft%20Store-Get%20PulseBar-0078D6?style=for-the-badge&logo=microsoftstore&logoColor=white" alt="Get from Microsoft Store">
+  </a>
+  <a href="../../releases/latest">
+    <img src="https://img.shields.io/badge/Direct%20Download-Installer%20%2F%20Portable-3fb950?style=for-the-badge&logo=github&logoColor=white" alt="Direct Download">
+  </a>
+</p>
+
+<p align="center">
   <img src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D6?logo=windows&logoColor=white" alt="Windows">
-  <img src="https://img.shields.io/badge/version-2.4-3fb950" alt="v2.4">
+  <img src="https://img.shields.io/badge/version-2.5-3fb950" alt="v2.5">
   <img src="https://img.shields.io/badge/price-Free-brightgreen" alt="Free">
+  <img src="https://img.shields.io/badge/languages-8-blueviolet" alt="8 languages">
+  <img src="https://img.shields.io/badge/themes-10-orange" alt="10 themes">
 </p>
 
 ![PulseBar](assets/promo_banner.png)
 
-> **⬇️ Download** — grab the latest **`PulseBar-Setup.exe`** (installer) or
-> **`PulseBar.exe`** (portable) from the [**Releases**](../../releases) page.
+<p align="center">
+  <img src="store/screenshots/1_hero.png" width="32%" alt="Hero">
+  <img src="store/screenshots/2_hover.png" width="32%" alt="Hover details">
+  <img src="store/screenshots/3_themes.png" width="32%" alt="Themes">
+</p>
 
 ---
 
