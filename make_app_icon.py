@@ -19,7 +19,7 @@ square(sh, 512, scale=0.96).save(os.path.join(A, 'pulsebar_emblem.png'))
 # tray emblem (transparent), 64
 square(sh, 64, scale=0.98).save(os.path.join(D, 'icons', 'tray.png'))
 
-# app-icon badge: navy rounded square + shield
+# app-icon badge: navy rounded square + shield (used as app.ico)
 SZ = 256
 badge = Image.new('RGBA', (SZ, SZ), (0, 0, 0, 0))
 m = Image.new('L', (SZ, SZ), 0)
@@ -27,9 +27,8 @@ ImageDraw.Draw(m).rounded_rectangle([0, 0, SZ - 1, SZ - 1], radius=54, fill=255)
 badge.paste(Image.new('RGBA', (SZ, SZ), (13, 17, 23, 255)), (0, 0), m)
 emb = square(sh, int(SZ * 0.88))
 badge.alpha_composite(emb, ((SZ - emb.width) // 2, (SZ - emb.height) // 2))
-badge.save(os.path.join(A, 'pulsebar_icon_navy.png'))
 
 # multi-resolution .ico
 badge.save(os.path.join(D, 'app.ico'),
            sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)])
-print('saved app.ico + pulsebar_emblem.png + icons/tray.png + pulsebar_icon_navy.png')
+print('saved app.ico + pulsebar_emblem.png + icons/tray.png')

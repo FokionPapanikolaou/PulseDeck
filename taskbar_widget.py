@@ -1121,7 +1121,7 @@ class Widget:
         icons = {}
         mdir = os.path.join(ICON_DIR, 'menu')
         for name in ('metrics','position','size','opacity','clock','globe',
-                     'refresh','fullscreen','power','language','info','close','thermo','heart'):
+                     'refresh','fullscreen','power','language','info','close','heart'):
             try:
                 icons[name] = tk.PhotoImage(file=os.path.join(mdir, name + '.png'))
             except Exception:

@@ -127,13 +127,4 @@ d.ellipse([cx, cy-r-0.4*r, cx+2*r, cy+r-0.4*r], fill=W)
 d.polygon([(cx-2*r+0.3*SS, cy+0.2*r), (cx+2*r-0.3*SS, cy+0.2*r), (cx, cy+3.2*r)], fill=W)
 save(img, 'heart')
 
-# thermo — thermometer outline
-img = canvas(); d = ImageDraw.Draw(img)
-cx = 8*SS; tubw = 1.6*SS
-d.rounded_rectangle([cx-tubw, 3*SS, cx+tubw, 11*SS], radius=tubw, outline=W, width=lw(1.3))
-d.ellipse([cx-3*SS, 9.5*SS, cx+3*SS, 14.5*SS], outline=W, width=lw(1.3))
-d.ellipse([cx-1.6*SS, 11.4*SS, cx+1.6*SS, 13.4*SS], fill=W)
-d.line([cx, 8*SS, cx, 12*SS], fill=W, width=int(2.4*SS))
-save(img, 'thermo')
-
 print('Menu icons saved to', OUT)

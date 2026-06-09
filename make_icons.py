@@ -113,19 +113,6 @@ def battery():
     d.rounded_rectangle([x0+pad, y0+pad, x0+pad+fillw, y1-pad], radius=S*0.02, fill=green)
     save(img, 'battery.png')
 
-# ── TEMPERATURE — red thermometer ──────────────────────────────────────
-def temp():
-    img = new(); d = ImageDraw.Draw(img)
-    red = (240, 70, 70, 255); edge = (255, 150, 150, 255)
-    cx = S*0.5; top = S*0.16; bulbcy = S*0.74; bulbr = S*0.16; tubw = S*0.11
-    d.rounded_rectangle([cx-tubw, top, cx+tubw, bulbcy], radius=tubw,
-                        outline=edge, width=int(S*0.03), fill=WHITE)
-    d.ellipse([cx-bulbr, bulbcy-bulbr, cx+bulbr, bulbcy+bulbr], fill=red)
-    d.rounded_rectangle([cx-tubw*0.45, S*0.42, cx+tubw*0.45, bulbcy], radius=tubw*0.45, fill=red)
-    for ty in (0.30, 0.42, 0.54):
-        d.line([cx+tubw, S*ty, cx+tubw+S*0.07, S*ty], fill=edge, width=int(S*0.02))
-    save(img, 'temp.png')
-
 # ── GPU — teal graphics card ───────────────────────────────────────────
 def gpu():
     img = new(); d = ImageDraw.Draw(img)
@@ -216,6 +203,6 @@ def wx_storm():
                (S*0.44, S*0.98), (S*0.64, S*0.72), (S*0.52, S*0.72)], fill=bolt)
     save(img, 'wx_storm.png')
 
-cpu(); ram(); net(); disk(); battery(); temp(); gpu()
+cpu(); ram(); net(); disk(); battery(); gpu()
 wx_clear(); wx_partly(); wx_cloudy(); wx_fog(); wx_rain(); wx_snow(); wx_storm()
 print('Vibrant icons saved to', OUT)
