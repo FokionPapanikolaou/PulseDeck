@@ -15,7 +15,7 @@ import traceback
 import faulthandler
 
 APP_NAME = 'PulseBar'
-VERSION  = '2.4'
+VERSION  = '2.5'
 
 # ── Crash logging (enabled when NETCPURAM_DEBUG=1) ─────────────────────
 def _debug_log_path():
@@ -177,6 +177,79 @@ TOOLTIPS_LABEL = {
  'de':'Hover-Details','fr':'Détails au survol','it':'Dettagli al passaggio',
  'pt':'Detalhes ao passar','ru':'Подсказки при наведении',
 }
+# tooltip body strings, per language
+TIP = {
+ 'en':{'top':'Top processes','used':'Used','free':'Free','total':'Total','session':'Session',
+       'cores':'Cores','source':'Windows counters','charging':'Charging','onbatt':'On battery',
+       'timeleft':'Time left','now':'Now','perdisk':'Per-disk · read / write','status':'Status',
+       'sampling':'sampling…','loading':'loading…','vramused':'VRAM used',
+       'feels':'Feels like','humidity':'Humidity','wind':'Wind','forecast':'Forecast'},
+ 'el':{'top':'Κορυφαίες διεργασίες','used':'Σε χρήση','free':'Ελεύθερα','total':'Σύνολο','session':'Συνεδρία',
+       'cores':'Πυρήνες','source':'Μετρητές Windows','charging':'Φόρτιση','onbatt':'Στη μπαταρία',
+       'timeleft':'Απομένει','now':'Τώρα','perdisk':'Ανά δίσκο · ανάγν./εγγρ.','status':'Κατάσταση',
+       'sampling':'δειγματοληψία…','loading':'φόρτωση…','vramused':'VRAM σε χρήση',
+       'feels':'Αίσθηση','humidity':'Υγρασία','wind':'Άνεμος','forecast':'Πρόγνωση'},
+ 'es':{'top':'Procesos principales','used':'Usado','free':'Libre','total':'Total','session':'Sesión',
+       'cores':'Núcleos','source':'Contadores de Windows','charging':'Cargando','onbatt':'Con batería',
+       'timeleft':'Restante','now':'Ahora','perdisk':'Por disco · lect./escr.','status':'Estado',
+       'sampling':'muestreando…','loading':'cargando…','vramused':'VRAM usada',
+       'feels':'Sensación','humidity':'Humedad','wind':'Viento','forecast':'Pronóstico'},
+ 'de':{'top':'Top-Prozesse','used':'Belegt','free':'Frei','total':'Gesamt','session':'Sitzung',
+       'cores':'Kerne','source':'Windows-Zähler','charging':'Lädt','onbatt':'Akkubetrieb',
+       'timeleft':'Restzeit','now':'Jetzt','perdisk':'Pro Datenträger · L/S','status':'Status',
+       'sampling':'Abtastung…','loading':'lädt…','vramused':'VRAM belegt',
+       'feels':'Gefühlt','humidity':'Luftfeuchte','wind':'Wind','forecast':'Vorhersage'},
+ 'fr':{'top':'Processus principaux','used':'Utilisé','free':'Libre','total':'Total','session':'Session',
+       'cores':'Cœurs','source':'Compteurs Windows','charging':'En charge','onbatt':'Sur batterie',
+       'timeleft':'Restant','now':'Maintenant','perdisk':'Par disque · lect./écr.','status':'État',
+       'sampling':'échantillonnage…','loading':'chargement…','vramused':'VRAM utilisée',
+       'feels':'Ressenti','humidity':'Humidité','wind':'Vent','forecast':'Prévisions'},
+ 'it':{'top':'Processi principali','used':'Usato','free':'Libero','total':'Totale','session':'Sessione',
+       'cores':'Core','source':'Contatori Windows','charging':'In carica','onbatt':'A batteria',
+       'timeleft':'Rimanente','now':'Ora','perdisk':'Per disco · lett./scritt.','status':'Stato',
+       'sampling':'campionamento…','loading':'caricamento…','vramused':'VRAM usata',
+       'feels':'Percepita','humidity':'Umidità','wind':'Vento','forecast':'Previsioni'},
+ 'pt':{'top':'Processos principais','used':'Usado','free':'Livre','total':'Total','session':'Sessão',
+       'cores':'Núcleos','source':'Contadores do Windows','charging':'Carregando','onbatt':'Na bateria',
+       'timeleft':'Restante','now':'Agora','perdisk':'Por disco · leit./escr.','status':'Estado',
+       'sampling':'amostragem…','loading':'carregando…','vramused':'VRAM usada',
+       'feels':'Sensação','humidity':'Humidade','wind':'Vento','forecast':'Previsão'},
+ 'ru':{'top':'Топ процессы','used':'Занято','free':'Свободно','total':'Всего','session':'Сессия',
+       'cores':'Ядра','source':'Счётчики Windows','charging':'Зарядка','onbatt':'От батареи',
+       'timeleft':'Осталось','now':'Сейчас','perdisk':'По дискам · чт./зап.','status':'Состояние',
+       'sampling':'выборка…','loading':'загрузка…','vramused':'VRAM занято',
+       'feels':'Ощущается','humidity':'Влажность','wind':'Ветер','forecast':'Прогноз'},
+}
+# localized short weekday names (Mon=0 … Sun=6)
+WDAYS = {
+ 'en':['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+ 'el':['Δευ','Τρι','Τετ','Πεμ','Παρ','Σαβ','Κυρ'],
+ 'es':['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'],
+ 'de':['Mo','Di','Mi','Do','Fr','Sa','So'],
+ 'fr':['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'],
+ 'it':['Lun','Mar','Mer','Gio','Ven','Sab','Dom'],
+ 'pt':['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'],
+ 'ru':['Пн','Вт','Ср','Чт','Пт','Сб','Вс'],
+}
+UPDATE_LABEL = {
+ 'en':'Update available','el':'Διαθέσιμη ενημέρωση','es':'Actualización disponible',
+ 'de':'Update verfügbar','fr':'Mise à jour disponible','it':'Aggiornamento disponibile',
+ 'pt':'Atualização disponível','ru':'Доступно обновление',
+}
+CHECKUPD_LABEL = {
+ 'en':'Check for updates','el':'Έλεγχος ενημερώσεων','es':'Buscar actualizaciones',
+ 'de':'Nach Updates suchen','fr':'Rechercher des mises à jour','it':'Cerca aggiornamenti',
+ 'pt':'Procurar atualizações','ru':'Проверять обновления',
+}
+RELEASES_URL = 'https://github.com/FokionPapanikolaou/PulseBar/releases/latest'
+RELEASES_API = 'https://api.github.com/repos/FokionPapanikolaou/PulseBar/releases/latest'
+
+def _ver_tuple(s):
+    out = []
+    for p in str(s).replace('-', '.').split('.'):
+        n = ''.join(ch for ch in p if ch.isdigit())
+        out.append(int(n) if n else 0)
+    return tuple(out)
 BG_TRANSP = {
  'en':'Transparent','el':'Διάφανο','es':'Transparente','de':'Transparent',
  'fr':'Transparent','it':'Trasparente','pt':'Transparente','ru':'Прозрачный',
@@ -351,6 +424,8 @@ DEFAULTS = {
     'sparklines':False,      # mini history graphs
     'disks':     [],         # drive letters to show space % for, e.g. ['C:']
     'tooltips':  True,       # hover a metric -> details popup
+    'check_updates': True,   # check GitHub for a newer release on launch
+    'last_update_check': 0,  # epoch seconds of the last check (throttle)
 }
 
 # Color themes — 'accent' tints icons-divider, 'val' is the calm value color
@@ -466,7 +541,9 @@ def weather_icon_name(code):
     return 'wx_cloudy'
 
 def fetch_weather(unit='C', city=''):
-    """Return {'temp':int,'code':int,'city':str} or None. Best-effort."""
+    """Return a rich weather dict or None. Best-effort.
+    Keys: temp, code, city, feels, humidity, wind, wind_unit,
+          daily=[{code,tmax,tmin,wd}] (next 3 days)."""
     try:
         if city:
             q = urllib.parse.quote(city)
@@ -480,11 +557,34 @@ def fetch_weather(unit='C', city=''):
             lat, lon = g['latitude'], g['longitude']
             name = g.get('city', '')
         tu = 'fahrenheit' if unit == 'F' else 'celsius'
-        w = _http_json(f'https://api.open-meteo.com/v1/forecast?latitude={lat}'
-                       f'&longitude={lon}&current=temperature_2m,weather_code&temperature_unit={tu}')
+        wu = 'mph' if unit == 'F' else 'kmh'
+        w = _http_json(
+            f'https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}'
+            f'&current=temperature_2m,apparent_temperature,relative_humidity_2m,'
+            f'wind_speed_10m,weather_code'
+            f'&daily=weather_code,temperature_2m_max,temperature_2m_min'
+            f'&forecast_days=4&timezone=auto&temperature_unit={tu}&wind_speed_unit={wu}')
         cur = w['current']
-        return {'temp': round(cur['temperature_2m']),
-                'code': int(cur['weather_code']), 'city': name}
+        out = {'temp': round(cur['temperature_2m']), 'code': int(cur['weather_code']),
+               'city': name,
+               'feels': round(cur.get('apparent_temperature', cur['temperature_2m'])),
+               'humidity': int(cur.get('relative_humidity_2m', 0)),
+               'wind': round(cur.get('wind_speed_10m', 0)),
+               'wind_unit': ('mph' if unit == 'F' else 'km/h')}
+        import datetime
+        d = w.get('daily') or {}
+        codes = d.get('weather_code') or []
+        tmax = d.get('temperature_2m_max') or []
+        tmin = d.get('temperature_2m_min') or []
+        times = d.get('time') or []
+        daily = []
+        for i in range(1, min(4, len(codes))):
+            try: wd = datetime.date.fromisoformat(times[i]).weekday()
+            except Exception: wd = 0
+            daily.append({'code': int(codes[i]), 'tmax': round(tmax[i]),
+                          'tmin': round(tmin[i]), 'wd': wd})
+        out['daily'] = daily
+        return out
     except Exception:
         return None
 
@@ -664,6 +764,7 @@ class Widget:
         self._tip_hide_job = None
         self._tip_cells = []            # [(frame, kind, extra), ...]
         self._disk_lbls = {}            # {drive: label}
+        self._update_tag = None         # set if a newer GitHub release exists
         self._has_batt = psutil.sensors_battery() is not None
         self._gpu = None
         self._gpu_mem = None
@@ -694,6 +795,7 @@ class Widget:
         self._foreground_loop()
         self._setup_tray()
         threading.Thread(target=self._proc_sampler, daemon=True).start()
+        threading.Thread(target=self._update_check_worker, daemon=True).start()
 
         # First launch: a Windows tray notification points to the settings icon.
         if self._first_run:
@@ -921,6 +1023,10 @@ class Widget:
         disks_menu = Menu(*[disk_toggle(d) for d in list_drives()])
 
         return Menu(
+            MI(lambda it: '⬆  ' + UPDATE_LABEL.get(self.lang, UPDATE_LABEL['en'])
+                          + (f'  v{self._update_tag}' if self._update_tag else ''),
+               lambda i, it: self._ui(self._open_releases),
+               visible=lambda it: bool(getattr(self, '_update_tag', None))),
             MI(t('metrics'), metrics),
             MI(DISKS_LABEL.get(self.lang, DISKS_LABEL['en']), disks_menu),
             MI(t('weather'), weather),
@@ -935,6 +1041,7 @@ class Widget:
                lambda i, it: self._ui(self._act_lock),
                checked=lambda it: bool(self.cfg.get('locked'))),
             MI(t('reposition'), lambda i, it: self._ui(self._act_reposition)),
+            toggle('check_updates', CHECKUPD_LABEL.get(self.lang, CHECKUPD_LABEL['en'])),
             MI(t('startup'),
                lambda i, it: self._ui(lambda: (set_startup(not is_startup_enabled()))),
                checked=lambda it: is_startup_enabled()),
@@ -1004,6 +1111,10 @@ class Widget:
     def t(self, key):
         """Translate a key into the current language (fallback English)."""
         return T.get(self.lang, T['en']).get(key, T['en'].get(key, key))
+
+    def tip(self, key):
+        """Translate a tooltip-body string for the current language."""
+        return TIP.get(self.lang, TIP['en']).get(key, TIP['en'].get(key, key))
 
     def _load_menu_icons(self):
         """Load the 16px menu icons once; return name->PhotoImage dict."""
@@ -1436,6 +1547,42 @@ class Widget:
             self._proc_top = {'cpu': [(n, c / ncpu) for n, c, m in tc],
                               'mem': [(n, m) for n, c, m in tm]}
 
+    # ── auto-update check ──────────────────────────────────────────────
+    def _update_check_worker(self):
+        time.sleep(8)
+        self._check_updates()
+
+    def _check_updates(self):
+        if not self.cfg.get('check_updates', True):
+            return
+        try:
+            if time.time() - float(self.cfg.get('last_update_check', 0)) < 12 * 3600:
+                return
+        except Exception:
+            pass
+        try:
+            data = _http_json(RELEASES_API, timeout=8)
+            tag = (data.get('tag_name') or '').lstrip('vV')
+            self.cfg['last_update_check'] = int(time.time())
+            save_config(self.cfg)
+            if tag and _ver_tuple(tag) > _ver_tuple(VERSION):
+                self._update_tag = tag
+                try:
+                    if getattr(self, '_tray', None):
+                        self._tray.notify(
+                            f'PulseBar {tag} — ' + UPDATE_LABEL.get(self.lang, UPDATE_LABEL['en']),
+                            'PulseBar')
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+    def _open_releases(self):
+        try:
+            webbrowser.open(RELEASES_URL)
+        except Exception:
+            pass
+
     # ── hover tooltips ─────────────────────────────────────────────────
     def _all_widgets(self, w):
         out = [w]
@@ -1482,69 +1629,86 @@ class Widget:
 
     def _tip_content(self, kind, extra):
         GREEN='#3fb950'; ORANGE='#ffa657'; BLUE='#58a6ff'; PURPLE='#a371f7'
+        tp = self.tip
         rows = []; bars = []; title = ('', '')
         try:
             if kind == 'cpu':
                 cpu = sum(self._percpu)/len(self._percpu) if self._percpu else psutil.cpu_percent()
                 ghz = self._cpufreq.read_ghz()
                 title = ('CPU', f'{cpu:.0f}%' + (f'  ·  {ghz:.1f} GHz' if ghz else ''))
-                rows.append(('Top processes', '', None))
-                for n, c in self._proc_top.get('cpu', []) or [('sampling…', None)]:
+                rows.append((tp('top'), '', None))
+                for n, c in self._proc_top.get('cpu', []) or [(tp('sampling'), None)]:
                     rows.append((n[:18], (f'{c:.1f}%' if c is not None else ''), ORANGE))
                 bars = list(self._percpu)
             elif kind == 'ram':
                 vm = psutil.virtual_memory()
                 title = ('RAM', f'{vm.used/1073741824:.1f} / {vm.total/1073741824:.1f} GB')
-                rows.append((f'{vm.percent:.0f}% used · {vm.available/1073741824:.1f} GB free', '', None))
-                rows.append(('Top processes', '', None))
-                for n, m in self._proc_top.get('mem', []) or [('sampling…', None)]:
+                rows.append((tp('used'), f'{vm.percent:.0f}%', ORANGE))
+                rows.append((tp('free'), f'{vm.available/1073741824:.1f} GB', GREEN))
+                rows.append((tp('top'), '', None))
+                for n, m in self._proc_top.get('mem', []) or [(tp('sampling'), None)]:
                     rows.append((n[:18], (self._hb(m) if m is not None else ''), GREEN))
             elif kind == 'gpu':
                 title = ('GPU', (f'{self._gpu:.0f}%' if self._gpu is not None else 'n/a'))
                 if self._gpu_mem is not None and self._vram_total:
                     rows.append(('VRAM', f'{self._gpu_mem:.1f} / {self._vram_total:.1f} GB', GREEN))
-                    rows.append(('VRAM used', f'{self._gpu_mem / self._vram_total * 100:.0f}%', ORANGE))
+                    rows.append((tp('vramused'), f'{self._gpu_mem / self._vram_total * 100:.0f}%', ORANGE))
                 elif self._gpu_mem is not None:
-                    rows.append(('VRAM used', f'{self._gpu_mem:.1f} GB', GREEN))
+                    rows.append((tp('vramused'), f'{self._gpu_mem:.1f} GB', GREEN))
                 elif self._vram_total:
-                    rows.append(('VRAM total', f'{self._vram_total:.1f} GB', GREEN))
-                rows.append(('Source', 'Windows counters', None))
+                    rows.append(('VRAM', f'{self._vram_total:.1f} GB', GREEN))
+                rows.append((tp('source'), '', None))
             elif kind == 'net':
-                title = ('Network', '')
-                rows.append(('Session ↑', self._hb(self._net_session['up']), BLUE))
-                rows.append(('Session ↓', self._hb(self._net_session['dn']), GREEN))
+                title = (self.t('net'), '')
+                rows.append((tp('session') + ' ↑', self._hb(self._net_session['up']), BLUE))
+                rows.append((tp('session') + ' ↓', self._hb(self._net_session['dn']), GREEN))
                 io = psutil.net_io_counters()
-                rows.append(('Total ↑', self._hb(io.bytes_sent), None))
-                rows.append(('Total ↓', self._hb(io.bytes_recv), None))
+                rows.append((tp('total') + ' ↑', self._hb(io.bytes_sent), None))
+                rows.append((tp('total') + ' ↓', self._hb(io.bytes_recv), None))
             elif kind == 'disk':
-                title = ('Disk I/O', '')
-                rows.append(('Per-disk · read / write', '', None))
+                title = (self.t('disk') + ' I/O', '')
+                rows.append((tp('perdisk'), '', None))
                 if self._perdisk_rates:
                     for d, (rd, wr) in self._perdisk_rates.items():
                         rows.append((d[:14], f'{self._hb(rd)}/s · {self._hb(wr)}/s', PURPLE))
                 else:
-                    rows.append(('sampling…', '', None))
+                    rows.append((tp('sampling'), '', None))
             elif kind == 'diskspace':
                 u = psutil.disk_usage(extra + '\\')
                 title = (extra, f'{u.percent:.0f}%')
-                rows.append(('Used', self._hb(u.used), ORANGE))
-                rows.append(('Free', self._hb(u.free), GREEN))
-                rows.append(('Total', self._hb(u.total), None))
+                rows.append((tp('used'), self._hb(u.used), ORANGE))
+                rows.append((tp('free'), self._hb(u.free), GREEN))
+                rows.append((tp('total'), self._hb(u.total), None))
             elif kind == 'batt':
                 b = psutil.sensors_battery()
                 if b:
-                    title = ('Battery', f'{int(b.percent)}%')
-                    rows.append(('Status', 'Charging' if b.power_plugged else 'On battery', None))
+                    title = (self.t('batt'), f'{int(b.percent)}%')
+                    rows.append((tp('status'),
+                                 tp('charging') if b.power_plugged else tp('onbatt'), None))
                     if b.secsleft and b.secsleft > 0 and not b.power_plugged:
-                        rows.append(('Time left', f'{b.secsleft//3600}h {(b.secsleft%3600)//60}m', None))
+                        rows.append((tp('timeleft'), f'{b.secsleft//3600}h {(b.secsleft%3600)//60}m', None))
             elif kind == 'weather':
-                title = ('Weather', '')
+                title = (self.t('weather'), '')
                 w = self._weather or {}
                 if w:
+                    unit = self.cfg.get('weather_unit', 'C')
                     if w.get('city'): rows.append((str(w.get('city')), '', None))
-                    rows.append(('Now', f"{w.get('temp','?')}°{self.cfg.get('weather_unit','C')}", ORANGE))
+                    rows.append((tp('now'), f"{w.get('temp','?')}°{unit}", ORANGE))
+                    if w.get('feels') is not None:
+                        rows.append((tp('feels'), f"{w['feels']}°{unit}", None))
+                    if w.get('humidity'):
+                        rows.append((tp('humidity'), f"{w['humidity']}%", BLUE))
+                    if w.get('wind') is not None:
+                        rows.append((tp('wind'), f"{w['wind']} {w.get('wind_unit','km/h')}", None))
+                    daily = w.get('daily') or []
+                    if daily:
+                        rows.append((tp('forecast'), '', None))
+                        wd = WDAYS.get(self.lang, WDAYS['en'])
+                        for dd in daily:
+                            nm = wd[dd['wd']] if 0 <= dd.get('wd', 0) < 7 else ''
+                            rows.append((nm, f"{dd['tmin']}° / {dd['tmax']}°", GREEN))
                 else:
-                    rows.append(('loading…', '', None))
+                    rows.append((tp('loading'), '', None))
         except Exception:
             rows.append(('—', '', None))
         return title, rows, bars
@@ -1581,7 +1745,7 @@ class Widget:
                          font=('Segoe UI', 9, 'bold')).pack(side='right')
         if bars:
             bf = tk.Frame(inner, bg=PANEL); bf.pack(fill='x', padx=12, pady=(3, 9))
-            tk.Label(bf, text='Cores', fg=GREY, bg=PANEL,
+            tk.Label(bf, text=self.tip('cores'), fg=GREY, bg=PANEL,
                      font=('Segoe UI', 9)).pack(side='left', padx=(0, 8))
             cv = tk.Canvas(bf, width=len(bars)*9, height=18, bg=PANEL, highlightthickness=0)
             cv.pack(side='left')
