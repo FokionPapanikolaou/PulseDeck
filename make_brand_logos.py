@@ -1,4 +1,4 @@
-"""Generate professional-looking brand wordmark PNGs for PulseBar's System tab.
+"""Generate professional-looking brand wordmark PNGs for PulseDeck's System tab.
 
 Each is a flat, modern wordmark — solid brand color block with white text, or
 white block with brand-colored text — no childish rounded rect / gradient.
@@ -61,7 +61,7 @@ def make(key, label, bg, fg, family='black', size=36, tracking=2, padding_x=14):
 
     img.save(os.path.join(OUT, key + '.png'))
 
-print('Generating brand wordmarks…')
+print('Generating brand wordmarks...')
 
 # Flat, minimalist wordmarks. Brand colors used as identifying accents.
 # These are stylized inspired-by marks for hardware identification, not the
@@ -109,4 +109,4 @@ for args in LOGOS:
     make(*args)
     print(' ', args[0] + '.png')
 
-print(f'\nDone. {len(LOGOS)} wordmarks generated at {W}x{H} → scaled to 32px tall at runtime.')
+print(f'\nDone. {len(LOGOS)} wordmarks generated at {W}x{H} -> scaled to 32px tall at runtime.')
