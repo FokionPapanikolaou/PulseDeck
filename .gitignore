@@ -27,3 +27,8 @@ desktop.ini
 .DS_Store
 .vscode/
 .idea/
+
+# Internal/private — keep local, not on public GitHub
+store/ANALYTICS.md
+store/social_posts.md
+store/screenshots_v27/ig_*.png
