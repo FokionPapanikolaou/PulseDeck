@@ -36,9 +36,9 @@
 </p>
 
 <p align="center">
-  <img src="store/screenshots/1_hero.png" width="32%" alt="Hero">
-  <img src="store/screenshots/2_hover.png" width="32%" alt="Hover details">
-  <img src="store/screenshots/3_themes.png" width="32%" alt="Themes">
+  <img src="store/screenshots_v27/1_system.png" width="32%" alt="System info with brand logos">
+  <img src="store/screenshots_v27/2_metrics.png" width="32%" alt="Customize — drag to reorder metrics">
+  <img src="store/screenshots_v27/4_alerts.png" width="32%" alt="Earthquake alerts">
 </p>
 
 ---
