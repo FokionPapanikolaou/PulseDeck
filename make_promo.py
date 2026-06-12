@@ -1,4 +1,4 @@
-"""Create a clean promo banner using the real widget closeup."""
+﻿"""Create a clean promo banner using the real widget closeup."""
 from PIL import Image, ImageDraw, ImageFont
 import os
 
@@ -19,11 +19,11 @@ def font(px, bold=True):
     except OSError: return ImageFont.load_default()
 
 # Title
-d.text((50, 50), 'PulseBar', font=font(56), fill=(255,255,255,255))
-d.text((52, 122), "Your PC's pulse — live on the Windows 11 taskbar",
+d.text((50, 50), 'PulseDeck', font=font(56), fill=(255,255,255,255))
+d.text((52, 122), "Your PC's pulse β€” live on the Windows 11 taskbar",
        font=font(22, False), fill=(160, 200, 255, 255))
 
-# PulseBar shield emblem top-right
+# PulseDeck shield emblem top-right
 try:
     ic = Image.open(os.path.join(D, 'assets', 'pulsebar_emblem.png')).convert('RGBA').resize((150,150), Image.LANCZOS)
     img.alpha_composite(ic, (W-185, 28))
@@ -39,8 +39,8 @@ big = shot.resize((sw, sh), Image.LANCZOS)
 img.alpha_composite(big, (40, strip_y + (90-sh)//2))
 
 # Feature bullets
-feats = ['Live CPU · RAM · GPU · Network', 'Sits right on the taskbar',
-         'Weather, 10 themes & 8 languages', 'Free · Auto-start with Windows']
+feats = ['Live CPU Β· RAM Β· GPU Β· Network', 'Sits right on the taskbar',
+         'Weather, 10 themes & 8 languages', 'Free Β· Auto-start with Windows']
 fy = strip_y + 110
 for f in feats:
     d.ellipse([50, fy+8, 60, fy+18], fill=(63, 185, 80, 255))

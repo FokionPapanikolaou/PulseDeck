@@ -1,10 +1,10 @@
-# Security Policy
+﻿# Security Policy
 
 ## Supported versions
-Only the latest release of PulseBar (currently **v2.5**) receives security
+Only the latest release of PulseDeck (currently **v2.5**) receives security
 fixes. If you're on an older version, please update first via the
 [Microsoft Store](https://apps.microsoft.com/detail/9P128R4SVXLC) or the
-latest [GitHub release](https://github.com/FokionPapanikolaou/PulseBar/releases/latest).
+latest [GitHub release](https://github.com/FokionPapanikolaou/PulseDeck/releases/latest).
 
 ## Reporting a vulnerability
 
@@ -12,14 +12,14 @@ latest [GitHub release](https://github.com/FokionPapanikolaou/PulseBar/releases/
 
 Instead, use GitHub's private reporting:
 
-➡️ **[Report a vulnerability privately](https://github.com/FokionPapanikolaou/PulseBar/security/advisories/new)**
+β΅οΈ **[Report a vulnerability privately](https://github.com/FokionPapanikolaou/PulseDeck/security/advisories/new)**
 
 I'll acknowledge within 72 hours and aim to ship a fix in the next release.
 Coordinated disclosure is appreciated.
 
 ## What's in scope
 
-PulseBar is a small desktop utility — the realistic attack surface is:
+PulseDeck is a small desktop utility β€” the realistic attack surface is:
 
 - The optional weather widget making HTTPS calls to `ipapi.co` and
   `open-meteo.com`
@@ -35,7 +35,7 @@ response, etc.), I'd like to hear about it.
 ## What's *not* in scope
 
 - Microsoft Windows or the .NET runtime itself
-- Third-party themes / hacks people apply on top of PulseBar
+- Third-party themes / hacks people apply on top of PulseDeck
 - The Microsoft Store binary signing process (managed by Microsoft)
 
-Thanks for helping keep PulseBar safe! 🛡️
+Thanks for helping keep PulseDeck safe! π›΅οΈ

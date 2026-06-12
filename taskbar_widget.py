@@ -540,8 +540,8 @@ CUST_THEME = {
     'magenta':  '#d96bff',
     'titlebar': '#0a1018',
 }
-RELEASES_URL = 'https://github.com/FokionPapanikolaou/PulseBar/releases/latest'
-RELEASES_API = 'https://api.github.com/repos/FokionPapanikolaou/PulseBar/releases/latest'
+RELEASES_URL = 'https://github.com/FokionPapanikolaou/PulseDeck/releases/latest'
+RELEASES_API = 'https://api.github.com/repos/FokionPapanikolaou/PulseDeck/releases/latest'
 
 def _ver_tuple(s):
     out = []
@@ -2685,9 +2685,9 @@ class CustomizeWindow:
         link_btn('🏪', L['store'].replace('Microsoft ', ''),
                  'https://apps.microsoft.com/detail/9P128R4SVXLC')
         link_btn('🐙', 'GitHub',
-                 'https://github.com/FokionPapanikolaou/PulseBar')
+                 'https://github.com/FokionPapanikolaou/PulseDeck')
         link_btn('🌐', L['website'],
-                 'https://fokionpapanikolaou.github.io/PulseBar/')
+                 'https://fokionpapanikolaou.github.io/PulseDeck/')
         # ── donate: direct in-window buttons (no extra popup) ──
         tk.Label(body, text='💜  ' + L['donate'], fg='#d8b6ff', bg=T['bg'],
                  font=('Segoe UI', 11, 'bold')).pack(pady=(18, 6))
