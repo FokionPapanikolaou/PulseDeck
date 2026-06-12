@@ -1,6 +1,6 @@
-; Inno Setup script — PulseBar
-#define AppName "PulseBar"
-#define AppVer "2.5.1"
+; Inno Setup script — PulseDeck (internal identity stays "PulseBar")
+#define AppName "PulseDeck"
+#define AppVer "2.7.0"
 #define AppPublisher "Fokion Papanikolaou"
 #define AppExe "PulseBar.exe"
 
@@ -13,7 +13,7 @@ DefaultDirName={autopf}\PulseBar
 DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
 OutputDir=dist
-OutputBaseFilename=PulseBar-Setup
+OutputBaseFilename=PulseDeck-Setup
 SetupIconFile=app.ico
 Compression=lzma2
 SolidCompression=yes

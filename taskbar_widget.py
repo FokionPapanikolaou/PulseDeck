@@ -14,8 +14,9 @@ import urllib.parse
 import traceback
 import faulthandler
 
-APP_NAME = 'PulseBar'
-VERSION  = '2.5.1'
+APP_NAME = 'PulseBar'        # internal identity: config dir, mutex, registry, Store package
+DISPLAY_NAME = 'PulseDeck'   # user-visible product name (rebrand)
+VERSION  = '2.7.0'
 
 # ── Crash logging (enabled when NETCPURAM_DEBUG=1) ─────────────────────
 def _debug_log_path():
@@ -241,6 +242,304 @@ CHECKUPD_LABEL = {
  'de':'Nach Updates suchen','fr':'Rechercher des mises à jour','it':'Cerca aggiornamenti',
  'pt':'Procurar atualizações','ru':'Проверять обновления',
 }
+# ── earthquakes (v2.6) ──
+QUAKES_LABEL = {
+ 'en':'Earthquakes','el':'Σεισμοί','es':'Terremotos','de':'Erdbeben',
+ 'fr':'Tremblements de terre','it':'Terremoti','pt':'Terramotos','ru':'Землетрясения',
+}
+QUAKES_FELT_LABEL = {
+ 'en':'Felt level','el':'Επίπεδο αίσθησης','es':'Nivel de percepción',
+ 'de':'Spürbarkeit','fr':'Niveau perçu','it':'Livello percepito',
+ 'pt':'Nível percetível','ru':'Уровень восприятия',
+}
+QUAKES_LEVELS = {  # MMI thresholds shown in the menu
+ 'en':[('Subtle (felt indoors)',3.0),('Noticeable (widely felt)',4.0),
+       ('Strong (objects move)',5.0),('Severe (damage)',6.0)],
+ 'el':[('Διακριτικό (μέσα σε σπίτι)',3.0),('Αισθητό (ευρέως)',4.0),
+       ('Δυνατό (κουνιούνται αντικείμενα)',5.0),('Έντονο (ζημιές)',6.0)],
+ 'es':[('Sutil (en interior)',3.0),('Notable (ampliamente sentido)',4.0),
+       ('Fuerte (mueve objetos)',5.0),('Severo (daños)',6.0)],
+ 'de':[('Subtil (innen spürbar)',3.0),('Spürbar (weithin)',4.0),
+       ('Stark (Objekte bewegen sich)',5.0),('Schwer (Schäden)',6.0)],
+ 'fr':[('Subtil (à l\'intérieur)',3.0),('Notable (largement ressenti)',4.0),
+       ('Fort (objets bougent)',5.0),('Sévère (dégâts)',6.0)],
+ 'it':[('Sottile (al chiuso)',3.0),('Notevole (ampiamente)',4.0),
+       ('Forte (oggetti si muovono)',5.0),('Severo (danni)',6.0)],
+ 'pt':[('Subtil (no interior)',3.0),('Notável (amplamente sentido)',4.0),
+       ('Forte (objetos movem-se)',5.0),('Severo (danos)',6.0)],
+ 'ru':[('Слабое (в помещении)',3.0),('Заметное (повсеместно)',4.0),
+       ('Сильное (предметы двигаются)',5.0),('Тяжелое (разрушения)',6.0)],
+}
+QUAKES_TOAST_LABEL = {
+ 'en':'Toast notifications','el':'Ειδοποιήσεις (toast)','es':'Notificaciones',
+ 'de':'Toast-Benachrichtigungen','fr':'Notifications toast',
+ 'it':'Notifiche toast','pt':'Notificações toast','ru':'Уведомления',
+}
+QUAKES_MUTE_LABEL = {
+ 'en':'Mute all','el':'Σίγαση όλων','es':'Silenciar todo','de':'Alles stumm',
+ 'fr':'Tout couper','it':'Silenzia tutto','pt':'Silenciar tudo','ru':'Отключить все',
+}
+QUAKES_RECENT_LABEL = {
+ 'en':'Recent events…','el':'Πρόσφατα συμβάντα…','es':'Eventos recientes…',
+ 'de':'Letzte Ereignisse…','fr':'Événements récents…','it':'Eventi recenti…',
+ 'pt':'Eventos recentes…','ru':'Недавние события…',
+}
+QUAKES_TOAST_TITLE = {
+ 'en':'Earthquake felt','el':'Αισθητός σεισμός','es':'Terremoto sentido',
+ 'de':'Erdbeben gespürt','fr':'Tremblement de terre ressenti',
+ 'it':'Terremoto avvertito','pt':'Terramoto sentido','ru':'Землетрясение',
+}
+# ── power consumption (v2.7) ──
+POWER_LABEL = {
+ 'en':'Power','el':'Ισχύς','es':'Potencia','de':'Leistung',
+ 'fr':'Puissance','it':'Potenza','pt':'Potência','ru':'Мощность',
+}
+# ── Customize Window labels (v2.6) ──
+CUST_LABELS = {
+ 'en':{'title':'PulseDeck — Customize','general':'General','metrics':'Metrics',
+       'appearance':'Appearance','alerts':'Alerts','system':'System','about':'About',
+       'reset':'Reset to defaults','apply':'Apply','close':'Close',
+       'live_hint':'Click Apply to save',
+       'show_hide':'Show & order','drag_hint':'Drag ☰ to reorder',
+       'always_last':'Always last (recommended)',
+       'manage_drives':'Drives to show','set_city':'Set city',
+       'refresh_rate':'Refresh rate','language':'Language',
+       'lock_pos':'Lock position','reset_pos':'Reset position',
+       'startup':'Start with Windows','check_upd':'Check for updates',
+       'theme':'Theme','size':'Size','background':'Background',
+       'orientation':'Orientation','stacked':'Two rows (stacked)',
+       'sparklines':'Mini graphs','on_taskbar':'Sit on taskbar',
+       'tooltips':'Hover details',
+       'quakes_on':'Earthquake alerts','sources':'Sources','felt_level':'Felt level',
+       'manual_loc':'Manual location','recent_evt':'Recent events',
+       'donate':'Donate','github':'View on GitHub','store':'Microsoft Store',
+       'website':'Website','version':'Version'},
+ 'el':{'title':'PulseDeck — Προσαρμογή','general':'Γενικά','metrics':'Ενδείξεις',
+       'appearance':'Εμφάνιση','alerts':'Ειδοποιήσεις','system':'Σύστημα','about':'Σχετικά',
+       'reset':'Επαναφορά προεπιλογών','apply':'Εφαρμογή','close':'Κλείσιμο',
+       'live_hint':'Πάτα Εφαρμογή για αποθήκευση',
+       'show_hide':'Εμφάνιση & σειρά','drag_hint':'Σύρε το ☰ για αλλαγή σειράς',
+       'always_last':'Πάντα τελευταίο (συνιστάται)',
+       'manage_drives':'Δίσκοι','set_city':'Ορισμός πόλης',
+       'refresh_rate':'Ανανέωση','language':'Γλώσσα',
+       'lock_pos':'Κλείδωμα θέσης','reset_pos':'Επαναφορά θέσης',
+       'startup':'Εκκίνηση με Windows','check_upd':'Έλεγχος ενημερώσεων',
+       'theme':'Θέμα','size':'Μέγεθος','background':'Φόντο',
+       'orientation':'Διάταξη','stacked':'Δύο σειρές',
+       'sparklines':'Mini γραφήματα','on_taskbar':'Πάνω στη μπάρα',
+       'tooltips':'Λεπτομέρειες (hover)',
+       'quakes_on':'Ειδοποιήσεις σεισμών','sources':'Πηγές','felt_level':'Επίπεδο αίσθησης',
+       'manual_loc':'Χειροκίνητη τοποθεσία','recent_evt':'Πρόσφατα συμβάντα',
+       'donate':'Δωρεά','github':'Στο GitHub','store':'Microsoft Store',
+       'website':'Ιστότοπος','version':'Έκδοση'},
+ 'es':{'title':'PulseDeck — Personalizar','general':'General','metrics':'Métricas',
+       'appearance':'Apariencia','alerts':'Alertas','system':'Sistema','about':'Acerca de',
+       'reset':'Restablecer','apply':'Aplicar','close':'Cerrar',
+       'live_hint':'Los cambios se aplican en vivo',
+       'show_hide':'Mostrar y ordenar','drag_hint':'Arrastrar para reordenar',
+       'always_last':'Siempre al final (recomendado)',
+       'manage_drives':'Discos','set_city':'Establecer ciudad',
+       'refresh_rate':'Frecuencia','language':'Idioma',
+       'lock_pos':'Bloquear posición','reset_pos':'Restablecer posición',
+       'startup':'Iniciar con Windows','check_upd':'Buscar actualizaciones',
+       'theme':'Tema','size':'Tamaño','background':'Fondo',
+       'orientation':'Orientación','stacked':'Dos filas',
+       'sparklines':'Mini gráficos','on_taskbar':'En la barra',
+       'tooltips':'Detalles al pasar',
+       'quakes_on':'Alertas sísmicas','sources':'Fuentes','felt_level':'Nivel percibido',
+       'manual_loc':'Ubicación manual','recent_evt':'Eventos recientes',
+       'donate':'Donar','github':'Ver en GitHub','store':'Microsoft Store',
+       'website':'Sitio web','version':'Versión'},
+ 'de':{'title':'PulseDeck — Anpassen','general':'Allgemein','metrics':'Werte',
+       'appearance':'Aussehen','alerts':'Warnungen','system':'System','about':'Info',
+       'reset':'Standard wiederherstellen','apply':'Übernehmen','close':'Schließen',
+       'live_hint':'Änderungen werden live übernommen',
+       'show_hide':'Anzeigen & ordnen','drag_hint':'Ziehen zum Neuordnen',
+       'always_last':'Immer zuletzt (empfohlen)',
+       'manage_drives':'Laufwerke','set_city':'Stadt festlegen',
+       'refresh_rate':'Aktualisierung','language':'Sprache',
+       'lock_pos':'Position sperren','reset_pos':'Position zurücksetzen',
+       'startup':'Mit Windows starten','check_upd':'Nach Updates suchen',
+       'theme':'Design','size':'Größe','background':'Hintergrund',
+       'orientation':'Ausrichtung','stacked':'Zwei Zeilen',
+       'sparklines':'Mini-Diagramme','on_taskbar':'Auf Taskleiste',
+       'tooltips':'Hover-Details',
+       'quakes_on':'Erdbeben-Warnungen','sources':'Quellen','felt_level':'Spürbarkeit',
+       'manual_loc':'Manueller Standort','recent_evt':'Letzte Ereignisse',
+       'donate':'Spenden','github':'Auf GitHub','store':'Microsoft Store',
+       'website':'Website','version':'Version'},
+ 'fr':{'title':'PulseDeck — Personnaliser','general':'Général','metrics':'Mesures',
+       'appearance':'Apparence','alerts':'Alertes','system':'Système','about':'À propos',
+       'reset':'Réinitialiser','apply':'Appliquer','close':'Fermer',
+       'live_hint':'Modifications appliquées en direct',
+       'show_hide':'Afficher & ordonner','drag_hint':'Glisser pour réorganiser',
+       'always_last':'Toujours en dernier (recommandé)',
+       'manage_drives':'Disques','set_city':'Définir la ville',
+       'refresh_rate':'Rafraîchissement','language':'Langue',
+       'lock_pos':'Verrouiller la position','reset_pos':'Réinitialiser la position',
+       'startup':'Démarrer avec Windows','check_upd':'Rechercher des MAJ',
+       'theme':'Thème','size':'Taille','background':'Arrière-plan',
+       'orientation':'Orientation','stacked':'Deux lignes',
+       'sparklines':'Mini graphiques','on_taskbar':'Sur la barre',
+       'tooltips':'Détails au survol',
+       'quakes_on':'Alertes sismiques','sources':'Sources','felt_level':'Niveau perçu',
+       'manual_loc':'Emplacement manuel','recent_evt':'Événements récents',
+       'donate':'Faire un don','github':'Sur GitHub','store':'Microsoft Store',
+       'website':'Site web','version':'Version'},
+ 'it':{'title':'PulseDeck — Personalizza','general':'Generale','metrics':'Misure',
+       'appearance':'Aspetto','alerts':'Avvisi','system':'Sistema','about':'Info',
+       'reset':'Ripristina','apply':'Applica','close':'Chiudi',
+       'live_hint':'Le modifiche si applicano in tempo reale',
+       'show_hide':'Mostra e ordina','drag_hint':'Trascina per riordinare',
+       'always_last':'Sempre per ultimo (consigliato)',
+       'manage_drives':'Dischi','set_city':'Imposta città',
+       'refresh_rate':'Aggiornamento','language':'Lingua',
+       'lock_pos':'Blocca posizione','reset_pos':'Reimposta posizione',
+       'startup':'Avvia con Windows','check_upd':'Cerca aggiornamenti',
+       'theme':'Tema','size':'Dimensione','background':'Sfondo',
+       'orientation':'Orientamento','stacked':'Due righe',
+       'sparklines':'Mini grafici','on_taskbar':'Sulla barra',
+       'tooltips':'Dettagli al passaggio',
+       'quakes_on':'Avvisi sismici','sources':'Fonti','felt_level':'Livello percepito',
+       'manual_loc':'Posizione manuale','recent_evt':'Eventi recenti',
+       'donate':'Dona','github':'Su GitHub','store':'Microsoft Store',
+       'website':'Sito web','version':'Versione'},
+ 'pt':{'title':'PulseDeck — Personalizar','general':'Geral','metrics':'Métricas',
+       'appearance':'Aparência','alerts':'Alertas','system':'Sistema','about':'Sobre',
+       'reset':'Repor padrões','apply':'Aplicar','close':'Fechar',
+       'live_hint':'Alterações aplicadas em tempo real',
+       'show_hide':'Mostrar e ordenar','drag_hint':'Arrastar para reordenar',
+       'always_last':'Sempre por último (recomendado)',
+       'manage_drives':'Discos','set_city':'Definir cidade',
+       'refresh_rate':'Atualização','language':'Idioma',
+       'lock_pos':'Bloquear posição','reset_pos':'Repor posição',
+       'startup':'Iniciar com o Windows','check_upd':'Procurar atualizações',
+       'theme':'Tema','size':'Tamanho','background':'Fundo',
+       'orientation':'Orientação','stacked':'Duas linhas',
+       'sparklines':'Mini gráficos','on_taskbar':'Na barra',
+       'tooltips':'Detalhes ao passar',
+       'quakes_on':'Alertas sísmicos','sources':'Fontes','felt_level':'Nível percetível',
+       'manual_loc':'Localização manual','recent_evt':'Eventos recentes',
+       'donate':'Doar','github':'No GitHub','store':'Microsoft Store',
+       'website':'Site','version':'Versão'},
+ 'ru':{'title':'PulseDeck — Настройка','general':'Общие','metrics':'Метрики',
+       'appearance':'Внешний вид','alerts':'Уведомления','system':'Система','about':'О программе',
+       'reset':'Сбросить','apply':'Применить','close':'Закрыть',
+       'live_hint':'Изменения применяются мгновенно',
+       'show_hide':'Показать и упорядочить','drag_hint':'Перетащите для переупорядочивания',
+       'always_last':'Всегда в конце (рекомендуется)',
+       'manage_drives':'Диски','set_city':'Указать город',
+       'refresh_rate':'Обновление','language':'Язык',
+       'lock_pos':'Заблокировать позицию','reset_pos':'Сбросить позицию',
+       'startup':'Запуск с Windows','check_upd':'Проверять обновления',
+       'theme':'Тема','size':'Размер','background':'Фон',
+       'orientation':'Ориентация','stacked':'Две строки',
+       'sparklines':'Мини-графики','on_taskbar':'На панели',
+       'tooltips':'Подсказки при наведении',
+       'quakes_on':'Уведомления о землетрясениях','sources':'Источники','felt_level':'Уровень восприятия',
+       'manual_loc':'Местоположение вручную','recent_evt':'Недавние события',
+       'donate':'Поддержать','github':'На GitHub','store':'Microsoft Store',
+       'website':'Сайт','version':'Версия'},
+}
+# v2.7 additions — merged into CUST_LABELS below to keep the blocks above tidy.
+CUST_EXTRA = {
+ 'en':{'single_row':'Single row shows','row_percent':'Percent','row_detail':'Details (GHz/GB)',
+       'loading_sys':'Loading system information…',
+       'felt_near':'Recent felt events near you','no_felt':'No felt events recently.',
+       'sys_mobo':'Motherboard','sys_monitor':'Monitor','sys_audio':'Audio',
+       'sys_optical':'Optical drive','sys_storage':'Storage','sys_network':'Network',
+       'sys_windows':'Windows','sys_ram':'RAM','copy_all':'Copy all','copied':'Copied!',
+       'paypal':'PayPal','revolut':'Revolut','quake_dist':'Alert radius (km)',
+       'quake_dur':'Alert duration (min)'},
+ 'el':{'single_row':'Η μονή σειρά δείχνει','row_percent':'Ποσοστό','row_detail':'Λεπτομέρεια (GHz/GB)',
+       'loading_sys':'Φόρτωση πληροφοριών συστήματος…',
+       'felt_near':'Πρόσφατα αισθητά συμβάντα κοντά σου','no_felt':'Κανένα αισθητό συμβάν πρόσφατα.',
+       'sys_mobo':'Μητρική','sys_monitor':'Οθόνη','sys_audio':'Ήχος',
+       'sys_optical':'Οπτικός δίσκος','sys_storage':'Αποθήκευση','sys_network':'Δίκτυο',
+       'sys_windows':'Windows','sys_ram':'RAM','copy_all':'Αντιγραφή όλων','copied':'Αντιγράφηκε!',
+       'paypal':'PayPal','revolut':'Revolut','quake_dist':'Ακτίνα ειδοποίησης (km)',
+       'quake_dur':'Διάρκεια ειδοποίησης (λεπτά)'},
+ 'es':{'single_row':'La fila única muestra','row_percent':'Porcentaje','row_detail':'Detalles (GHz/GB)',
+       'loading_sys':'Cargando información del sistema…',
+       'felt_near':'Eventos sentidos cerca de ti','no_felt':'No hay eventos sentidos recientemente.',
+       'sys_mobo':'Placa base','sys_monitor':'Monitor','sys_audio':'Audio',
+       'sys_optical':'Unidad óptica','sys_storage':'Almacenamiento','sys_network':'Red',
+       'sys_windows':'Windows','sys_ram':'RAM','copy_all':'Copiar todo','copied':'¡Copiado!',
+       'paypal':'PayPal','revolut':'Revolut','quake_dist':'Radio de alerta (km)',
+       'quake_dur':'Duración de alerta (min)'},
+ 'de':{'single_row':'Einzelne Zeile zeigt','row_percent':'Prozent','row_detail':'Details (GHz/GB)',
+       'loading_sys':'Systeminformationen werden geladen…',
+       'felt_near':'Spürbare Ereignisse in der Nähe','no_felt':'Keine spürbaren Ereignisse kürzlich.',
+       'sys_mobo':'Hauptplatine','sys_monitor':'Monitor','sys_audio':'Audio',
+       'sys_optical':'Optisches Laufwerk','sys_storage':'Speicher','sys_network':'Netzwerk',
+       'sys_windows':'Windows','sys_ram':'RAM','copy_all':'Alles kopieren','copied':'Kopiert!',
+       'paypal':'PayPal','revolut':'Revolut','quake_dist':'Warnradius (km)',
+       'quake_dur':'Warndauer (Min.)'},
+ 'fr':{'single_row':'La ligne unique affiche','row_percent':'Pourcentage','row_detail':'Détails (GHz/Go)',
+       'loading_sys':'Chargement des informations système…',
+       'felt_near':'Événements ressentis près de vous','no_felt':'Aucun événement ressenti récemment.',
+       'sys_mobo':'Carte mère','sys_monitor':'Écran','sys_audio':'Audio',
+       'sys_optical':'Lecteur optique','sys_storage':'Stockage','sys_network':'Réseau',
+       'sys_windows':'Windows','sys_ram':'RAM','copy_all':'Tout copier','copied':'Copié !',
+       'paypal':'PayPal','revolut':'Revolut','quake_dist':'Rayon d’alerte (km)',
+       'quake_dur':'Durée d’alerte (min)'},
+ 'it':{'single_row':'La riga singola mostra','row_percent':'Percentuale','row_detail':'Dettagli (GHz/GB)',
+       'loading_sys':'Caricamento informazioni di sistema…',
+       'felt_near':'Eventi percepiti vicino a te','no_felt':'Nessun evento percepito di recente.',
+       'sys_mobo':'Scheda madre','sys_monitor':'Monitor','sys_audio':'Audio',
+       'sys_optical':'Unità ottica','sys_storage':'Archiviazione','sys_network':'Rete',
+       'sys_windows':'Windows','sys_ram':'RAM','copy_all':'Copia tutto','copied':'Copiato!',
+       'paypal':'PayPal','revolut':'Revolut','quake_dist':'Raggio di avviso (km)',
+       'quake_dur':'Durata avviso (min)'},
+ 'pt':{'single_row':'A linha única mostra','row_percent':'Percentagem','row_detail':'Detalhes (GHz/GB)',
+       'loading_sys':'A carregar informações do sistema…',
+       'felt_near':'Eventos sentidos perto de si','no_felt':'Nenhum evento sentido recentemente.',
+       'sys_mobo':'Placa-mãe','sys_monitor':'Monitor','sys_audio':'Áudio',
+       'sys_optical':'Unidade ótica','sys_storage':'Armazenamento','sys_network':'Rede',
+       'sys_windows':'Windows','sys_ram':'RAM','copy_all':'Copiar tudo','copied':'Copiado!',
+       'paypal':'PayPal','revolut':'Revolut','quake_dist':'Raio de alerta (km)',
+       'quake_dur':'Duração do alerta (min)'},
+ 'ru':{'single_row':'Одна строка показывает','row_percent':'Процент','row_detail':'Детали (ГГц/ГБ)',
+       'loading_sys':'Загрузка сведений о системе…',
+       'felt_near':'Недавние ощутимые события рядом','no_felt':'Недавно ощутимых событий нет.',
+       'sys_mobo':'Материнская плата','sys_monitor':'Монитор','sys_audio':'Звук',
+       'sys_optical':'Оптический привод','sys_storage':'Хранилище','sys_network':'Сеть',
+       'sys_windows':'Windows','sys_ram':'ОЗУ','copy_all':'Копировать всё','copied':'Скопировано!',
+       'paypal':'PayPal','revolut':'Revolut','quake_dist':'Радиус оповещения (км)',
+       'quake_dur':'Длительность оповещения (мин)'},
+}
+for _lng, _d in CUST_EXTRA.items():
+    CUST_LABELS.setdefault(_lng, {}).update(_d)
+
+# Cell metadata for the Metrics tab (id -> friendly name, icon glyph, config key)
+CELL_META = (
+    ('cpu',     'CPU',         '💻', 'show_cpu'),
+    ('ram',     'RAM',         '🧠', 'show_ram'),
+    ('gpu',     'GPU',         '🎮', 'show_gpu'),
+    ('net',     'Network',     '🌐', 'show_net'),
+    ('disk',    'Disk I/O',    '💿', 'show_disk'),
+    ('batt',    'Battery',     '🔋', 'show_batt'),
+    ('weather', 'Weather',     '☁',  'show_weather'),
+    ('power',   'Power',       '⚡', 'show_power'),
+    ('quake',   'Earthquake',  '🚨', 'quakes_on'),
+)
+DEFAULT_CELL_ORDER = [c[0] for c in CELL_META]
+# Customize Window theme (matches the future PulseDeck dashboard)
+CUST_THEME = {
+    'bg':       '#0b0f18',
+    'bg2':      '#131a28',
+    'panel':    '#161b22',
+    'line':     '#2d333b',
+    'text':     '#ecf2f8',
+    'muted':    '#8a9cba',
+    'cyan':     '#3fc3ff',
+    'blue':     '#58a6ff',
+    'green':    '#3fb950',
+    'orange':   '#ffa657',
+    'red':      '#f85149',
+    'magenta':  '#d96bff',
+    'titlebar': '#0a1018',
+}
 RELEASES_URL = 'https://github.com/FokionPapanikolaou/PulseBar/releases/latest'
 RELEASES_API = 'https://api.github.com/repos/FokionPapanikolaou/PulseBar/releases/latest'
 
@@ -351,6 +650,413 @@ def get_total_vram_gb():
         pass
     return (best / 1073741824) if best else None
 
+# ── Power consumption estimate (v2.7) ──────────────────────────────────
+# Reports a best-effort live wattage figure for CPU + GPU.
+# Strategy, in order of accuracy:
+#   1) NVIDIA NVML (via nvidia-smi)  -> exact GPU power if NVIDIA
+#   2) Battery discharge rate         -> exact full-system power on laptops
+#   3) Estimate: TDP × utilisation%   -> universal fallback (~15% accuracy)
+#
+# The TDP tables are intentionally short and approximate — a 65/95/105/125W
+# CPU classification is enough for the bar (precision isn't the point; trends
+# are). For the GPU we use a small map of recent AMD/NVIDIA cards and fall
+# back to 150W generic.
+
+_CPU_TDP_HINTS = (
+    # patterns -> TDP watts
+    ('Core i3', 65), ('Core i5', 65), ('Core i7', 125), ('Core i9', 125),
+    ('Ryzen 3', 65), ('Ryzen 5', 65), ('Ryzen 7', 105),
+    ('Ryzen 9 7950', 170), ('Ryzen 9 7900', 170), ('Ryzen 9 5950', 105),
+    ('Ryzen 9 5900', 105), ('Ryzen Threadripper', 280),
+    ('Atom', 10), ('Celeron', 15), ('Pentium', 35), ('Xeon', 150),
+    ('AMD A', 65), ('FX-', 95),
+)
+_GPU_TDP_HINTS = (
+    # pattern -> TDP watts
+    ('RTX 4090', 450), ('RTX 4080', 320), ('RTX 4070 Ti', 285), ('RTX 4070', 200),
+    ('RTX 4060 Ti', 165), ('RTX 4060', 115), ('RTX 4050', 115),
+    ('RTX 3090', 350), ('RTX 3080', 320), ('RTX 3070', 220),
+    ('RTX 3060 Ti', 200), ('RTX 3060', 170), ('RTX 3050', 130),
+    ('RTX 2080', 215), ('RTX 2070', 175), ('RTX 2060', 160),
+    ('GTX 1660', 120), ('GTX 1650', 75), ('GTX 1060', 120),
+    # AMD
+    ('RX 9070', 220), ('RX 9060', 160), ('RX 7900 XTX', 355), ('RX 7900 XT', 315),
+    ('RX 7800 XT', 263), ('RX 7700 XT', 245), ('RX 7600', 165),
+    ('RX 6950', 335), ('RX 6900', 300), ('RX 6800', 250), ('RX 6700', 230),
+    ('RX 6600', 132), ('RX 6500', 107),
+    # Intel
+    ('Arc A770', 225), ('Arc A750', 225), ('Arc A580', 175), ('Arc A380', 75),
+    # Integrated / generic
+    ('Vega', 15), ('UHD Graphics', 15), ('Iris', 25), ('Radeon Graphics', 15),
+)
+
+def _match_tdp(name, hints, default):
+    if not name: return default
+    up = str(name)
+    for pat, w in hints:
+        if pat.lower() in up.lower():
+            return w
+    return default
+
+def get_cpu_tdp_w(name):
+    return _match_tdp(name, _CPU_TDP_HINTS, 65)
+
+def get_gpu_tdp_w(name):
+    return _match_tdp(name, _GPU_TDP_HINTS, 150)
+
+_NVSMI_OK = None   # None = untested, False = missing (never retry), True = works
+
+def _nvidia_smi_power():
+    """Return GPU power draw in watts via nvidia-smi, or None.
+    Caches availability: spawning a subprocess every poll on systems WITHOUT
+    nvidia-smi (AMD/Intel) cost 10-50 ms on the calling thread per tick and
+    caused visible UI stutter."""
+    global _NVSMI_OK
+    if _NVSMI_OK is False:
+        return None
+    try:
+        si = subprocess.STARTUPINFO()
+        si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        r = subprocess.run(
+            ['nvidia-smi', '--query-gpu=power.draw', '--format=csv,noheader,nounits'],
+            capture_output=True, text=True, timeout=2, startupinfo=si)
+        out = (r.stdout or '').strip().splitlines()
+        if out:
+            _NVSMI_OK = True
+            return float(out[0].strip())
+        _NVSMI_OK = False
+    except Exception:
+        _NVSMI_OK = False
+    return None
+
+def _battery_discharge_w():
+    """Return discharge wattage from battery (positive value), or None.
+    Uses GetSystemPowerStatus + per-battery WMI if available."""
+    try:
+        import ctypes.wintypes as _wt
+        class SPS(ctypes.Structure):
+            _fields_ = [('ACLineStatus', ctypes.c_ubyte),
+                        ('BatteryFlag', ctypes.c_ubyte),
+                        ('BatteryLifePercent', ctypes.c_ubyte),
+                        ('SystemStatusFlag', ctypes.c_ubyte),
+                        ('BatteryLifeTime', _wt.DWORD),
+                        ('BatteryFullLifeTime', _wt.DWORD)]
+        sps = SPS()
+        if not ctypes.windll.kernel32.GetSystemPowerStatus(ctypes.byref(sps)):
+            return None
+        if sps.ACLineStatus == 1:
+            return None  # on AC, can't read discharge
+        # Walk WMI Win32_Battery for EstimatedRunTime + DesignCapacity
+        # to compute rate. Simpler: psutil already exposes secsleft.
+        b = psutil.sensors_battery()
+        if not b or b.power_plugged:
+            return None
+        # Without instantaneous discharge rate, we can't compute exact watts.
+        # Return None so the estimate path is used instead.
+    except Exception:
+        return None
+    return None
+
+def get_power_estimate(cpu_util, gpu_util, cpu_name='', gpu_name=''):
+    """Return {'cpu': float, 'gpu': float, 'total': float, 'source': str}.
+
+    cpu_util, gpu_util are percentages (0..100). source is one of:
+      'nvml'      — GPU value came from nvidia-smi (exact); CPU estimated
+      'battery'   — battery discharge rate (laptops); whole system
+      'estimate'  — TDP × utilisation (~15% accuracy)
+    """
+    cpu_tdp = get_cpu_tdp_w(cpu_name)
+    gpu_tdp = get_gpu_tdp_w(gpu_name)
+    # idle baseline: ~10-15% of TDP for CPU, ~8-12% for GPU (PCIe + memory)
+    cpu_idle = cpu_tdp * 0.12
+    gpu_idle = gpu_tdp * 0.10
+    cpu_w = cpu_idle + (cpu_tdp - cpu_idle) * max(0.0, min(100.0, float(cpu_util or 0))) / 100.0
+    nvml = _nvidia_smi_power()
+    if nvml is not None:
+        return {'cpu': cpu_w, 'gpu': nvml, 'total': cpu_w + nvml, 'source': 'nvml',
+                'cpu_tdp': cpu_tdp, 'gpu_tdp': gpu_tdp}
+    batt = _battery_discharge_w()
+    if batt is not None:
+        # whole-system; expose as 'total', leave components blank
+        return {'cpu': None, 'gpu': None, 'total': batt, 'source': 'battery',
+                'cpu_tdp': cpu_tdp, 'gpu_tdp': gpu_tdp}
+    gpu_w = gpu_idle + (gpu_tdp - gpu_idle) * max(0.0, min(100.0, float(gpu_util or 0))) / 100.0
+    return {'cpu': cpu_w, 'gpu': gpu_w, 'total': cpu_w + gpu_w, 'source': 'estimate',
+            'cpu_tdp': cpu_tdp, 'gpu_tdp': gpu_tdp}
+
+def get_gpu_name():
+    """Return the primary discrete GPU name from the display adapter registry."""
+    candidates = []
+    base = r'SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}'
+    try:
+        k = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, base)
+        i = 0
+        while True:
+            try: sub = winreg.EnumKey(k, i); i += 1
+            except OSError: break
+            if not sub.isdigit(): continue
+            try:
+                sk = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, base + '\\' + sub)
+                try:
+                    name, _ = winreg.QueryValueEx(sk, 'DriverDesc')
+                    # try to read the qwMemorySize so we can rank by VRAM
+                    mem = 0
+                    for vn in ('HardwareInformation.qwMemorySize',
+                               'HardwareInformation.MemorySize'):
+                        try:
+                            v, _ = winreg.QueryValueEx(sk, vn)
+                            if isinstance(v, bytes):
+                                v = int.from_bytes(v, 'little')
+                            mem = max(mem, int(v))
+                            break
+                        except (FileNotFoundError, OSError, ValueError):
+                            continue
+                    candidates.append((name, mem))
+                finally:
+                    winreg.CloseKey(sk)
+            except (FileNotFoundError, OSError):
+                continue
+        winreg.CloseKey(k)
+    except OSError:
+        pass
+    # Prefer the adapter with the largest VRAM (i.e. the discrete one)
+    candidates.sort(key=lambda x: x[1], reverse=True)
+    for name, _mem in candidates:
+        # skip pure-iGPU labels if a discrete option exists
+        if name:
+            return name
+    return ''
+
+# ── System Info collector (v2.7) ───────────────────────────────────────
+# Gathers a comprehensive read-only snapshot of the machine for display in
+# the "System" tab. No admin needed; falls back gracefully when a field
+# isn't available.
+
+def _wmi_query(cls, *cols):
+    """Lightweight WMI via PowerShell (no admin needed). Returns list of dicts."""
+    try:
+        attrs = ','.join(cols) if cols else '*'
+        cmd = ['powershell', '-NoProfile', '-NonInteractive', '-Command',
+               f"Get-CimInstance -ClassName {cls} | Select-Object {attrs} | ConvertTo-Json -Compress -Depth 2"]
+        si = subprocess.STARTUPINFO()
+        si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=6, startupinfo=si)
+        if not r.stdout: return []
+        data = json.loads(r.stdout)
+        return data if isinstance(data, list) else [data]
+    except Exception:
+        return []
+
+def _human_bytes(n):
+    n = float(n or 0)
+    for u in ('B','KB','MB','GB','TB','PB'):
+        if n < 1024: return f'{n:.1f} {u}' if u != 'B' else f'{int(n)} {u}'
+        n /= 1024
+    return f'{n:.1f} EB'
+
+def _uptime_str():
+    try:
+        secs = int(time.time() - psutil.boot_time())
+        d, r = divmod(secs, 86400); h, r = divmod(r, 3600); m, _ = divmod(r, 60)
+        if d: return f'{d}d {h}h {m}m'
+        if h: return f'{h}h {m}m'
+        return f'{m}m'
+    except Exception:
+        return '—'
+
+def collect_system_info():
+    """Snapshot of CPU/RAM/GPU/OS/Disk/Network info. Best-effort."""
+    out = {'cpu': {}, 'ram': {}, 'gpu': [], 'os': {}, 'disks': [], 'net': [],
+           'mobo': {}, 'bios': {}, 'audio': [], 'monitors': [], 'optical': []}
+    try:
+        cpu = _wmi_query('Win32_Processor',
+                         'Name', 'NumberOfCores', 'NumberOfLogicalProcessors',
+                         'MaxClockSpeed', 'L2CacheSize', 'L3CacheSize',
+                         'SocketDesignation', 'Manufacturer')
+        if cpu:
+            c = cpu[0]
+            out['cpu'] = {
+                'name': str(c.get('Name','') or '').strip(),
+                'manufacturer': c.get('Manufacturer',''),
+                'cores': c.get('NumberOfCores'),
+                'threads': c.get('NumberOfLogicalProcessors'),
+                'base_mhz': c.get('MaxClockSpeed'),
+                'l2_kb': c.get('L2CacheSize'),
+                'l3_kb': c.get('L3CacheSize'),
+                'socket': c.get('SocketDesignation',''),
+            }
+        try: out['cpu']['current_mhz'] = int(psutil.cpu_freq().current) if psutil.cpu_freq() else None
+        except Exception: pass
+    except Exception: pass
+    try:
+        vm = psutil.virtual_memory()
+        sm = psutil.swap_memory()
+        out['ram'] = {'total': vm.total, 'used': vm.used, 'free': vm.available,
+                      'percent': vm.percent,
+                      'swap_total': sm.total, 'swap_used': sm.used}
+        mods = _wmi_query('Win32_PhysicalMemory',
+                          'Capacity','Speed','Manufacturer','PartNumber','DeviceLocator')
+        out['ram']['modules'] = [{
+            'capacity': int(m.get('Capacity', 0) or 0),
+            'speed': m.get('Speed'),
+            'mfr': str(m.get('Manufacturer','') or '').strip(),
+            'part': str(m.get('PartNumber','') or '').strip(),
+            'slot': m.get('DeviceLocator',''),
+        } for m in mods]
+    except Exception: pass
+    try:
+        gpus = _wmi_query('Win32_VideoController',
+                          'Name', 'AdapterRAM', 'DriverVersion',
+                          'CurrentHorizontalResolution', 'CurrentVerticalResolution',
+                          'CurrentRefreshRate')
+        for g in gpus:
+            name = str(g.get('Name','') or '').strip()
+            if not name: continue
+            out['gpu'].append({
+                'name': name,
+                'vram': int(g.get('AdapterRAM') or 0),
+                'driver': g.get('DriverVersion'),
+                'res': (g.get('CurrentHorizontalResolution'),
+                        g.get('CurrentVerticalResolution')),
+                'hz': g.get('CurrentRefreshRate'),
+            })
+        if not out['gpu']:
+            # fallback: registry-based GPU name + VRAM only
+            gn = get_gpu_name(); gv = get_total_vram_gb()
+            if gn: out['gpu'].append({'name': gn, 'vram': int((gv or 0) * 1073741824)})
+    except Exception: pass
+    try:
+        osinfo = _wmi_query('Win32_OperatingSystem',
+                            'Caption', 'Version', 'BuildNumber',
+                            'OSArchitecture', 'InstallDate', 'LastBootUpTime')
+        if osinfo:
+            o = osinfo[0]
+            out['os'] = {
+                'name': str(o.get('Caption','') or '').strip(),
+                'version': o.get('Version'),
+                'build': o.get('BuildNumber'),
+                'arch': o.get('OSArchitecture'),
+                'uptime': _uptime_str(),
+            }
+    except Exception: pass
+    try:
+        for p in psutil.disk_partitions(all=False):
+            try:
+                u = psutil.disk_usage(p.mountpoint)
+                out['disks'].append({
+                    'device': p.device.rstrip('\\'),
+                    'fstype': p.fstype,
+                    'total': u.total, 'used': u.used, 'free': u.free,
+                    'percent': u.percent,
+                })
+            except Exception: continue
+    except Exception: pass
+    try:
+        addrs = psutil.net_if_addrs()
+        stats = psutil.net_if_stats()
+        for name, addr_list in addrs.items():
+            st = stats.get(name)
+            if not st or not st.isup: continue
+            ip4 = next((a.address for a in addr_list if a.family.name == 'AF_INET'), None)
+            mac = next((a.address for a in addr_list if a.family.name == 'AF_LINK'), None)
+            if not ip4 and not mac: continue
+            out['net'].append({
+                'name': name, 'ip': ip4, 'mac': mac,
+                'speed_mbps': st.speed,
+            })
+    except Exception: pass
+    # ── Motherboard ──
+    try:
+        mb = _wmi_query('Win32_BaseBoard',
+                        'Manufacturer', 'Product', 'Version', 'SerialNumber')
+        if mb:
+            m = mb[0]
+            out['mobo'] = {
+                'manufacturer': str(m.get('Manufacturer','') or '').strip(),
+                'product': str(m.get('Product','') or '').strip(),
+                'version': str(m.get('Version','') or '').strip(),
+                'serial': str(m.get('SerialNumber','') or '').strip(),
+            }
+        bios = _wmi_query('Win32_BIOS',
+                          'Manufacturer', 'Name', 'SMBIOSBIOSVersion', 'ReleaseDate')
+        if bios:
+            b = bios[0]
+            rd = str(b.get('ReleaseDate','') or '')[:8]
+            if len(rd) == 8 and rd.isdigit():
+                rd = f'{rd[0:4]}-{rd[4:6]}-{rd[6:8]}'
+            out['bios'] = {
+                'manufacturer': str(b.get('Manufacturer','') or '').strip(),
+                'version': str(b.get('SMBIOSBIOSVersion','') or '').strip(),
+                'date': rd,
+            }
+    except Exception: pass
+    # ── Audio devices ──
+    try:
+        audios = _wmi_query('Win32_SoundDevice',
+                            'Name', 'Manufacturer', 'Status')
+        for a in audios:
+            name = str(a.get('Name','') or '').strip()
+            if not name: continue
+            out['audio'].append({
+                'name': name,
+                'manufacturer': str(a.get('Manufacturer','') or '').strip(),
+                'status': str(a.get('Status','') or '').strip(),
+            })
+    except Exception: pass
+    # ── Monitors (via WmiMonitorID under root/wmi) ──
+    try:
+        cmd = ['powershell', '-NoProfile', '-NonInteractive', '-Command',
+               "Get-CimInstance -Namespace root/wmi -ClassName WmiMonitorID | "
+               "Select-Object ManufacturerName, UserFriendlyName, ProductCodeID, YearOfManufacture | "
+               "ConvertTo-Json -Compress -Depth 2"]
+        si = subprocess.STARTUPINFO()
+        si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=6, startupinfo=si)
+        if r.stdout:
+            data = json.loads(r.stdout)
+            data = data if isinstance(data, list) else [data]
+            EDID_MFR = {  # 3-letter EDID codes → friendly name
+                'AOC':'AOC','ACI':'Asus','ACR':'Acer','AUO':'AU Optronics',
+                'BNQ':'BenQ','BOE':'BOE','CMN':'Innolux','DEL':'Dell',
+                'GSM':'LG','HPN':'HP','HSD':'HannStar','HWP':'HP',
+                'IVM':'Iiyama','LEN':'Lenovo','LGD':'LG Display','MEI':'Panasonic',
+                'MSI':'MSI','MTC':'Mitsubishi','NEC':'NEC','PHL':'Philips',
+                'SAM':'Samsung','SEC':'Samsung','SHP':'Sharp','SNY':'Sony',
+                'VSC':'ViewSonic',
+            }
+            for m in data:
+                def _dec(lst):
+                    try:
+                        return ''.join(chr(c) for c in lst if isinstance(c, int) and 0 < c < 128).strip()
+                    except Exception:
+                        return ''
+                mfr_raw = _dec(m.get('ManufacturerName') or [])
+                mfr = EDID_MFR.get(mfr_raw, mfr_raw)
+                model = _dec(m.get('UserFriendlyName') or [])
+                code = _dec(m.get('ProductCodeID') or [])
+                year = m.get('YearOfManufacture')
+                if not (mfr or model or code): continue
+                out['monitors'].append({
+                    'manufacturer': mfr, 'model': model,
+                    'code': code, 'year': year,
+                })
+    except Exception: pass
+    # ── Optical drives ──
+    try:
+        opts = _wmi_query('Win32_CDROMDrive',
+                          'Name', 'Manufacturer', 'MediaType', 'Drive')
+        for o in opts:
+            name = str(o.get('Name','') or '').strip()
+            if not name: continue
+            out['optical'].append({
+                'name': name,
+                'manufacturer': str(o.get('Manufacturer','') or '').strip(),
+                'media': str(o.get('MediaType','') or '').strip(),
+                'drive': str(o.get('Drive','') or '').strip(),
+            })
+    except Exception: pass
+    return out
+
 # ── paths ──────────────────────────────────────────────────────────────
 TRANSPARENT = '#010101'
 BG = '#0d1117'   # dark widget background (blends with the taskbar)
@@ -426,6 +1132,27 @@ DEFAULTS = {
     'tooltips':  True,       # hover a metric -> details popup
     'check_updates': True,   # check GitHub for a newer release on launch
     'last_update_check': 0,  # epoch seconds of the last check (throttle)
+    # ── earthquakes (v2.6) ──
+    'quakes_on': True,       # earthquake alerts enabled
+    'quakes_emsc': True,     # EMSC (Europe-centric) source
+    'quakes_usgs': True,     # USGS (global) source
+    'quakes_min_mmi': 3.0,   # alert when felt MMI >= this (3 = subtle, 4 = noticeable, 5 = strong, 6 = severe)
+    'quakes_min_mag': 2.5,   # pre-filter quakes below this magnitude
+    'quakes_max_age_min': 30,  # ignore events older than this many minutes
+    'quakes_max_dist_km': 100, # hide events farther than this from user
+    'quakes_alert_min':   20,  # how long the bar dot stays lit (minutes)
+    'quakes_toasts': True,   # show Windows toast on a felt quake
+    'quakes_mute': False,    # silence everything (no toast, no dot)
+    'quakes_lat': None,      # manual override (otherwise IP-derived)
+    'quakes_lon': None,
+    'quakes_seen': [],       # ids of already-alerted quakes (anti-spam)
+    # ── power consumption (v2.7) ──
+    'show_power': False,     # show estimated CPU+GPU power on the bar
+    'power_unit': 'W',       # only 'W' for now (kW reserved for future)
+    # ── customize: cell ordering ──
+    'cell_order': None,      # None = use DEFAULT_CELL_ORDER; else list of ids
+    'critical_last': True,   # always force the quake alert cell to the end
+    'single_row_mode': 'percent',  # when stacked is OFF: 'percent' | 'detail'
 }
 
 # Color themes — 'accent' tints icons-divider, 'val' is the calm value color
@@ -630,6 +1357,145 @@ def fetch_weather(unit='C', city=''):
     except Exception:
         return None
 
+# ── Earthquakes (EMSC + USGS, free, no API key) ────────────────────────
+# Uses the Bakun-Wentworth model to estimate Modified Mercalli Intensity
+# at the user's location, so we only alert on quakes that would actually
+# be felt locally — not every distant quake anywhere in the country.
+
+import math as _math
+
+def _hypocentral_km(lat1, lon1, lat2, lon2, depth_km):
+    """Great-circle surface distance + depth → hypocentral distance (km)."""
+    R = 6371.0
+    p1 = _math.radians(lat1); p2 = _math.radians(lat2)
+    dp = _math.radians(lat2 - lat1); dl = _math.radians(lon2 - lon1)
+    a = _math.sin(dp/2)**2 + _math.cos(p1) * _math.cos(p2) * _math.sin(dl/2)**2
+    surf = 2 * R * _math.asin(_math.sqrt(a))
+    return _math.sqrt(surf**2 + (depth_km or 10)**2)
+
+def _felt_intensity_mmi(magnitude, hypocentral_km):
+    """Estimate MMI at a site from M and hypocentral distance.
+    Bakun & Wentworth (1997) intensity attenuation, clamped to [0, 12]."""
+    R = max(1.0, hypocentral_km)
+    mmi = 3.67 + 0.98 * magnitude - 1.10 * _math.log10(R) - 0.0033 * R
+    return max(0.0, min(12.0, mmi))
+
+def _mmi_label(mmi):
+    """Friendly description of a MMI level."""
+    if mmi < 2:   return 'imperceptible'
+    if mmi < 3:   return 'barely felt'
+    if mmi < 4:   return 'felt'
+    if mmi < 5:   return 'widely felt'
+    if mmi < 6:   return 'strong'
+    if mmi < 7:   return 'very strong'
+    if mmi < 8:   return 'severe'
+    if mmi < 9:   return 'violent'
+    return 'extreme'
+
+def _emsc_recent(min_mag=2.5, limit=200):
+    """Recent quakes from EMSC (FDSN-event JSON). Best-effort, returns list."""
+    try:
+        import datetime as _dt
+        start = (_dt.datetime.utcnow() - _dt.timedelta(hours=2)).strftime('%Y-%m-%dT%H:%M:%S')
+        url = ('https://www.seismicportal.eu/fdsnws/event/1/query?'
+               f'format=json&limit={limit}&minmag={min_mag}&start={start}')
+        data = _http_json(url, timeout=8) or {}
+        out = []
+        for f in data.get('features', []):
+            p = f.get('properties', {}) or {}
+            g = f.get('geometry', {}) or {}
+            coords = (g.get('coordinates') or [None, None, None])
+            lon, lat, dep = coords[0], coords[1], coords[2] if len(coords) > 2 else 10
+            try:
+                mag = float(p.get('mag'))
+                lat = float(lat); lon = float(lon)
+                dep = float(dep) if dep is not None else 10.0
+            except Exception:
+                continue
+            out.append({
+                'id': str(f.get('id') or p.get('unid') or p.get('source_id') or ''),
+                'mag': mag, 'lat': lat, 'lon': lon, 'depth': abs(dep),
+                'time': p.get('time') or '',
+                'region': p.get('flynn_region') or p.get('region') or '',
+                'source': 'EMSC',
+            })
+        return out
+    except Exception:
+        return []
+
+def _usgs_recent(min_mag=2.5):
+    """Recent quakes from USGS (past hour, all M2.5+). Best-effort."""
+    try:
+        url = 'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_hour.geojson'
+        data = _http_json(url, timeout=8) or {}
+        out = []
+        for f in data.get('features', []):
+            p = f.get('properties', {}) or {}
+            g = f.get('geometry', {}) or {}
+            coords = (g.get('coordinates') or [None, None, None])
+            lon, lat, dep = coords[0], coords[1], coords[2] if len(coords) > 2 else 10
+            try:
+                mag = float(p.get('mag'))
+                if mag < min_mag: continue
+                lat = float(lat); lon = float(lon)
+                dep = float(dep) if dep is not None else 10.0
+            except Exception:
+                continue
+            out.append({
+                'id': str(f.get('id') or ''),
+                'mag': mag, 'lat': lat, 'lon': lon, 'depth': abs(dep),
+                'time': p.get('time') or '',     # epoch ms
+                'region': p.get('place') or '',
+                'source': 'USGS',
+            })
+        return out
+    except Exception:
+        return []
+
+def fetch_quakes(user_lat, user_lon, sources=('emsc', 'usgs'), min_mag=2.5):
+    """Combine EMSC + USGS, annotate each with hypocentral distance, MMI
+    and a friendly relative time. Returns a list sorted by time desc."""
+    import datetime as _dt
+    if user_lat is None or user_lon is None:
+        return []
+    all_q = []
+    if 'emsc' in sources: all_q += _emsc_recent(min_mag=min_mag)
+    if 'usgs' in sources: all_q += _usgs_recent(min_mag=min_mag)
+    # de-dup by (rounded lat/lon/time/mag) — EMSC & USGS often list the same event
+    seen = set()
+    uniq = []
+    for q in all_q:
+        # time may be ISO string (EMSC) or epoch ms int (USGS); normalise to a
+        # rounded second-bucket for de-dup
+        t = q.get('time')
+        if isinstance(t, (int, float)):
+            t_key = int(t / 60000)   # minute bucket
+        else:
+            t_key = (str(t) or '')[:16]
+        key = (round(q['lat'], 1), round(q['lon'], 1), round(q['mag'], 1), t_key)
+        if key in seen: continue
+        seen.add(key)
+        uniq.append(q)
+    now = _dt.datetime.utcnow()
+    for q in uniq:
+        q['dist_km'] = _hypocentral_km(user_lat, user_lon, q['lat'], q['lon'], q['depth'])
+        q['mmi']     = _felt_intensity_mmi(q['mag'], q['dist_km'])
+        q['mmi_label'] = _mmi_label(q['mmi'])
+        # parse time → seconds ago
+        t = q.get('time') or ''
+        secs = None
+        try:
+            if isinstance(t, (int, float)):
+                secs = (now - _dt.datetime.utcfromtimestamp(t / 1000.0)).total_seconds()
+            elif t:
+                s = t.replace('Z', '').replace('T', ' ').split('.')[0]
+                secs = (now - _dt.datetime.fromisoformat(s)).total_seconds()
+        except Exception:
+            pass
+        q['age_sec'] = secs if secs is not None and secs >= 0 else None
+    uniq.sort(key=lambda q: q['age_sec'] if q['age_sec'] is not None else 1e12)
+    return uniq
+
 # ── CPU name ───────────────────────────────────────────────────────────
 def get_cpu_name():
     try:
@@ -762,8 +1628,1088 @@ class CpuFreq:
         except Exception:
             return None
 
+# ── Customize Window (v2.6) ────────────────────────────────────────────
+class CustomizeWindow:
+    """Custom-chrome settings window with tabbed sections. Live preview."""
+    def __init__(self, widget):
+        self.w = widget                    # back-ref to Widget
+        self.lang = widget.lang
+        self.L = CUST_LABELS.get(self.lang, CUST_LABELS['en'])
+        self.T = CUST_THEME
+        self._win = None
+        self._tabs = {}
+        self._active_tab = 'metrics'
+        self._drag_data = None             # for reordering rows
+        self._row_widgets = []             # ordered rows in metrics tab
+        self._pending = {}                 # staged changes (applied on Apply)
+        self._dirty = False
+        self._apply_btn = None
+        self._status_lbl = None
+        self.open()
+
+    # ── window chrome ──
+    def open(self):
+        if self._win and tk.Toplevel.winfo_exists(self._win):
+            self._win.lift(); self._win.focus_force(); return
+        win = tk.Toplevel(self.w.root)
+        win.title('PulseDeck')
+        win.overrideredirect(True)
+        win.geometry('760x540')
+        win.configure(bg=self.T['bg'])
+        try: win.iconbitmap(os.path.join(_base_dir(), 'app.ico'))
+        except Exception: pass
+        # rounded-corner illusion via region (Windows-only)
+        try:
+            self._round_corners(win, 12)
+        except Exception:
+            pass
+        self._win = win
+        # center on screen
+        win.update_idletasks()
+        sw = win.winfo_screenwidth(); sh = win.winfo_screenheight()
+        ww, wh = 760, 540
+        win.geometry(f'{ww}x{wh}+{(sw-ww)//2}+{(sh-wh)//2}')
+        self._build_chrome()
+        win.bind('<Escape>', lambda e: self.close())
+
+    def _round_corners(self, win, radius):
+        # Win32 SetWindowRgn for soft rounded look
+        win.update_idletasks()
+        hwnd = ctypes.windll.user32.GetParent(win.winfo_id()) or win.winfo_id()
+        w = win.winfo_width(); h = win.winfo_height()
+        try:
+            rgn = ctypes.windll.gdi32.CreateRoundRectRgn(0, 0, w, h, radius * 2, radius * 2)
+            ctypes.windll.user32.SetWindowRgn(hwnd, rgn, True)
+        except Exception:
+            pass
+
+    def _build_chrome(self):
+        win = self._win; T = self.T
+        # ── custom title bar ──
+        tb = tk.Frame(win, bg=T['titlebar'], height=42)
+        tb.pack(side='top', fill='x'); tb.pack_propagate(False)
+        # drag area
+        tb.bind('<ButtonPress-1>', self._tb_press)
+        tb.bind('<B1-Motion>', self._tb_drag)
+        # title
+        try:
+            emb = tk.PhotoImage(file=os.path.join(_base_dir(), 'icons', 'tray.png'))
+            self._tb_emb = emb
+            tk.Label(tb, image=emb, bg=T['titlebar']).pack(side='left', padx=(12, 8), pady=6)
+        except Exception:
+            pass
+        tk.Label(tb, text=self.L['title'], fg=T['text'], bg=T['titlebar'],
+                 font=('Segoe UI', 11, 'bold')).pack(side='left')
+        # close button
+        close_btn = tk.Label(tb, text='✕', fg=T['muted'], bg=T['titlebar'],
+                             font=('Segoe UI', 14), padx=18, pady=6, cursor='hand2')
+        close_btn.pack(side='right')
+        close_btn.bind('<Button-1>', lambda e: self.close())
+        close_btn.bind('<Enter>', lambda e: close_btn.config(fg=T['red'], bg='#2a1518'))
+        close_btn.bind('<Leave>', lambda e: close_btn.config(fg=T['muted'], bg=T['titlebar']))
+        # title bar bottom divider
+        tk.Frame(win, bg=T['line'], height=1).pack(side='top', fill='x')
+        # ── footer FIRST so it reserves bottom space; body fills what's left ──
+        self._build_footer(win)
+        # ── body: tab bar + content ──
+        body = tk.Frame(win, bg=T['bg']); body.pack(side='top', fill='both', expand=True)
+        tabs = tk.Frame(body, bg=T['bg2'], width=170)
+        tabs.pack(side='left', fill='y'); tabs.pack_propagate(False)
+        content = tk.Frame(body, bg=T['bg']); content.pack(side='left', fill='both', expand=True)
+        self._content = content
+        # tab buttons
+        self._tab_buttons = {}
+        for tid, key, icon in (
+            ('general',    'general',    '⚙'),
+            ('metrics',    'metrics',    '📊'),
+            ('appearance', 'appearance', '🎨'),
+            ('alerts',     'alerts',     '🚨'),
+            ('system',     'system',     '💻'),
+            ('about',      'about',      'ℹ'),
+        ):
+            b = tk.Label(tabs, text=f'  {icon}  {self.L[key]}', fg=T['muted'],
+                         bg=T['bg2'], font=('Segoe UI', 10), padx=18, pady=12,
+                         anchor='w', cursor='hand2')
+            b.pack(fill='x')
+            b.bind('<Button-1>', lambda e, t=tid: self.show_tab(t))
+            b.bind('<Enter>', lambda e, b=b, t=tid: (b.config(bg='#1a2233') if t != self._active_tab else None))
+            b.bind('<Leave>', lambda e, b=b, t=tid: (b.config(bg=T['bg2']) if t != self._active_tab else None))
+            self._tab_buttons[tid] = b
+        # show initial tab (footer was packed already, above the body)
+        self.show_tab(self._active_tab)
+
+    def _build_footer(self, win):
+        T = self.T; L = self.L
+        # divider
+        tk.Frame(win, bg=T['line'], height=1).pack(side='bottom', fill='x')
+        foot = tk.Frame(win, bg=T['titlebar'], height=52); foot.pack(side='bottom', fill='x')
+        foot.pack_propagate(False)
+        # Cancel button (right)
+        cancel = tk.Label(foot, text=L['close'], fg=T['muted'], bg=T['titlebar'],
+                          font=('Segoe UI', 10), padx=22, pady=10, cursor='hand2')
+        cancel.pack(side='right', padx=(0, 10))
+        cancel.bind('<Button-1>', lambda e: self._on_cancel())
+        cancel.bind('<Enter>', lambda e: cancel.config(fg=T['text'], bg='#1a2233'))
+        cancel.bind('<Leave>', lambda e: cancel.config(fg=T['muted'], bg=T['titlebar']))
+        # Apply button (right of cancel)
+        apply_btn = tk.Label(foot, text=L['apply'], fg='#0b0f18', bg=T['line'],
+                             font=('Segoe UI', 10, 'bold'),
+                             padx=28, pady=10, cursor='hand2')
+        apply_btn.pack(side='right', padx=(0, 8))
+        apply_btn.bind('<Button-1>', lambda e: self._on_apply())
+        self._apply_btn = apply_btn
+        # status text on the left (shows when there are pending changes)
+        self._status_lbl = tk.Label(foot, text='', fg=T['muted'], bg=T['titlebar'],
+                                    font=('Segoe UI', 9), padx=18)
+        self._status_lbl.pack(side='left', pady=10)
+
+    def _on_apply(self):
+        """Apply changes and KEEP the window open. The bar rebuild happens
+        in the next event-loop tick so the click event finishes first."""
+        _log(f'_on_apply ENTER dirty={getattr(self, "_dirty", False)}')
+        if not getattr(self, '_dirty', False):
+            return
+        try: self._win.after(20, self._do_apply_keep_open)
+        except Exception: self._do_apply_keep_open()
+
+    def _do_apply_keep_open(self):
+        _log('_do_apply ENTER')
+        try:
+            # apply language first so subsequent rebuild speaks the new tongue
+            if 'language' in self._pending:
+                code = self._pending['language']
+                self.w.cfg['language'] = code
+                self.w.lang = code; self.lang = code
+                self.L = CUST_LABELS.get(code, CUST_LABELS['en'])
+                del self._pending['language']
+            had_lang = 'language' in self._pending
+            for k, v in self._pending.items():
+                self.w.cfg[k] = v
+            _log(f'  -> merged {list(self._pending.keys())}')
+            save_config(self.w.cfg)
+            self._pending = {}
+            self._dirty = False
+            # Rebuild the bar — no in-place repaint of this window, so no
+            # half-redrawn state. Apply button just gets a brief "✓ Saved".
+            try: self.w._rebuild()
+            except Exception: pass
+            try:
+                self._apply_btn.config(text='✓ ' + self.L['apply'],
+                                       bg=self.T['green'], fg='#0b0f18')
+            except Exception: pass
+            # Reset the Apply button after a short delay so the user knows
+            # subsequent clicks are for new changes.
+            try: self._win.after(1200, self._reset_apply_button)
+            except Exception: pass
+        except Exception as e:
+            _log(f'_do_apply EXC: {e}\n' + traceback.format_exc())
+
+    def _reset_apply_button(self):
+        """After a successful Apply, dim the button back to its idle look."""
+        try:
+            self._apply_btn.config(text=self.L['apply'],
+                                   bg=self.T['line'], fg='#0b0f18')
+        except Exception: pass
+
+    def _on_cancel(self):
+        """Discard pending changes and close the window."""
+        self._pending = {}
+        self._dirty = False
+        self.close()
+
+    def _tb_press(self, e):
+        self._drag_data = (e.x_root - self._win.winfo_x(), e.y_root - self._win.winfo_y())
+
+    def _tb_drag(self, e):
+        if not self._drag_data: return
+        x = e.x_root - self._drag_data[0]
+        y = e.y_root - self._drag_data[1]
+        self._win.geometry(f'+{x}+{y}')
+
+    def close(self):
+        try: self._win.destroy()
+        except Exception: pass
+        self._win = None
+        try: self.w._customize = None
+        except Exception: pass
+
+    # ── tabs ──
+    def show_tab(self, tid):
+        """ALWAYS deferred: destroying the widget that is currently
+        dispatching the click event (e.g. a ▲ button inside the tab we're
+        about to clear) freezes Tcl. Deferring by one tick guarantees the
+        event handler returns before any widget is destroyed."""
+        self._active_tab = tid
+        try:
+            self._win.after(15, lambda: self._show_tab_now(tid))
+        except Exception:
+            self._show_tab_now(tid)
+
+    def _show_tab_now(self, tid):
+        if tid != self._active_tab:
+            return  # superseded by a newer request
+        # update tab button styles
+        for k, b in self._tab_buttons.items():
+            if k == tid:
+                b.config(bg=self.T['panel'], fg=self.T['cyan'],
+                         font=('Segoe UI', 10, 'bold'))
+            else:
+                b.config(bg=self.T['bg2'], fg=self.T['muted'],
+                         font=('Segoe UI', 10))
+        # clear content (safe now — no event is being dispatched from inside)
+        for c in self._content.winfo_children():
+            c.destroy()
+        # build the selected tab
+        getattr(self, f'_tab_{tid}')()
+
+    def _section(self, title, padx=24):
+        T = self.T
+        f = tk.Frame(self._content, bg=T['bg'])
+        f.pack(side='top', fill='x', padx=padx, pady=(14, 6))
+        tk.Label(f, text=title, fg=T['text'], bg=T['bg'],
+                 font=('Segoe UI', 12, 'bold')).pack(side='left')
+        tk.Frame(self._content, bg=T['line'], height=1).pack(side='top', fill='x', padx=padx)
+        return f
+
+    def _check_row(self, parent, label, cfg_key, on_toggle=None):
+        T = self.T
+        row = tk.Frame(parent, bg=T['bg']); row.pack(fill='x', padx=24, pady=4)
+        var = tk.BooleanVar(value=bool(self.w.cfg.get(cfg_key)))
+        cb = tk.Checkbutton(row, text=' ' + label, variable=var, fg=T['text'], bg=T['bg'],
+                            selectcolor=T['bg2'], activebackground=T['bg'],
+                            activeforeground=T['text'], font=('Segoe UI', 10),
+                            bd=0, highlightthickness=0, anchor='w',
+                            command=lambda: self._on_check(cfg_key, var.get(), on_toggle))
+        cb.pack(side='left', fill='x', expand=True)
+        return cb
+
+    def _mark_dirty(self):
+        """Flag that there are unsaved/unapplied changes."""
+        self._dirty = True
+        try:
+            if getattr(self, '_apply_btn', None):
+                self._apply_btn.config(state='normal',
+                                       bg=self.T['cyan'], fg='#0b0f18',
+                                       text='● ' + self.L['apply'])
+        except Exception:
+            pass
+
+    def _on_check(self, key, val, on_toggle):
+        # write to a staging dict; nothing applies until "Apply" is clicked.
+        self._pending[key] = val
+        self._mark_dirty()
+        if on_toggle:
+            # callback that has side-effects we want live (e.g. opening
+            # Windows Settings); these are passed-through unchanged.
+            try: self._win.after(1, lambda: on_toggle(val))
+            except Exception: pass
+
+    def _radio_group(self, parent, label, cfg_key, options, on_change=None):
+        """options = [(value, label), ...]"""
+        T = self.T
+        row = tk.Frame(parent, bg=T['bg']); row.pack(fill='x', padx=24, pady=6)
+        tk.Label(row, text=label, fg=T['muted'], bg=T['bg'],
+                 font=('Segoe UI', 10), width=20, anchor='w').pack(side='left')
+        # Tk's native radiobutton looks blurry on dark themes (no clear
+        # selected-state contrast). Custom-drawn pills give clean feedback.
+        current = self._pending.get(cfg_key, self.w.cfg.get(cfg_key))
+        # collect the rendered pills so we can update them on click
+        pills = []
+        def render_pills():
+            cur = self._pending.get(cfg_key, self.w.cfg.get(cfg_key))
+            for val, btn in pills:
+                # robust equality across int/float/str
+                try:
+                    sel = (val == cur) or (str(val) == str(cur)) \
+                          or (isinstance(val, (int, float)) and
+                              isinstance(cur, (int, float)) and abs(val - cur) < 1e-6)
+                except Exception:
+                    sel = (val == cur)
+                btn.config(text=('● ' if sel else '○ ') + btn._label,
+                           fg=(T['cyan'] if sel else T['muted']))
+        def make_click(v):
+            def _click(e=None):
+                self._on_radio(cfg_key, v, on_change)
+                render_pills()
+            return _click
+        for val, lbl in options:
+            pill = tk.Label(row, text='○ ' + lbl, fg=T['muted'], bg=T['bg'],
+                            font=('Segoe UI', 10), padx=8, pady=2, cursor='hand2')
+            pill._label = lbl
+            pill.pack(side='left', padx=4)
+            pill.bind('<Button-1>', make_click(val))
+            pill.bind('<Enter>', lambda e, p=pill:
+                      p.config(bg='#1a2233') if 'bg' not in p._label else None)
+            pill.bind('<Leave>', lambda e, p=pill: p.config(bg=T['bg']))
+            pills.append((val, pill))
+        render_pills()
+
+    def _on_radio(self, key, val, on_change):
+        self._pending[key] = val
+        self._mark_dirty()
+        if on_change:
+            try: self._win.after(1, lambda: on_change(val))
+            except Exception: pass
+
+    # ── General tab ──
+    def _tab_general(self):
+        T = self.T; L = self.L
+        self._section('⚙  ' + L['general'])
+        body = tk.Frame(self._content, bg=T['bg']); body.pack(fill='both', expand=True)
+        self._radio_group(body, L['refresh_rate'], 'interval',
+                          [(500, '0.5s'), (1000, '1s'), (2000, '2s'), (5000, '5s')],
+                          on_change=lambda v: None)
+        # language dropdown via radio (compact)
+        lr = tk.Frame(body, bg=T['bg']); lr.pack(fill='x', padx=24, pady=6)
+        tk.Label(lr, text=L['language'], fg=T['muted'], bg=T['bg'],
+                 font=('Segoe UI', 10), width=20, anchor='w').pack(side='left')
+        # Custom dropdown — ttk.Combobox renders poorly on dark themes
+        cur_lang = self._pending.get('language', self.w.cfg.get('language') or self.w.lang)
+        btn = tk.Label(lr, text=LANG_NAMES.get(cur_lang, 'English') + '  ▾',
+                       fg=T['text'], bg=T['panel'], padx=12, pady=4,
+                       font=('Segoe UI', 10), cursor='hand2',
+                       relief='solid', bd=1, highlightbackground=T['line'])
+        btn.pack(side='left')
+        def _show_lang_menu(_e=None):
+            menu = tk.Toplevel(self._win); menu.overrideredirect(True)
+            menu.configure(bg=T['panel'], highlightbackground=T['line'], highlightthickness=1)
+            try: menu.attributes('-topmost', True)
+            except Exception: pass
+            x = btn.winfo_rootx(); y = btn.winfo_rooty() + btn.winfo_height() + 2
+            menu.geometry(f'+{x}+{y}')
+            for code in LANGS:
+                row = tk.Label(menu, text=LANG_NAMES[code], fg=T['text'],
+                               bg=T['panel'] if code != cur_lang else T['bg2'],
+                               padx=18, pady=6, font=('Segoe UI', 10),
+                               anchor='w', cursor='hand2', width=18)
+                row.pack(fill='x')
+                def _pick(c=code, m=menu, b=btn):
+                    btn.config(text=LANG_NAMES[c] + '  ▾')
+                    try: m.destroy()
+                    except Exception: pass
+                    self._on_lang_change(c)
+                row.bind('<Button-1>', lambda e, p=_pick: p())
+                row.bind('<Enter>', lambda e, r=row: r.config(bg=T['bg2']))
+                row.bind('<Leave>', lambda e, r=row, c=code:
+                         r.config(bg=T['panel'] if c != cur_lang else T['bg2']))
+            # auto-close on focus-out
+            menu.bind('<FocusOut>', lambda e: menu.destroy())
+            menu.focus_set()
+        btn.bind('<Button-1>', _show_lang_menu)
+        btn.bind('<Enter>', lambda e: btn.config(bg=T['bg2']))
+        btn.bind('<Leave>', lambda e: btn.config(bg=T['panel']))
+        self._check_row(body, L['lock_pos'], 'locked')
+        self._check_row(body, L['tooltips'], 'tooltips')
+        self._check_row(body, L['check_upd'], 'check_updates')
+        # startup row: a button that opens Settings (MSIX) or toggles (Win32)
+        srow = tk.Frame(body, bg=T['bg']); srow.pack(fill='x', padx=24, pady=10)
+        if _is_msix():
+            b = tk.Button(srow, text='🚀  ' + L['startup'] + '  →  Windows Settings',
+                          command=lambda: _open_startup_settings(),
+                          bg=T['panel'], fg=T['text'], bd=0,
+                          font=('Segoe UI', 10), padx=16, pady=8,
+                          activebackground=T['bg2'], activeforeground=T['cyan'],
+                          cursor='hand2')
+            b.pack(side='left')
+        else:
+            var = tk.BooleanVar(value=is_startup_enabled())
+            cb = tk.Checkbutton(srow, text='  🚀  ' + L['startup'], variable=var,
+                                fg=T['text'], bg=T['bg'], selectcolor=T['bg2'],
+                                activebackground=T['bg'], activeforeground=T['text'],
+                                font=('Segoe UI', 10), bd=0,
+                                command=lambda: set_startup(var.get()))
+            cb.pack(side='left')
+        # reset position
+        rp = tk.Button(self._content, text='⤺  ' + L['reset_pos'],
+                       command=lambda: (self.w._act_reposition(),),
+                       bg=T['panel'], fg=T['text'], bd=0,
+                       font=('Segoe UI', 10), padx=14, pady=6,
+                       activebackground=T['bg2'], activeforeground=T['cyan'],
+                       cursor='hand2')
+        rp.pack(side='top', anchor='w', padx=24, pady=10)
+
+    def _on_lang_change(self, code):
+        # Stage only — language switch happens on Apply.
+        self._pending['language'] = code
+        self._mark_dirty()
+
+    # ── Metrics tab (with drag-reorder) ──
+    def _tab_metrics(self):
+        T = self.T; L = self.L
+        self._section('📊  ' + L['show_hide'])
+        hint = tk.Label(self._content, text='  ' + L['drag_hint'], fg=T['muted'],
+                        bg=T['bg'], font=('Segoe UI', 9))
+        hint.pack(anchor='w', padx=24)
+        # rows container (no canvas needed — fits 9 rows easily)
+        wrap = tk.Frame(self._content, bg=T['bg'])
+        wrap.pack(fill='both', expand=True, padx=20, pady=8)
+        self._row_widgets = []
+        order = self._get_order()
+        for cid in order:
+            self._build_metric_row(wrap, cid)
+        # critical-last toggle
+        cl = tk.Frame(self._content, bg=T['bg']); cl.pack(fill='x', padx=24, pady=8)
+        var = tk.BooleanVar(value=bool(self.w.cfg.get('critical_last', True)))
+        cb = tk.Checkbutton(cl, text='  🚨 ' + L['always_last'], variable=var,
+                            fg=T['orange'], bg=T['bg'], selectcolor=T['bg2'],
+                            activebackground=T['bg'], activeforeground=T['orange'],
+                            font=('Segoe UI', 9), bd=0,
+                            command=lambda: self._on_check('critical_last', var.get(),
+                                                            lambda v: self.w._rebuild()))
+        cb.pack(side='left')
+        # reset button bottom
+        rb = tk.Button(self._content, text='⤺  ' + L['reset'],
+                       command=self._reset_order,
+                       bg=T['panel'], fg=T['text'], bd=0,
+                       font=('Segoe UI', 10), padx=14, pady=6,
+                       activebackground=T['bg2'], activeforeground=T['cyan'],
+                       cursor='hand2')
+        rb.pack(side='top', anchor='w', padx=24, pady=8)
+
+    def _build_metric_row(self, parent, cid):
+        T = self.T
+        meta = next((m for m in CELL_META if m[0] == cid), None)
+        if not meta: return
+        _, name, icon, cfg_key = meta
+        # NO highlightthickness — the 1-px dark "border" the user reported
+        # was Tk's default highlight rectangle around each row frame
+        row = tk.Frame(parent, bg=T['panel'], height=42, bd=0, highlightthickness=0)
+        row.pack(fill='x', pady=3); row.pack_propagate(False)
+        # ☰ drag handle — drag the row up/down to reorder.
+        # (The old freeze was never the drag itself: the bar's _bind_events
+        #  was hijacking clicks inside this window. That's fixed, so the
+        #  natural drag UX is back.)
+        handle = tk.Label(row, text='☰', fg=T['muted'], bg=T['panel'],
+                          font=('Segoe UI', 12), padx=12, cursor='hand2')
+        handle.pack(side='left')
+        handle.bind('<Enter>', lambda e, w=handle: w.config(fg=T['cyan']))
+        handle.bind('<Leave>', lambda e, w=handle: w.config(fg=T['muted']))
+        for w_ in (handle, row):
+            w_.bind('<ButtonPress-1>', lambda e, r=row: self._row_press(e, r))
+            w_.bind('<B1-Motion>', lambda e, r=row: self._row_drag(e, r))
+            w_.bind('<ButtonRelease-1>', lambda e, r=row: self._row_release(e, r))
+        # checkbox (custom-drawn for the dark theme)
+        is_on = bool(self._pending.get(cfg_key, self.w.cfg.get(cfg_key)))
+        chk = tk.Label(row, text=('☑' if is_on else '☐'),
+                       fg=T['green'] if is_on else T['muted'],
+                       bg=T['panel'], font=('Segoe UI', 14, 'bold'),
+                       padx=10, cursor='hand2')
+        chk.pack(side='left')
+        def _toggle(e=None, k=cfg_key, lbl=chk):
+            new = not bool(self._pending.get(k, self.w.cfg.get(k)))
+            lbl.config(text='☑' if new else '☐',
+                       fg=T['green'] if new else T['muted'])
+            self._on_check(k, new, None)
+        chk.bind('<Button-1>', _toggle)
+        # icon + name
+        tk.Label(row, text=icon + '  ' + name, fg=T['text'], bg=T['panel'],
+                 font=('Segoe UI', 10)).pack(side='left', padx=4)
+        row._cell_id = cid
+        self._row_widgets.append(row)
+
+    def _move_row(self, cid, direction):
+        """Move a row up (direction=-1) or down (direction=+1) in the order."""
+        order = self._get_order()
+        try:
+            i = order.index(cid)
+        except ValueError:
+            return
+        j = i + direction
+        if j < 0 or j >= len(order):
+            return
+        order[i], order[j] = order[j], order[i]
+        self._pending['cell_order'] = order
+        self._mark_dirty()
+        # repaint the metrics tab to show the new order
+        try: self.show_tab('metrics')
+        except Exception: pass
+
+    def _get_order(self):
+        # staged order takes precedence over the saved one
+        staged = self._pending.get('cell_order', 'unset')
+        if staged != 'unset':
+            order = staged or DEFAULT_CELL_ORDER
+        else:
+            order = self.w.cfg.get('cell_order') or DEFAULT_CELL_ORDER
+        ids = set(c[0] for c in CELL_META)
+        order = [c for c in order if c in ids]
+        for c in DEFAULT_CELL_ORDER:
+            if c not in order: order.append(c)
+        return order
+
+    # ── ghost-target drag: nothing moves DURING the drag (no repacking,
+    #    no stale geometry, no oscillation). We only highlight the row the
+    #    cursor is over; the single reorder happens at release. ──
+    def _row_press(self, e, row):
+        self._drag_row = row
+        self._drag_target = None
+        row.config(bg=self.T['bg2'])
+        for c in row.winfo_children():
+            try: c.config(bg=self.T['bg2'])
+            except Exception: pass
+
+    def _row_drag(self, e, row):
+        if getattr(self, '_drag_row', None) != row: return
+        # geometry is STABLE during the whole drag (nothing is repacked),
+        # so winfo_rooty values are always correct here
+        target = None
+        for r in self._row_widgets:
+            if r is row: continue
+            try:
+                y1 = r.winfo_rooty()
+                if y1 <= e.y_root <= y1 + r.winfo_height():
+                    target = r
+                    break
+            except Exception:
+                continue
+        old = getattr(self, '_drag_target', None)
+        if target is old: return
+        # clear previous target highlight
+        if old is not None:
+            try:
+                old.config(bg=self.T['panel'])
+                for c in old.winfo_children():
+                    try: c.config(bg=self.T['panel'])
+                    except Exception: pass
+            except Exception: pass
+        # highlight the new target
+        if target is not None:
+            try:
+                target.config(bg='#1d3a52')
+                for c in target.winfo_children():
+                    try: c.config(bg='#1d3a52')
+                    except Exception: pass
+            except Exception: pass
+        self._drag_target = target
+
+    def _row_release(self, e, row):
+        if getattr(self, '_drag_row', None) is None:
+            return
+        src = self._drag_row
+        tgt = getattr(self, '_drag_target', None)
+        self._drag_row = None
+        self._drag_target = None
+        # restore colours on both rows
+        for r in (src, tgt):
+            if r is None: continue
+            try:
+                r.config(bg=self.T['panel'])
+                for c in r.winfo_children():
+                    try: c.config(bg=self.T['panel'])
+                    except Exception: pass
+            except Exception: pass
+        if tgt is None or tgt is src:
+            return   # plain click / dropped on itself — nothing to do
+        # single reorder: move src to tgt's position
+        try:
+            rows = self._row_widgets
+            i, j = rows.index(src), rows.index(tgt)
+            rows.insert(j, rows.pop(i))
+            for rr in rows:
+                rr.pack_forget()
+            for rr in rows:
+                rr.pack(fill='x', pady=3)
+            self._pending['cell_order'] = [r._cell_id for r in rows]
+            self._mark_dirty()
+        except Exception:
+            pass
+
+    def _reset_order(self):
+        self._pending['cell_order'] = None
+        self._mark_dirty()
+        # rebuild the metrics tab to show the default order visually
+        self.show_tab('metrics')
+
+    # ── Appearance tab ──
+    def _tab_appearance(self):
+        T = self.T; L = self.L
+        self._section('🎨  ' + L['appearance'])
+        body = tk.Frame(self._content, bg=T['bg']); body.pack(fill='both', expand=True)
+        # theme dropdown
+        tr = tk.Frame(body, bg=T['bg']); tr.pack(fill='x', padx=24, pady=8)
+        tk.Label(tr, text=L['theme'], fg=T['muted'], bg=T['bg'],
+                 font=('Segoe UI', 10), width=20, anchor='w').pack(side='left')
+        # custom theme dropdown
+        cur_theme = self._pending.get('theme', self.w.cfg.get('theme', 'default'))
+        tbtn = tk.Label(tr, text=cur_theme.capitalize() + '  ▾',
+                        fg=T['text'], bg=T['panel'], padx=12, pady=4,
+                        font=('Segoe UI', 10), cursor='hand2',
+                        relief='solid', bd=1, highlightbackground=T['line'])
+        tbtn.pack(side='left')
+        def _show_theme_menu(_e=None):
+            menu = tk.Toplevel(self._win); menu.overrideredirect(True)
+            menu.configure(bg=T['panel'], highlightbackground=T['line'], highlightthickness=1)
+            try: menu.attributes('-topmost', True)
+            except Exception: pass
+            x = tbtn.winfo_rootx(); y = tbtn.winfo_rooty() + tbtn.winfo_height() + 2
+            menu.geometry(f'+{x}+{y}')
+            for name in THEMES:
+                row = tk.Label(menu, text=name.capitalize(), fg=T['text'],
+                               bg=T['panel'] if name != cur_theme else T['bg2'],
+                               padx=18, pady=6, font=('Segoe UI', 10),
+                               anchor='w', cursor='hand2', width=18)
+                row.pack(fill='x')
+                def _pick(n=name, m=menu, b=tbtn):
+                    b.config(text=n.capitalize() + '  ▾')
+                    try: m.destroy()
+                    except Exception: pass
+                    self._on_radio('theme', n, None)
+                row.bind('<Button-1>', lambda e, p=_pick: p())
+                row.bind('<Enter>', lambda e, r=row: r.config(bg=T['bg2']))
+                row.bind('<Leave>', lambda e, r=row, n=name:
+                         r.config(bg=T['panel'] if n != cur_theme else T['bg2']))
+            menu.bind('<FocusOut>', lambda e: menu.destroy())
+            menu.focus_set()
+        tbtn.bind('<Button-1>', _show_theme_menu)
+        tbtn.bind('<Enter>', lambda e: tbtn.config(bg=T['bg2']))
+        tbtn.bind('<Leave>', lambda e: tbtn.config(bg=T['panel']))
+        t = self.w.t
+        self._radio_group(body, L['size'], 'font_scale',
+                          [('small', t('small')), ('normal', t('normal')),
+                           ('large', t('large'))])
+        self._radio_group(body, L['orientation'], 'orientation',
+                          [('horizontal', '⇔'), ('vertical', '⇕')])
+        self._check_row(body, L['stacked'], 'stacked')
+        # When two-row mode is OFF, which of the two rows survives?
+        self._radio_group(body, '└ ' + L['single_row'], 'single_row_mode',
+                          [('percent', L['row_percent']),
+                           ('detail', L['row_detail'])])
+        self._check_row(body, L['sparklines'], 'sparklines')
+        self._check_row(body, L['on_taskbar'], 'on_taskbar')
+        self._check_row(body, L['background'] + ' — transparent', 'transparent_bg')
+        # opacity
+        self._radio_group(body, L['background'] + ' — ' + 'opacity',
+                          'opacity', [(0.5, '50%'), (0.7, '70%'),
+                                      (0.85, '85%'), (1.0, '100%')])
+        # network unit
+        self._radio_group(body, 'Network', 'net_unit',
+                          [('bytes', 'MB/s'), ('bits', 'Mbps')])
+
+    # ── Alerts tab ──
+    def _tab_alerts(self):
+        T = self.T; L = self.L
+        self._section('🚨  ' + L['alerts'])
+        body = tk.Frame(self._content, bg=T['bg']); body.pack(fill='both', expand=True)
+        self._check_row(body, L['quakes_on'], 'quakes_on',
+                        on_toggle=lambda v: (self.w._rebuild(),
+                                              self.w._ensure_quakes_thread() if v else None))
+        # sources row
+        sr = tk.Frame(body, bg=T['bg']); sr.pack(fill='x', padx=24, pady=6)
+        tk.Label(sr, text=L['sources'], fg=T['muted'], bg=T['bg'],
+                 font=('Segoe UI', 10), width=20, anchor='w').pack(side='left')
+        for key, name in (('quakes_emsc', 'EMSC (Europe)'),
+                          ('quakes_usgs', 'USGS (Global)')):
+            var = tk.BooleanVar(value=bool(self.w.cfg.get(key)))
+            tk.Checkbutton(sr, text=' ' + name, variable=var, fg=T['text'], bg=T['bg'],
+                           selectcolor=T['bg2'], activebackground=T['bg'],
+                           activeforeground=T['text'], font=('Segoe UI', 10),
+                           bd=0, command=lambda k=key, v=var:
+                           (self.w.cfg.update({k: v.get()}), save_config(self.w.cfg))
+                           ).pack(side='left', padx=8)
+        # felt level
+        levels = QUAKES_LEVELS.get(self.lang, QUAKES_LEVELS['en'])
+        self._radio_group(body, L['felt_level'], 'quakes_min_mmi',
+                          [(th, lbl.split('(')[0].strip()) for lbl, th in levels])
+        self._check_row(body, '🔔  Toast notifications', 'quakes_toasts')
+        self._check_row(body, '🔇  Mute all', 'quakes_mute')
+        # recent events button
+        rb = tk.Button(self._content, text='📜  ' + L['recent_evt'],
+                       command=self.w._show_quake_history,
+                       bg=T['panel'], fg=T['text'], bd=0,
+                       font=('Segoe UI', 10), padx=14, pady=6,
+                       activebackground=T['bg2'], activeforeground=T['cyan'],
+                       cursor='hand2')
+        rb.pack(side='top', anchor='w', padx=24, pady=10)
+
+    # ── About tab ──
+    # ── System Info tab ──
+    def _tab_system(self):
+        T = self.T; L = self.L
+        # Header
+        f = tk.Frame(self._content, bg=T['bg'])
+        f.pack(side='top', fill='x', padx=24, pady=(14, 6))
+        tk.Label(f, text='💻  ' + L['system'], fg=T['text'], bg=T['bg'],
+                 font=('Segoe UI', 12, 'bold')).pack(side='left')
+        tk.Frame(self._content, bg=T['line'], height=1).pack(
+            side='top', fill='x', padx=24)
+        loading_txt = '⏳  ' + self.L['loading_sys']
+        loading = tk.Label(self._content, text=loading_txt,
+                           fg=T['cyan'], bg=T['bg'],
+                           font=('Segoe UI', 11))
+        loading.pack(anchor='w', padx=24, pady=18)
+        # animate the hourglass while WMI runs
+        _frames = ['⏳', '⌛']
+        _i = [0]
+        def _tick():
+            try:
+                if loading.winfo_exists():
+                    _i[0] = (_i[0] + 1) % 2
+                    loading.config(text=_frames[_i[0]] + loading_txt[1:])
+                    self._win.after(500, _tick)
+            except Exception: pass
+        self._win.after(500, _tick)
+        # Collect in a thread so the UI stays responsive (WMI calls take ~1s)
+        def _bg():
+            info = collect_system_info()
+            try: self._win.after(0, lambda: self._render_system(info, loading))
+            except Exception: pass
+        threading.Thread(target=_bg, daemon=True).start()
+
+    def _render_system(self, info, loading_lbl):
+        try: loading_lbl.destroy()
+        except Exception: pass
+        T = self.T
+        # Scrollable body
+        outer = tk.Frame(self._content, bg=T['bg'])
+        outer.pack(fill='both', expand=True, padx=20, pady=4)
+        canvas = tk.Canvas(outer, bg=T['bg'], highlightthickness=0, bd=0)
+        sb = tk.Scrollbar(outer, orient='vertical', command=canvas.yview,
+                          bg=T['panel'], troughcolor=T['bg2'],
+                          activebackground=T['cyan'], bd=0, highlightthickness=0,
+                          width=10)
+        canvas.configure(yscrollcommand=sb.set)
+        sb.pack(side='right', fill='y')
+        canvas.pack(side='left', fill='both', expand=True)
+        body = tk.Frame(canvas, bg=T['bg'])
+        body_window = canvas.create_window((0, 0), window=body, anchor='nw')
+        # keep body the same width as the canvas viewport so right-packed
+        # children (brand logos) stay visible.
+        def _resize_body(e, _wid=body_window):
+            try: canvas.itemconfig(_wid, width=e.width)
+            except Exception: pass
+        canvas.bind('<Configure>', _resize_body)
+        body.bind('<Configure>',
+                  lambda e: canvas.configure(scrollregion=canvas.bbox('all')))
+        canvas.bind_all('<MouseWheel>',
+                        lambda e: canvas.yview_scroll(int(-e.delta/120), 'units'))
+
+        def _brand_logo(parent, name, bg_color):
+            """Brand logo image. Returns a Label with a PNG, or None."""
+            n = (name or '').lower()
+            # Keyword → logo file key (in icons/brands/<key>.png)
+            BRANDS = (
+                (('nvidia', 'geforce', 'rtx', 'gtx', 'quadro'),   'nvidia'),
+                (('radeon', 'ryzen', 'amd', 'authenticamd',
+                  'epyc', 'threadripper'),                         'amd'),
+                (('intel', 'genuineintel', 'core(tm)', 'celeron',
+                  'pentium', 'xeon', 'arc '),                      'intel'),
+                (('asustek', 'asus', 'rog '),                      'asus'),
+                (('micro-star', 'msi'),                            'msi'),
+                (('gigabyte', 'aorus'),                            'gigabyte'),
+                (('asrock',),                                      'asrock'),
+                (('samsung',),                                     'samsung'),
+                (('lg ', 'lg electronics', 'lg display', 'goldstar'),'lg'),
+                (('dell',),                                        'dell'),
+                (('hewlett', 'hp '),                               'hp'),
+                (('lenovo',),                                      'lenovo'),
+                (('acer',),                                        'acer'),
+                (('benq',),                                        'benq'),
+                (('aoc',),                                         'aoc'),
+                (('philips',),                                     'philips'),
+                (('viewsonic',),                                   'viewsonic'),
+                (('iiyama',),                                      'iiyama'),
+                (('corsair',),                                     'corsair'),
+                (('kingston', 'hyperx', 'fury'),                   'kingston'),
+                (('g.skill', 'gskill', 'g skill'),                 'gskill'),
+                (('crucial', 'micron'),                            'crucial'),
+                (('western digital', 'wdc', ' wd '),               'wd'),
+                (('seagate',),                                     'seagate'),
+                (('sandisk',),                                     'sandisk'),
+                (('toshiba', 'kioxia'),                            'kioxia'),
+                (('realtek',),                                     'realtek'),
+                (('creative',),                                    'creative'),
+                (('logitech',),                                    'logitech'),
+            )
+            key = None
+            for keys, k in BRANDS:
+                if any(kw in n for kw in keys):
+                    key = k; break
+            if not key: return None
+            # cache PhotoImage on the CustomizeWindow so refs live as long as
+            # the Toplevel master used to create them.
+            cache = getattr(self, '_brand_logo_cache', None)
+            if cache is None:
+                cache = {}
+                self._brand_logo_cache = cache
+            if key not in cache:
+                path = os.path.join(_base_dir(), 'icons', 'brands', key + '.png')
+                if not os.path.exists(path): return None
+                try:
+                    from PIL import Image, ImageTk
+                    im = Image.open(path).convert('RGBA')
+                    target_h = 32
+                    w0, h0 = im.size
+                    new_w = max(1, int(w0 * target_h / h0))
+                    im = im.resize((new_w, target_h), Image.LANCZOS)
+                    cache[key] = ImageTk.PhotoImage(im, master=self._win)
+                except Exception:
+                    return None
+            img = cache[key]
+            lbl = tk.Label(parent, image=img, bg=bg_color, bd=0,
+                           width=img.width(), height=img.height())
+            lbl.image = img
+            return lbl
+
+        def section(title, icon, color, badge_src=None):
+            sf = tk.Frame(body, bg=T['panel'], bd=0, highlightthickness=0)
+            sf.pack(fill='x', pady=(6, 4))
+            hdr = tk.Frame(sf, bg=T['panel']); hdr.pack(fill='x', padx=12, pady=(8, 4))
+            tk.Label(hdr, text=icon + '  ' + title, fg=color, bg=T['panel'],
+                     font=('Segoe UI', 11, 'bold')).pack(side='left')
+            # brand logo on the right
+            logo = _brand_logo(hdr, badge_src, T['panel']) if badge_src else None
+            if logo is not None:
+                logo.pack(side='right', padx=(0, 4))
+            return sf
+
+        def kv(parent, k, v, value_color=None):
+            if v in (None, ''): return
+            r = tk.Frame(parent, bg=T['panel']); r.pack(fill='x', padx=18, pady=2)
+            tk.Label(r, text=k, fg=T['muted'], bg=T['panel'],
+                     font=('Segoe UI', 9), width=20, anchor='w').pack(side='left')
+            tk.Label(r, text=str(v), fg=(value_color or T['text']), bg=T['panel'],
+                     font=('Segoe UI', 9), anchor='w').pack(side='left')
+
+        # ── CPU ──
+        cpu = info.get('cpu', {})
+        s = section('CPU', '💻', T['cyan'], badge_src=cpu.get('name', ''))
+        if cpu.get('name'): kv(s, 'Model', cpu['name'])
+        if cpu.get('manufacturer'): kv(s, 'Vendor', cpu['manufacturer'])
+        if cpu.get('cores'):
+            kv(s, 'Cores / Threads',
+               f"{cpu['cores']} / {cpu.get('threads', cpu['cores'])}")
+        if cpu.get('base_mhz'):
+            base_ghz = cpu['base_mhz'] / 1000
+            cur = cpu.get('current_mhz')
+            kv(s, 'Clock',
+               f"{cpu.get('current_mhz', cpu['base_mhz'])/1000:.2f} GHz / base {base_ghz:.2f} GHz")
+        if cpu.get('l3_kb'):
+            kv(s, 'L3 cache', f"{cpu['l3_kb']/1024:.0f} MB")
+        if cpu.get('socket'):
+            kv(s, 'Socket', cpu['socket'])
+        tk.Frame(s, bg=T['panel'], height=8).pack()
+
+        # ── RAM ──
+        ram = info.get('ram', {})
+        s = section('RAM', '🧠', T['green'])
+        if ram.get('total'):
+            kv(s, 'Total', _human_bytes(ram['total']))
+            kv(s, 'In use', f"{_human_bytes(ram['used'])}  ({ram['percent']:.0f}%)",
+               T['orange'])
+            kv(s, 'Free', _human_bytes(ram['free']), T['green'])
+        if ram.get('swap_total'):
+            kv(s, 'Page file',
+               f"{_human_bytes(ram['swap_used'])} / {_human_bytes(ram['swap_total'])}")
+        for i, m in enumerate(ram.get('modules', [])[:8]):
+            cap = _human_bytes(m['capacity']) if m['capacity'] else '?'
+            spd = f"{m['speed']} MHz" if m.get('speed') else ''
+            mfr = (m.get('mfr') or '').strip()
+            slot = (m.get('slot') or '').strip()
+            details = ' · '.join(x for x in (cap, spd, mfr) if x)
+            kv(s, slot or f'Module {i+1}', details)
+        tk.Frame(s, bg=T['panel'], height=8).pack()
+
+        # ── GPU ──
+        gpus = info.get('gpu', [])
+        if gpus:
+            s = section('GPU', '🎮', T['magenta'],
+                        badge_src=gpus[0].get('name', ''))
+            for g in gpus:
+                kv(s, 'Model', g.get('name', '?'))
+                if g.get('vram'):
+                    kv(s, 'VRAM', _human_bytes(g['vram']))
+                if g.get('driver'):
+                    kv(s, 'Driver', g['driver'])
+                if g.get('res') and g['res'][0]:
+                    res = f"{g['res'][0]} × {g['res'][1]}"
+                    if g.get('hz'): res += f"  @ {g['hz']} Hz"
+                    kv(s, 'Resolution', res)
+                tk.Frame(s, bg=T['panel'], height=6).pack()
+            tk.Frame(s, bg=T['panel'], height=2).pack()
+
+        # ── Motherboard ──
+        mb = info.get('mobo', {})
+        if mb.get('product') or mb.get('manufacturer'):
+            badge = mb.get('manufacturer','') + ' ' + mb.get('product','')
+            s = section(self.L['sys_mobo'], '🔌', T['orange'], badge_src=badge)
+            if mb.get('manufacturer'): kv(s, 'Vendor', mb['manufacturer'])
+            if mb.get('product'):      kv(s, 'Model',  mb['product'])
+            if mb.get('version'):      kv(s, 'Version', mb['version'])
+            bios = info.get('bios', {})
+            if bios.get('version'):
+                bv = bios['version']
+                if bios.get('date'): bv += '  ·  ' + bios['date']
+                kv(s, 'BIOS', bv)
+            tk.Frame(s, bg=T['panel'], height=8).pack()
+
+        # ── Monitors ──
+        mons = info.get('monitors', [])
+        if mons:
+            for i, m in enumerate(mons):
+                title = self.L['sys_monitor'] + ('' if len(mons) == 1 else f' {i+1}')
+                badge = (m.get('manufacturer','') + ' ' + m.get('model','')).strip()
+                s = section(title, '🖥️', T['cyan'], badge_src=badge)
+                if m.get('manufacturer'): kv(s, 'Vendor', m['manufacturer'])
+                if m.get('model'):        kv(s, 'Model',  m['model'])
+                if m.get('code'):         kv(s, 'Code',   m['code'])
+                if m.get('year'):         kv(s, 'Year',   m['year'])
+                tk.Frame(s, bg=T['panel'], height=8).pack()
+
+        # ── Audio ──
+        audios = info.get('audio', [])
+        if audios:
+            s = section(self.L['sys_audio'], '🎧', T['magenta'],
+                        badge_src=audios[0].get('manufacturer','') + ' ' + audios[0].get('name',''))
+            for a in audios:
+                kv(s, a.get('manufacturer', '') or 'Device', a['name'][:60])
+            tk.Frame(s, bg=T['panel'], height=8).pack()
+
+        # ── Optical drives ──
+        opts = info.get('optical', [])
+        if opts:
+            s = section(self.L['sys_optical'], '📀', T['orange'])
+            for o in opts:
+                lbl = o.get('drive', '') or o.get('manufacturer', '') or 'Drive'
+                kv(s, lbl, o['name'][:60])
+            tk.Frame(s, bg=T['panel'], height=8).pack()
+
+        # ── OS ──
+        os_ = info.get('os', {})
+        s = section('Windows', '🪟', T['blue'])
+        if os_.get('name'): kv(s, 'Edition', os_['name'])
+        if os_.get('version'):
+            v = os_['version']
+            if os_.get('build'): v += f"  (build {os_['build']})"
+            kv(s, 'Version', v)
+        if os_.get('arch'): kv(s, 'Architecture', os_['arch'])
+        kv(s, 'Uptime', os_.get('uptime', '—'), T['green'])
+        tk.Frame(s, bg=T['panel'], height=8).pack()
+
+        # ── Disks ──
+        disks = info.get('disks', [])
+        if disks:
+            s = section(self.L['sys_storage'], '💿', T['orange'])
+            for d in disks:
+                kv(s, d['device'],
+                   f"{_human_bytes(d['used'])} used of {_human_bytes(d['total'])}  "
+                   f"({d['percent']:.0f}%)  ·  {d.get('fstype','')}")
+            tk.Frame(s, bg=T['panel'], height=8).pack()
+
+        # ── Network ──
+        nets = info.get('net', [])
+        if nets:
+            s = section(self.L['sys_network'], '🌐', T['cyan'])
+            for n in nets:
+                bits = []
+                if n.get('ip'): bits.append(f"IP {n['ip']}")
+                if n.get('mac'): bits.append(f"MAC {n['mac']}")
+                if n.get('speed_mbps'):
+                    bits.append(f"{n['speed_mbps']} Mbps")
+                kv(s, n['name'][:30], '  ·  '.join(bits))
+            tk.Frame(s, bg=T['panel'], height=8).pack()
+
+        # ── Copy-all button ──
+        _copy_lbl = '📋  ' + self.L['copy_all']
+        def _copy_all():
+            try:
+                txt = self._format_sysinfo_text(info)
+                self._win.clipboard_clear()
+                self._win.clipboard_append(txt)
+                cp_btn.config(text='✓  ' + self.L['copied'])
+                self._win.after(1500, lambda: cp_btn.config(text=_copy_lbl))
+            except Exception: pass
+        cp_btn = tk.Label(body, text=_copy_lbl, fg=T['cyan'], bg=T['bg'],
+                          font=('Segoe UI', 10), padx=12, pady=6, cursor='hand2')
+        cp_btn.pack(anchor='w', padx=4, pady=8)
+        cp_btn.bind('<Button-1>', lambda e: _copy_all())
+
+    def _format_sysinfo_text(self, info):
+        """Plain-text version of the system info for clipboard / support."""
+        lines = [f'{DISPLAY_NAME} System Info  ·  {time.strftime("%Y-%m-%d %H:%M")}', '']
+        cpu = info.get('cpu', {})
+        if cpu:
+            lines.append('CPU')
+            for k in ('name','manufacturer','cores','threads','base_mhz','current_mhz','l3_kb','socket'):
+                v = cpu.get(k)
+                if v: lines.append(f'  {k}: {v}')
+            lines.append('')
+        ram = info.get('ram', {})
+        if ram:
+            lines.append('RAM')
+            lines.append(f"  total: {_human_bytes(ram.get('total',0))}")
+            lines.append(f"  used:  {_human_bytes(ram.get('used',0))} ({ram.get('percent',0):.0f}%)")
+            for m in ram.get('modules', []):
+                lines.append(f"  module: {_human_bytes(m.get('capacity',0))} @ {m.get('speed','?')} MHz  ({m.get('mfr','?')})")
+            lines.append('')
+        for g in info.get('gpu', []):
+            lines.append(f"GPU: {g.get('name')}  ·  VRAM {_human_bytes(g.get('vram',0))}  ·  driver {g.get('driver','?')}")
+        if info.get('gpu'): lines.append('')
+        os_ = info.get('os', {})
+        if os_:
+            lines.append(f"OS: {os_.get('name','?')}  ·  build {os_.get('build','?')}  ·  {os_.get('arch','?')}")
+            lines.append(f"Uptime: {os_.get('uptime','?')}")
+            lines.append('')
+        for d in info.get('disks', []):
+            lines.append(f"Disk {d['device']}: {_human_bytes(d['used'])} / {_human_bytes(d['total'])} ({d['percent']:.0f}%)")
+        if info.get('disks'): lines.append('')
+        for n in info.get('net', []):
+            lines.append(f"Net {n['name']}: IP {n.get('ip','?')}  MAC {n.get('mac','?')}  speed {n.get('speed_mbps','?')} Mbps")
+        return '\n'.join(lines)
+
+    def _tab_about(self):
+        T = self.T; L = self.L
+        body = tk.Frame(self._content, bg=T['bg']); body.pack(fill='both', expand=True)
+        # emblem
+        try:
+            emb = tk.PhotoImage(file=os.path.join(_base_dir(), 'icons', 'tray.png'))
+            self._about_emb = emb
+            tk.Label(body, image=emb, bg=T['bg']).pack(pady=(28, 8))
+        except Exception:
+            pass
+        tk.Label(body, text=DISPLAY_NAME, fg=T['text'], bg=T['bg'],
+                 font=('Segoe UI', 22, 'bold')).pack()
+        tk.Label(body, text=L['version'] + ' ' + VERSION, fg=T['muted'], bg=T['bg'],
+                 font=('Segoe UI', 10)).pack(pady=(0, 4))
+        tk.Label(body, text="© 2026 Fokion Papanikolaou", fg=T['muted'], bg=T['bg'],
+                 font=('Segoe UI', 9)).pack(pady=(0, 18))
+        # ── link icons in a single horizontal row ──
+        lrow = tk.Frame(body, bg=T['bg']); lrow.pack(pady=12)
+        def link_btn(icon, text, url):
+            b = tk.Label(lrow, text=f'{icon}\n{text}', fg=T['text'], bg=T['panel'],
+                         font=('Segoe UI', 10), padx=22, pady=10,
+                         cursor='hand2', justify='center')
+            b.pack(side='left', padx=6)
+            b.bind('<Button-1>', lambda e: webbrowser.open(url))
+            b.bind('<Enter>', lambda e: b.config(bg=T['bg2'], fg=T['cyan']))
+            b.bind('<Leave>', lambda e: b.config(bg=T['panel'], fg=T['text']))
+        link_btn('🏪', L['store'].replace('Microsoft ', ''),
+                 'https://apps.microsoft.com/detail/9P128R4SVXLC')
+        link_btn('🐙', 'GitHub',
+                 'https://github.com/FokionPapanikolaou/PulseBar')
+        link_btn('🌐', L['website'],
+                 'https://fokionpapanikolaou.github.io/PulseBar/')
+        # ── donate: direct in-window buttons (no extra popup) ──
+        tk.Label(body, text='💜  ' + L['donate'], fg='#d8b6ff', bg=T['bg'],
+                 font=('Segoe UI', 11, 'bold')).pack(pady=(18, 6))
+        drow = tk.Frame(body, bg=T['bg']); drow.pack()
+        def pay_btn(text, url, bbg, bfg, hbg):
+            b = tk.Label(drow, text=text, fg=bfg, bg=bbg,
+                         font=('Segoe UI', 10, 'bold'), padx=22, pady=8,
+                         cursor='hand2')
+            b.pack(side='left', padx=6)
+            b.bind('<Button-1>', lambda e: webbrowser.open(url))
+            b.bind('<Enter>', lambda e: b.config(bg=hbg))
+            b.bind('<Leave>', lambda e: b.config(bg=bbg))
+        pay_btn('PayPal',
+                'https://www.paypal.com/donate/?hosted_button_id=PHZG592VLQAFA',
+                '#0070ba', '#ffffff', '#1a8ad4')
+        pay_btn('Revolut',
+                'https://revolut.me/fokionpap',
+                '#191c1f', '#ffffff', '#33383d')
+
+
 # ── Widget ─────────────────────────────────────────────────────────────
-FONT_SCALES = {'small': (10, 9), 'normal': (12, 10), 'large': (14, 12)}
+FONT_SCALES = {'small': (9, 7), 'normal': (12, 10), 'large': (14, 12)}
 
 class Widget:
     COLORS = {'up': '#3fb950', 'dn': '#79c0ff', 'sep': '#2d333b'}
@@ -817,6 +2763,17 @@ class Widget:
         self._weather = None
         self._weather_running = False
         self._weather_dirty = False
+        # earthquakes (v2.6)
+        self._quake_active = None      # the most recent felt quake (dict) or None
+        self._quake_active_until = 0   # epoch when the dot should clear
+        self._quake_recent = []        # last 20 felt events (for the menu)
+        self._quakes_running = False
+        # power (v2.7)
+        self._cpu_name_cached = get_cpu_name()
+        self._gpu_name_cached = get_gpu_name()
+        self._power = None             # last {'cpu','gpu','total','source','cpu_tdp','gpu_tdp'} or None
+        # customize window (v2.6)
+        self._customize = None
         # rolling history for sparklines
         from collections import deque
         self._hist = {'cpu': deque(maxlen=32), 'ram': deque(maxlen=32)}
@@ -831,6 +2788,7 @@ class Widget:
         self._position()
         self._ensure_gpu_thread()
         self._ensure_weather_thread()
+        self._ensure_quakes_thread()
 
         self._update()
         self._animate()
@@ -838,6 +2796,8 @@ class Widget:
         self._setup_tray()
         threading.Thread(target=self._proc_sampler, daemon=True).start()
         threading.Thread(target=self._update_check_worker, daemon=True).start()
+        # adapt the chroma key to the real taskbar colour (kills dark fringes)
+        self.root.after(400, self._adapt_key_color)
 
         # First launch: a Windows tray notification points to the settings icon.
         if self._first_run:
@@ -848,17 +2808,66 @@ class Widget:
         try:
             if getattr(self, '_tray', None):
                 self._tray.notify(HINTS.get(self.lang, HINTS['en']),
-                                  'PulseBar')
+                                  DISPLAY_NAME)
         except Exception:
             pass
+
+    # ── adaptive chroma key ────────────────────────────────────────────
+    def _adapt_key_color(self):
+        """Sample the taskbar colour behind the widget and use it as the
+        chroma key. Anti-aliased fringes of icons/text then blend toward the
+        REAL background instead of near-black, so no dark boxes appear on
+        light taskbars. Re-run whenever the widget moves."""
+        if not self.cfg.get('transparent_bg'):
+            return
+        try:
+            from PIL import ImageGrab
+            self.root.withdraw()
+            self.root.update_idletasks()
+            x = self.root.winfo_x(); y = self.root.winfo_y()
+            w = max(60, self.root.winfo_width())
+            h = max(20, self.root.winfo_height())
+            img = ImageGrab.grab(bbox=(x, y, x + w, y + h))
+            img = img.resize((24, 8))
+            px = list(img.getdata())
+            r = sum(p[0] for p in px) // len(px)
+            g = sum(p[1] for p in px) // len(px)
+            b = sum(p[2] for p in px) // len(px)
+            # nudge one channel so the key is unlikely to collide with real
+            # pixel values inside the icons/text
+            b = b + 1 if b < 255 else b - 1
+            new_key = f'#{r:02x}{g:02x}{b:02x}'
+            old = getattr(self, '_adaptive_key', None)
+            # tolerance: skip the (expensive) rebuild if the sampled colour
+            # is within ±6 per channel of the current key
+            def _close(c1, c2):
+                if not c1 or not c2: return False
+                try:
+                    a = [int(c1[i:i+2], 16) for i in (1, 3, 5)]
+                    bch = [int(c2[i:i+2], 16) for i in (1, 3, 5)]
+                    return all(abs(x - y) <= 6 for x, y in zip(a, bch))
+                except Exception:
+                    return False
+            if not _close(new_key, old):
+                self._adaptive_key = new_key
+                self._apply_bg_mode()
+                self._build_ui()       # recreate children with the new bg
+                self._position()
+        except Exception:
+            pass
+        finally:
+            try: self.root.deiconify()
+            except Exception: pass
 
     # ── background mode (transparent vs. dark translucent) ─────────────
     def _apply_bg_mode(self):
         if self.cfg.get('transparent_bg'):
-            # true transparency via chroma-key; only icons/numbers show.
-            # (the keyed-out background is already click-through automatically;
-            #  settings live in the tray, so we don't need the widget clickable.)
-            self.bg = TRANSPARENT
+            # True transparency via chroma-key; only icons/numbers show.
+            # Anti-aliased pixels in icons/text blend toward the key colour,
+            # so the key must MATCH the taskbar behind us — otherwise dark
+            # "boxes" appear around everything on light taskbars. We sample
+            # the actual taskbar colour and use it as the key (adaptive).
+            self.bg = getattr(self, '_adaptive_key', None) or TRANSPARENT
             self.root.configure(bg=self.bg)
             self.root.attributes('-transparentcolor', self.bg)
             self.root.attributes('-alpha', 1.0)
@@ -887,7 +2896,7 @@ class Widget:
 
     # action helpers (always run on Tk thread)
     def _act_metric(self, key):
-        keys = ('show_cpu','show_ram','show_net','show_disk','show_batt','show_gpu','show_weather')
+        keys = ('show_cpu','show_ram','show_net','show_disk','show_batt','show_gpu','show_weather','show_power')
         if self.cfg.get(key) and not any(self.cfg.get(o) for o in keys if o != key):
             return
         self._set(key, not self.cfg.get(key)); self._rebuild()
@@ -915,6 +2924,84 @@ class Widget:
 
     def _act_set_rebuild(self, key, val):
         self._set(key, val); self._rebuild()
+
+    # ── earthquakes handlers ───────────────────────────────────────────
+    def _act_quakes_mmi(self, threshold):
+        self._set('quakes_min_mmi', float(threshold))
+
+    def _show_quake_history(self):
+        """Small popup listing the recent felt events near the user."""
+        try:
+            win = tk.Toplevel(self.root)
+            win.title(QUAKES_LABEL.get(self.lang, QUAKES_LABEL['en']))
+            win.configure(bg='#0d1117')
+            try: win.iconbitmap(os.path.join(_base_dir(), 'app.ico'))
+            except Exception: pass
+            win.geometry('540x420'); win.resizable(False, False)
+            try: win.attributes('-topmost', True)
+            except Exception: pass
+            HEAD = '#161b22'; LINE = '#2d333b'; GREY = '#8b96a2'; WHITE = '#ecf2f8'
+            ORANGE = '#ffa657'; RED = '#f85149'; CYAN = '#3fc3ff'
+            tk.Label(win, text='🚨  ' + QUAKES_LABEL.get(self.lang, QUAKES_LABEL['en']),
+                     bg='#0d1117', fg=CYAN, font=('Segoe UI', 14, 'bold')).pack(anchor='w', padx=18, pady=(14, 6))
+            _L = CUST_LABELS.get(self.lang, CUST_LABELS['en'])
+            tk.Label(win, text=_L['felt_near'], bg='#0d1117', fg=GREY,
+                     font=('Segoe UI', 9)).pack(anchor='w', padx=18)
+            tk.Frame(win, bg=LINE, height=1).pack(fill='x', padx=18, pady=(8, 0))
+
+            frame = tk.Frame(win, bg='#0d1117'); frame.pack(fill='both', expand=True, padx=18, pady=10)
+            if not self._quake_recent:
+                tk.Label(frame, bg='#0d1117', fg=GREY, text=_L['no_felt'],
+                         font=('Segoe UI', 10)).pack(anchor='w', pady=20)
+            else:
+                # click any row to dismiss the matching active alert
+                def _click_row(qq, rr):
+                    try:
+                        # if the clicked event IS the active one, dismiss it
+                        act = self._quake_active
+                        if act and act.get('id') and act['id'] == qq.get('id'):
+                            self._dismiss_quake_alert()
+                        # always mark as seen
+                        if qq.get('id'):
+                            seen = set(self.cfg.get('quakes_seen', []) or [])
+                            seen.add(qq['id'])
+                            self.cfg['quakes_seen'] = list(seen)[-200:]
+                            save_config(self.cfg)
+                        try: rr.destroy()
+                        except Exception: pass
+                    except Exception: pass
+                for q in self._quake_recent[:10]:
+                    row = tk.Frame(frame, bg=HEAD, highlightbackground=LINE,
+                                   highlightthickness=1, cursor='hand2')
+                    row.pack(fill='x', pady=3)
+                    inner = tk.Frame(row, bg=HEAD, cursor='hand2')
+                    inner.pack(fill='x', padx=10, pady=6)
+                    row.bind('<Button-1>', lambda e, qq=q, rr=row: _click_row(qq, rr))
+                    inner.bind('<Button-1>', lambda e, qq=q, rr=row: _click_row(qq, rr))
+                    col = RED if q['mmi'] >= 5 else (ORANGE if q['mmi'] >= 4 else CYAN)
+                    tk.Label(inner, text=f"M{q['mag']:.1f}", bg=HEAD, fg=col,
+                             font=('Segoe UI', 12, 'bold'), width=6, anchor='w').pack(side='left')
+                    detail = f"{q['dist_km']:.0f} km · MMI {q['mmi']:.1f} ({q['mmi_label']})"
+                    region = q.get('region', '')[:60]
+                    if region:
+                        detail = f"{region}\n{detail}"
+                    tk.Label(inner, text=detail, bg=HEAD, fg=WHITE, justify='left',
+                             font=('Segoe UI', 9)).pack(side='left', padx=10)
+                    age = q.get('age_sec')
+                    if age is not None:
+                        if age < 60:    ago = f"{int(age)}s"
+                        elif age < 3600: ago = f"{int(age/60)}m"
+                        else:           ago = f"{int(age/3600)}h"
+                    else:
+                        ago = ''
+                    src = q.get('source', '')
+                    tk.Label(inner, text=f"{ago}\n{src}", bg=HEAD, fg=GREY,
+                             font=('Segoe UI', 8), justify='right').pack(side='right')
+            tk.Button(win, text='Close', command=win.destroy,
+                      bg=HEAD, fg=WHITE, bd=0, font=('Segoe UI', 10),
+                      padx=20, pady=6, cursor='hand2').pack(pady=10)
+        except Exception:
+            pass
 
     def _act_toggle(self, key):
         self._set(key, not self.cfg.get(key)); self._rebuild()
@@ -980,7 +3067,7 @@ class Widget:
             except Exception:
                 img = Image.new('RGBA', (32, 32), (47, 129, 247, 255))
         self._pystray = pystray
-        self._tray = pystray.Icon(APP_NAME, img, 'PulseBar', self._tray_menu())
+        self._tray = pystray.Icon(APP_NAME, img, DISPLAY_NAME, self._tray_menu())
         threading.Thread(target=self._tray.run, daemon=True).start()
 
     def _tray_menu(self):
@@ -1006,6 +3093,7 @@ class Widget:
             metric('show_disk', t('disk')),
             *([metric('show_batt', t('batt'))] if self._has_batt else []),
             metric('show_weather', t('weather')),
+            metric('show_power', '⚡ ' + POWER_LABEL.get(self.lang, POWER_LABEL['en'])),
         )
         weather = Menu(
             MI('°C', lambda i, it: self._ui(lambda: self._act_weather_unit('C')),
@@ -1064,40 +3152,64 @@ class Widget:
                       checked=lambda it, d=drive: d in self.cfg.get('disks', []))
         disks_menu = Menu(*[disk_toggle(d) for d in list_drives()])
 
+        # ── earthquakes submenu ──
+        def mmi_radio(label, threshold):
+            return MI(label,
+                      lambda i, it: self._ui(lambda: self._act_quakes_mmi(threshold)),
+                      checked=lambda it, x=threshold: abs(self.cfg.get('quakes_min_mmi', 3.0) - x) < 0.01,
+                      radio=True)
+        levels = QUAKES_LEVELS.get(self.lang, QUAKES_LEVELS['en'])
+        quakes = Menu(
+            toggle('quakes_on', QUAKES_LABEL.get(self.lang, QUAKES_LABEL['en']) + ' on'),
+            Menu.SEPARATOR,
+            toggle('quakes_emsc', 'EMSC (Europe)'),
+            toggle('quakes_usgs', 'USGS (Global)'),
+            Menu.SEPARATOR,
+            *[mmi_radio(lab, th) for lab, th in levels],
+            Menu.SEPARATOR,
+            toggle('quakes_toasts', QUAKES_TOAST_LABEL.get(self.lang, QUAKES_TOAST_LABEL['en'])),
+            toggle('quakes_mute', QUAKES_MUTE_LABEL.get(self.lang, QUAKES_MUTE_LABEL['en'])),
+            Menu.SEPARATOR,
+            MI(QUAKES_RECENT_LABEL.get(self.lang, QUAKES_RECENT_LABEL['en']),
+               lambda i, it: self._ui(self._show_quake_history)),
+        )
+
+        # ── Hybrid tray menu: Customize… + quick toggles + system items ──
+        L = CUST_LABELS.get(self.lang, CUST_LABELS['en'])
         return Menu(
             MI(lambda it: '⬆  ' + UPDATE_LABEL.get(self.lang, UPDATE_LABEL['en'])
                           + (f'  v{self._update_tag}' if self._update_tag else ''),
                lambda i, it: self._ui(self._open_releases),
                visible=lambda it: bool(getattr(self, '_update_tag', None))),
-            MI(t('metrics'), metrics),
-            MI(DISKS_LABEL.get(self.lang, DISKS_LABEL['en']), disks_menu),
-            MI(t('weather'), weather),
-            MI(t('layout'), layout),
-            MI(t('size'), size), MI(BG_LABEL.get(self.lang, BG_LABEL['en']), background),
-            MI(t('refresh'), refresh), MI(t('netunit'), netunit),
-            MI(t('theme'), theme), MI(t('language'), language),
+            MI('🎨  ' + L['title'].split('—')[-1].strip() + '…',
+               lambda i, it: self._ui(self._open_customize),
+               default=True),
             Menu.SEPARATOR,
-            toggle('sparklines', t('sparklines')),
-            toggle('tooltips', TOOLTIPS_LABEL.get(self.lang, TOOLTIPS_LABEL['en'])),
+            # quick toggles that users hit often:
             MI(LOCK_LABEL.get(self.lang, LOCK_LABEL['en']),
                lambda i, it: self._ui(self._act_lock),
                checked=lambda it: bool(self.cfg.get('locked'))),
-            MI(t('reposition'), lambda i, it: self._ui(self._act_reposition)),
-            toggle('check_updates', CHECKUPD_LABEL.get(self.lang, CHECKUPD_LABEL['en'])),
-            # In MSIX mode startup is managed by Windows; we open Settings on click.
-            # Outside MSIX it's a proper toggle backed by the registry Run-key.
-            (MI(t('startup') + '…',
-                lambda i, it: self._ui(_open_startup_settings))
-             if _is_msix() else
-             MI(t('startup'),
-                lambda i, it: self._ui(lambda: (set_startup(not is_startup_enabled()))),
-                checked=lambda it: is_startup_enabled())),
+            toggle('quakes_mute', '🔇  ' + QUAKES_MUTE_LABEL.get(self.lang, QUAKES_MUTE_LABEL['en'])),
             Menu.SEPARATOR,
             MI('\U0001F49C  ' + DONATE_LABEL.get(self.lang, DONATE_LABEL['en']),
                lambda i, it: self._ui(self._show_donate)),
             MI(f'{APP_NAME} v{VERSION}', None, enabled=False),
             MI(t('close'), lambda i, it: self._ui(self._act_quit)),
         )
+
+    def _open_customize(self):
+        """Open the customize window. Only one instance at a time."""
+        try:
+            if getattr(self, '_customize', None) is not None:
+                try:
+                    self._customize._win.lift(); self._customize._win.focus_force()
+                    return
+                except Exception:
+                    self._customize = None
+            self._customize = CustomizeWindow(self)
+        except Exception:
+            import traceback as _tb
+            _tb.print_exc()
 
     # ── GPU background polling (PDH) ───────────────────────────────────
     def _ensure_gpu_thread(self):
@@ -1133,6 +3245,150 @@ class Widget:
                     break
                 time.sleep(10)
         self._weather_running = False
+
+    def _dismiss_quake_alert(self):
+        """User clicked the bar's quake icon → clear the active alert."""
+        try:
+            q = self._quake_active
+            if q and q.get('id'):
+                # also mark this event as seen so polling won't re-trigger it
+                seen = set(self.cfg.get('quakes_seen', []) or [])
+                seen.add(q['id'])
+                self.cfg['quakes_seen'] = list(seen)[-200:]
+                save_config(self.cfg)
+            self._quake_active = None
+            self._quake_active_until = 0
+            if getattr(self, 'lbl_quake', None):
+                self.lbl_quake.config(text='')
+        except Exception:
+            pass
+
+    # ── Earthquakes background polling ─────────────────────────────────
+    def _ensure_quakes_thread(self):
+        if self.cfg.get('quakes_on') and not self._quakes_running:
+            self._quakes_running = True
+            threading.Thread(target=self._quakes_loop, daemon=True).start()
+
+    def _user_latlon(self):
+        """User's coordinates: manual override > weather > ipapi."""
+        lat = self.cfg.get('quakes_lat')
+        lon = self.cfg.get('quakes_lon')
+        if isinstance(lat, (int, float)) and isinstance(lon, (int, float)):
+            return float(lat), float(lon)
+        # piggy-back on weather's geo if we already have it
+        try:
+            w = self._weather or {}
+            if w.get('lat') is not None and w.get('lon') is not None:
+                return float(w['lat']), float(w['lon'])
+        except Exception:
+            pass
+        try:
+            g = _http_json('https://ipapi.co/json/', timeout=6)
+            return float(g['latitude']), float(g['longitude'])
+        except Exception:
+            return None, None
+
+    def _quakes_loop(self):
+        # wait a moment so the weather thread can grab geo first
+        time.sleep(10)
+        while self.cfg.get('quakes_on'):
+            try:
+                self._check_quakes_once()
+            except Exception:
+                pass
+            # 5-minute poll, wake every 5s to react to config changes
+            for _ in range(60):
+                if not self.cfg.get('quakes_on'):
+                    break
+                time.sleep(5)
+        self._quakes_running = False
+
+    def _check_quakes_once(self):
+        lat, lon = self._user_latlon()
+        if lat is None: return
+        # ── debug: inject a synthetic event from a trigger file (for tests) ──
+        trigger = os.path.join(_exe_dir(), '_quake_test.json')
+        if os.path.exists(trigger):
+            try:
+                with open(trigger, 'r', encoding='utf-8') as f:
+                    fake = json.load(f)
+                os.remove(trigger)
+                # fill in derived fields if the test didn't
+                if 'dist_km' not in fake and lat is not None:
+                    fake['dist_km'] = _hypocentral_km(
+                        lat, lon, fake.get('lat', lat), fake.get('lon', lon),
+                        fake.get('depth', 10))
+                if 'mmi' not in fake:
+                    fake['mmi'] = _felt_intensity_mmi(fake.get('mag', 4.0),
+                                                     fake.get('dist_km', 10))
+                fake.setdefault('mmi_label', _mmi_label(fake['mmi']))
+                fake.setdefault('age_sec', 60)
+                fake.setdefault('source', 'TEST')
+                fake.setdefault('id', f'test-{int(time.time())}')
+                # show it
+                self._quake_active = fake
+                self._quake_active_until = time.time() + float(
+                    self.cfg.get('quakes_alert_min', 20)) * 60
+                self._quake_recent = [fake] + (self._quake_recent or [])
+                title = QUAKES_TOAST_TITLE.get(self.lang, QUAKES_TOAST_TITLE['en'])
+                body = (f"M{fake['mag']:.1f} · {fake['dist_km']:.0f} km · "
+                        f"{fake.get('region','')[:60]}").strip(' ·')
+                try:
+                    if getattr(self, '_tray', None):
+                        self._tray.notify(body, title)
+                except Exception:
+                    pass
+                return
+            except Exception:
+                pass
+        sources = []
+        if self.cfg.get('quakes_emsc'): sources.append('emsc')
+        if self.cfg.get('quakes_usgs'): sources.append('usgs')
+        if not sources: return
+        min_mag = float(self.cfg.get('quakes_min_mag', 2.5))
+        events = fetch_quakes(lat, lon, sources=tuple(sources), min_mag=min_mag)
+        max_age  = float(self.cfg.get('quakes_max_age_min', 30)) * 60.0
+        max_dist = float(self.cfg.get('quakes_max_dist_km', 100))
+        alert_min = float(self.cfg.get('quakes_alert_min', 20))
+        min_mmi = float(self.cfg.get('quakes_min_mmi', 3.0))
+        seen = set(self.cfg.get('quakes_seen', []) or [])
+        # find new felt events (must be inside the radius the user wants)
+        new_felt = []
+        for q in events:
+            if q['mmi'] < min_mmi: continue
+            if q['dist_km'] is None or q['dist_km'] > max_dist: continue
+            if q['age_sec'] is None or q['age_sec'] > max_age: continue
+            if q['id'] and q['id'] in seen: continue
+            new_felt.append(q)
+        # build the "recent felt events" list (last 20, any time, any source)
+        # also constrained by the user's radius
+        felt_all = [q for q in events
+                    if q['mmi'] >= min_mmi
+                    and q.get('dist_km') is not None
+                    and q['dist_km'] <= max_dist]
+        self._quake_recent = felt_all[:20]
+        # process new events: strongest first
+        new_felt.sort(key=lambda q: q['mmi'], reverse=True)
+        if new_felt:
+            strongest = new_felt[0]
+            self._quake_active = strongest
+            # bar dot stays lit for the configured number of minutes
+            self._quake_active_until = time.time() + alert_min * 60
+            # toast notification (unless muted)
+            if (self.cfg.get('quakes_toasts') and not self.cfg.get('quakes_mute')
+                    and getattr(self, '_tray', None)):
+                title = QUAKES_TOAST_TITLE.get(self.lang, QUAKES_TOAST_TITLE['en'])
+                body = (f"M{strongest['mag']:.1f} · {strongest['dist_km']:.0f} km · "
+                        f"{strongest.get('region','')[:60]}").strip(' ·')
+                try:
+                    self._tray.notify(body, title)
+                except Exception:
+                    pass
+            # remember all alerted IDs so we don't re-fire (cap at 200)
+            for q in new_felt:
+                if q['id']: seen.add(q['id'])
+            self.cfg['quakes_seen'] = list(seen)[-200:]
+            save_config(self.cfg)
 
     def _welcome(self):
         """First-run clickable banner — tapping it reliably opens the menu."""
@@ -1186,16 +3442,27 @@ class Widget:
         return icons
 
     def _bind_events(self):
-        """Bind drag + right-click on the window AND every child widget,
-        so clicks on the icons/numbers still work."""
+        """Bind drag on the bar window AND every bar child — but NEVER on
+        Toplevel children (Customize window, popups, tooltips). Binding
+        those made every click inside an open dialog start dragging the
+        bar, which then stuck to the cursor and 'froze' the dialog."""
         def bind_all(w):
-            # only drag on the widget; all settings live in the tray icon
             w.bind('<Button-1>', self._drag_start)
             w.bind('<B1-Motion>', self._drag_move)
             w.bind('<ButtonRelease-1>', self._drag_end)
             for child in w.winfo_children():
+                if isinstance(child, tk.Toplevel):
+                    continue   # dialogs manage their own input
                 bind_all(child)
-        bind_all(self.root)
+        # bind the root's handlers manually (root itself is fine), then
+        # recurse only into non-Toplevel children
+        self.root.bind('<Button-1>', self._drag_start)
+        self.root.bind('<B1-Motion>', self._drag_move)
+        self.root.bind('<ButtonRelease-1>', self._drag_end)
+        for child in self.root.winfo_children():
+            if isinstance(child, tk.Toplevel):
+                continue
+            bind_all(child)
 
     # ── positioning ───────────────────────────────────────────────────
     def _position(self):
@@ -1245,12 +3512,28 @@ class Widget:
         except Exception:
             pass   # never let a missing icon crash the widget
 
-    def _rebuild(self):
+    def _rebuild(self, _attempts=0):
         """Rebuild the UI safely (deferred until any menu grab is gone)."""
+        _log(f'_rebuild ENTER (attempts={_attempts}, rebuilding={getattr(self, "_rebuilding", False)})')
+        # re-entrancy guard: silently drop overlapping calls
+        if getattr(self, '_rebuilding', False):
+            _log('  -> re-entry blocked')
+            return
         try:
-            if self.root.grab_current() is not None:
-                self.root.after(50, self._rebuild)   # a menu is still up; wait
+            gc = self.root.grab_current()
+            if gc is not None and _attempts < 40:
+                _log(f'  -> grab={gc}, deferring')
+                self.root.after(50, lambda: self._rebuild(_attempts + 1))
                 return
+        except Exception as e:
+            _log(f'  -> grab check EXC: {e}')
+        self._rebuilding = True
+        try:
+            jid = getattr(self, '_pending_rebuild_after', None)
+            if jid:
+                try: self.root.after_cancel(jid)
+                except Exception: pass
+                self._pending_rebuild_after = None
         except Exception:
             pass
         _log('rebuild start')
@@ -1266,6 +3549,8 @@ class Widget:
             _log('rebuild done')
         except Exception:
             _log('rebuild EXC:\n' + traceback.format_exc())
+        finally:
+            self._rebuilding = False
 
     @property
     def theme(self):
@@ -1273,7 +3558,14 @@ class Widget:
 
     # ── UI ─────────────────────────────────────────────────────────────
     def _build_ui(self):
+        # Destroy only the bar cells — skip Toplevel children so that any
+        # open dialogs (Customize window, donate card, history popup, etc.)
+        # survive a rebuild.
         for w in self.root.winfo_children():
+            try:
+                if isinstance(w, tk.Toplevel): continue
+            except Exception:
+                pass
             w.destroy()
         self._imgs = []
         self._tip_cells = []     # [(frame, kind, extra)] for hover tooltips
@@ -1301,8 +3593,12 @@ class Widget:
                 pass
 
         def val(parent, width):
-            l = tk.Label(parent, text='', fg=valcol, width=width,
-                         bg=self.bg, font=vf, pady=0, padx=2)
+            # natural width in transparent mode (otherwise the extra space
+            # shows the dark taskbar through and looks like a black border)
+            kw = dict(text='', fg=valcol, bg=self.bg, font=vf, pady=0, padx=2)
+            if not self.cfg.get('transparent_bg'):
+                kw['width'] = width
+            l = tk.Label(parent, **kw)
             l.pack(side='left'); self._rgb_targets.append(l); return l
 
         def spark(parent):
@@ -1332,66 +3628,89 @@ class Widget:
             """A metric cell. Stacked = detail (e.g. GHz) on top, % below.
             Returns (cell, value_label, top_label_or_None)."""
             f = new_cell(); icon(icon_name, f)
+            # In transparent mode, an oversize `width=` chunk of the label
+            # background gets chroma-keyed → the dark taskbar shows through
+            # and looks like a "black border" around the value. Use natural
+            # width in transparent mode; keep fixed width only when opaque
+            # (so columns align visually).
+            use_width = None if self.cfg.get('transparent_bg') else width
+            f_lbl = lambda: dict(text='', fg=valcol, bg=self.bg, font=nf,
+                                 anchor='w', padx=2, pady=0,
+                                 **({'width': use_width} if use_width else {}))
             if stacked:
                 col = tk.Frame(f, bg=self.bg); col.pack(side='left', padx=2)
                 top = None
                 if has_top:
-                    top = tk.Label(col, text='', fg=valcol, bg=self.bg, font=nf,
-                                   width=width, anchor='w', padx=0, pady=0)
+                    top = tk.Label(col, **f_lbl())
                     top.pack(side='top', anchor='w'); self._rgb_targets.append(top)
-                v = tk.Label(col, text='', fg=valcol, bg=self.bg, font=nf,
-                             width=width, anchor='w', padx=0, pady=0)
+                v = tk.Label(col, **f_lbl())
                 v.pack(side='top', anchor='w'); self._rgb_targets.append(v)
                 return f, v, top
             return f, val(f, width), None
 
         sw = 7   # stacked column width fits "4.0 GHz" / "15.1 GB" / "100%"
-        if self.cfg['show_cpu']:
+
+        # Reset all labels (rebuild may have changed visibility / order)
+        self.lbl_cpu = self.lbl_cpu_top = None
+        self.lbl_ram = self.lbl_ram_top = None
+        self.lbl_gpu = self.lbl_gpu_top = None
+        self.lbl_up = self.lbl_dn = None
+        self.lbl_disk_r = self.lbl_disk_w = None
+        self.lbl_batt = None
+        self.lbl_wx = self.lbl_wx_icon = None
+        self.lbl_power = self.lbl_power_top = None
+        self.lbl_quake = None
+
+        # ── cell builders, keyed by cell id ──
+        def b_cpu():
             f, self.lbl_cpu, self.lbl_cpu_top = stat('cpu.png', sw if stacked else cpu_w, True)
             self.spark_cpu = spark(f); self._tip_cells.append((f, 'cpu', None))
-        if self.cfg['show_ram']:
+        def b_ram():
             f, self.lbl_ram, self.lbl_ram_top = stat('ram.png', sw if stacked else ram_w, True)
             self.spark_ram = spark(f); self._tip_cells.append((f, 'ram', None))
-        if self.cfg.get('show_gpu'):
+        def b_gpu():
             f, self.lbl_gpu, self.lbl_gpu_top = stat('gpu.png', sw if stacked else 4, stacked)
             self._tip_cells.append((f, 'gpu', None))
-        if self.cfg['show_net']:
+        def b_net():
             f = new_cell(); icon('net.png', f)
             nfr = tk.Frame(f, bg=self.bg); nfr.pack(side='left', padx=2)
             def net_row(arrow, color):
                 row = tk.Frame(nfr, bg=self.bg); row.pack(side='top', anchor='w')
                 tk.Label(row, text=arrow, fg=color, bg=self.bg, font=nf, padx=0).pack(side='left')
-                v = tk.Label(row, text='  0K', fg=valcol, bg=self.bg,
-                             font=nf, width=7, anchor='w', padx=1)
+                # natural width — the wide 'width=7' left a visible chunk of
+                # the (dark) taskbar showing through, looking like a black box
+                v = tk.Label(row, text=' 0 K', fg=valcol, bg=self.bg,
+                             font=nf, anchor='w', padx=2)
                 v.pack(side='left'); self._rgb_targets.append(v); return v
             self.lbl_up = net_row('▲', self.COLORS['up'])
             self.lbl_dn = net_row('▼', self.COLORS['dn'])
             self._tip_cells.append((f, 'net', None))
-        if self.cfg.get('show_disk'):
+        def b_disk():
             f = new_cell(); icon('disk.png', f)
             dfr = tk.Frame(f, bg=self.bg); dfr.pack(side='left', padx=2)
             def disk_row(arrow, color):
                 row = tk.Frame(dfr, bg=self.bg); row.pack(side='top', anchor='w')
                 tk.Label(row, text=arrow, fg=color, bg=self.bg, font=nf, padx=0).pack(side='left')
-                v = tk.Label(row, text='  0K', fg=valcol, bg=self.bg,
-                             font=nf, width=7, anchor='w', padx=1)
+                # natural width to avoid showing the bare taskbar through
+                v = tk.Label(row, text=' 0 K', fg=valcol, bg=self.bg,
+                             font=nf, anchor='w', padx=2)
                 v.pack(side='left'); self._rgb_targets.append(v); return v
             self.lbl_disk_r = disk_row('R', self.COLORS['dn'])
             self.lbl_disk_w = disk_row('W', self.COLORS['up'])
             self._tip_cells.append((f, 'disk', None))
-        # per-drive space % cells (e.g. C: 60%)
-        for drive in self.cfg.get('disks', []):
-            f = new_cell(); icon('disk.png', f)
-            lbl = tk.Label(f, text=f'{drive[0]} ..', fg=valcol, bg=self.bg,
-                           font=nf if stacked else vf, width=6, anchor='w', padx=2)
-            lbl.pack(side='left'); self._rgb_targets.append(lbl)
-            self._disk_lbls[drive] = lbl
-            self._tip_cells.append((f, 'diskspace', drive))
-        if self.cfg.get('show_batt') and self._has_batt:
+            # per-drive space % cells (e.g. C: 60%) live with the disk cell
+            for drive in self.cfg.get('disks', []):
+                fd = new_cell(); icon('disk.png', fd)
+                lbl = tk.Label(fd, text=f'{drive[0]} ..', fg=valcol, bg=self.bg,
+                               font=nf if stacked else vf, width=6, anchor='w', padx=2)
+                lbl.pack(side='left'); self._rgb_targets.append(lbl)
+                self._disk_lbls[drive] = lbl
+                self._tip_cells.append((fd, 'diskspace', drive))
+        def b_batt():
+            if not self._has_batt: return
             f, self.lbl_batt, _ = stat('battery.png', sw if stacked else 5, stacked)
             self._tip_cells.append((f, 'batt', None))
-        self.lbl_wx = self.lbl_wx_icon = None
-        if self.cfg.get('show_weather'):
+        def b_weather():
             f = new_cell()
             self.lbl_wx_icon = tk.Label(f, image=self._wx_icons.get('wx_cloudy'),
                                         bg=self.bg, bd=0)
@@ -1400,6 +3719,56 @@ class Widget:
                                    font=(vf if not stacked else nf), width=5, anchor='w', padx=2)
             self.lbl_wx.pack(side='left'); self._rgb_targets.append(self.lbl_wx)
             self._tip_cells.append((f, 'weather', None))
+        def b_power():
+            f = new_cell()
+            tk.Label(f, text='⚡', fg='#ffd64a', bg=self.bg,
+                     font=('Segoe UI', big), padx=2).pack(side='left')
+            if stacked:
+                col = tk.Frame(f, bg=self.bg); col.pack(side='left', padx=2)
+                # natural width — no extra transparent space showing the bar
+                self.lbl_power_top = tk.Label(col, text='', fg=valcol, bg=self.bg,
+                                              font=nf, anchor='w', padx=0)
+                self.lbl_power_top.pack(side='top', anchor='w'); self._rgb_targets.append(self.lbl_power_top)
+                self.lbl_power = tk.Label(col, text='', fg=valcol, bg=self.bg,
+                                          font=nf, anchor='w', padx=0)
+                self.lbl_power.pack(side='top', anchor='w'); self._rgb_targets.append(self.lbl_power)
+            else:
+                self.lbl_power_top = None
+                self.lbl_power = tk.Label(f, text='', fg=valcol, bg=self.bg,
+                                          font=vf, anchor='w', padx=2)
+                self.lbl_power.pack(side='left'); self._rgb_targets.append(self.lbl_power)
+            self._tip_cells.append((f, 'power', None))
+        def b_quake():
+            f = new_cell()
+            self.lbl_quake = tk.Label(f, text='', fg='#f85149', bg=self.bg,
+                                      font=('Segoe UI', big, 'bold'), padx=4,
+                                      cursor='hand2')
+            self.lbl_quake.pack(side='left')
+            # click the alert icon to dismiss it (user-requested)
+            self.lbl_quake.bind('<Button-1>', lambda e: self._dismiss_quake_alert())
+            self._tip_cells.append((f, 'quake', None))
+
+        builders = {'cpu': b_cpu, 'ram': b_ram, 'gpu': b_gpu, 'net': b_net,
+                    'disk': b_disk, 'batt': b_batt, 'weather': b_weather,
+                    'power': b_power, 'quake': b_quake}
+        visible_keys = {
+            'cpu': 'show_cpu', 'ram': 'show_ram', 'gpu': 'show_gpu',
+            'net': 'show_net', 'disk': 'show_disk', 'batt': 'show_batt',
+            'weather': 'show_weather', 'power': 'show_power', 'quake': 'quakes_on',
+        }
+        # Resolve order, then forcibly push critical cells to the end if asked
+        order = list(self.cfg.get('cell_order') or DEFAULT_CELL_ORDER)
+        for cid in DEFAULT_CELL_ORDER:
+            if cid not in order: order.append(cid)
+        if self.cfg.get('critical_last', True) and 'quake' in order:
+            order.remove('quake'); order.append('quake')
+        # Build cells in order
+        for cid in order:
+            if not self.cfg.get(visible_keys.get(cid, ''), False): continue
+            try:
+                builders[cid]()
+            except Exception:
+                pass
 
         # place cells according to orientation
         for i, f in enumerate(cells):
@@ -1407,7 +3776,10 @@ class Widget:
                 f.pack(side='top', anchor='w')
             else:
                 if i > 0:
-                    s = tk.Label(mc, text='│', fg=th['accent'], bg=self.bg,
+                    # in transparent mode the dark theme accent reads as a
+                    # harsh black line on light taskbars — use a soft gray
+                    sep_col = '#9aa7b8' if self.cfg.get('transparent_bg') else th['accent']
+                    s = tk.Label(mc, text='│', fg=sep_col, bg=self.bg,
                                  font=('Consolas', big+1), padx=3)
                     s.pack(side='left'); self._sep_labels.append(s)
                 f.pack(side='left')
@@ -1567,6 +3939,13 @@ class Widget:
 
     # ── process sampler (feeds the tooltips) ───────────────────────────
     def _proc_sampler(self):
+        # IMPORTANT: psutil.process_iter holds the Python GIL while scanning
+        # all processes (200-500 ms on busy systems). That blocked the Tk
+        # main thread every 2 s and made the customize window appear to
+        # "freeze". We now:
+        #   - skip the scan when no tooltip is currently visible
+        #   - poll every 5 s instead of 2
+        #   - warm up cpu_percent only ONCE at start (cheap)
         try:
             for p in psutil.process_iter():
                 try: p.cpu_percent()
@@ -1575,7 +3954,11 @@ class Widget:
             pass
         ncpu = psutil.cpu_count() or 1
         while True:
-            time.sleep(2.0)
+            time.sleep(5.0)
+            # only do the heavy scan when the user is actually looking at a tip
+            if not (getattr(self, '_tip', None) is not None
+                    or getattr(self, '_customize', None) is not None):
+                continue
             procs = []
             try:
                 for p in psutil.process_iter(['name', 'memory_info']):
@@ -1617,8 +4000,8 @@ class Widget:
                 try:
                     if getattr(self, '_tray', None):
                         self._tray.notify(
-                            f'PulseBar {tag} — ' + UPDATE_LABEL.get(self.lang, UPDATE_LABEL['en']),
-                            'PulseBar')
+                            f'{DISPLAY_NAME} {tag} — ' + UPDATE_LABEL.get(self.lang, UPDATE_LABEL['en']),
+                            DISPLAY_NAME)
                 except Exception:
                     pass
         except Exception:
@@ -1756,6 +4139,44 @@ class Widget:
                             rows.append((nm, f"{dd['tmin']}° / {dd['tmax']}°", GREEN))
                 else:
                     rows.append((tp('loading'), '', None))
+            elif kind == 'power':
+                title = (POWER_LABEL.get(self.lang, POWER_LABEL['en']), '')
+                p = self._power or {}
+                if p:
+                    total = p.get('total')
+                    if total is not None:
+                        rows.append((POWER_LABEL.get(self.lang, POWER_LABEL['en']) + ' total',
+                                     f'{int(round(total))} W', ORANGE))
+                    if p.get('cpu') is not None:
+                        rows.append(('CPU', f"{int(round(p['cpu']))} W / {int(round(p['cpu_tdp']))} W TDP", BLUE))
+                    if p.get('gpu') is not None:
+                        rows.append(('GPU', f"{int(round(p['gpu']))} W / {int(round(p['gpu_tdp']))} W TDP", GREEN))
+                    if p.get('source'):
+                        src_label = {'nvml': 'nvidia-smi (exact)',
+                                     'battery': 'battery rate (exact)',
+                                     'estimate': 'TDP × utilisation'}.get(p['source'], p['source'])
+                        rows.append(('Source', src_label, None))
+                    if self._cpu_name_cached:
+                        rows.append((self._cpu_name_cached[:30], '', None))
+                    if self._gpu_name_cached:
+                        rows.append((self._gpu_name_cached[:30], '', None))
+                else:
+                    rows.append((tp('loading'), '', None))
+            elif kind == 'quake':
+                title = (QUAKES_LABEL.get(self.lang, QUAKES_LABEL['en']), '')
+                q = self._quake_active
+                if q is not None:
+                    rows.append(('Magnitude', f"M{q['mag']:.1f}", ORANGE))
+                    rows.append(('Distance', f"{q['dist_km']:.0f} km", None))
+                    rows.append(('Intensity', f"MMI {q['mmi']:.1f} ({q['mmi_label']})", PURPLE))
+                    if q.get('region'):
+                        rows.append(('Region', str(q['region'])[:40], None))
+                    if q.get('age_sec') is not None:
+                        ageMin = q['age_sec'] / 60
+                        rows.append(('Time', f"{ageMin:.0f} min ago", None))
+                    rows.append(('Source', q.get('source', '—'), None))
+                else:
+                    rows.append(('No active alert', '', None))
         except Exception:
             rows.append(('—', '', None))
         return title, rows, bars
@@ -1834,9 +4255,13 @@ class Widget:
                 self.lbl_cpu_top.config(text=(f'{ghz:.1f} GHz' if ghz else ''))
                 self.lbl_cpu.config(text=f'{cpu:3.0f}%', fg=self._load_color(cpu))
             else:
-                txt = f'{cpu:3.0f}%'
-                if self.cfg.get('cpu_freq') and ghz:
-                    txt += f' {ghz:.1f}G'
+                # single row: show the row the user picked (percent or detail)
+                if self.cfg.get('single_row_mode') == 'detail' and ghz:
+                    txt = f'{ghz:.1f} GHz'
+                else:
+                    txt = f'{cpu:3.0f}%'
+                    if self.cfg.get('cpu_freq') and ghz:
+                        txt += f' {ghz:.1f}G'
                 self.lbl_cpu.config(text=txt, fg=self._load_color(cpu))
             self._draw_spark(self.spark_cpu, self._hist['cpu'])
         if self.lbl_ram:
@@ -1848,9 +4273,12 @@ class Widget:
                 self.lbl_ram_top.config(text=self._used_total(used_gb, vm.total / 1073741824))
                 self.lbl_ram.config(text=f'{ram:3.0f}%', fg=self._load_color(ram))
             else:
-                txt = f'{ram:3.0f}%'
-                if self.cfg.get('ram_gb'):
-                    txt += f' {used_gb:.1f}G'
+                if self.cfg.get('single_row_mode') == 'detail':
+                    txt = self._used_total(used_gb, vm.total / 1073741824)
+                else:
+                    txt = f'{ram:3.0f}%'
+                    if self.cfg.get('ram_gb'):
+                        txt += f' {used_gb:.1f}G'
                 self.lbl_ram.config(text=txt, fg=self._load_color(ram))
             self._draw_spark(self.spark_ram, self._hist['ram'])
         if self.lbl_up:
@@ -1889,13 +4317,19 @@ class Widget:
                 self._perdisk_prev = pd
             except Exception:
                 pass
-        # per-drive space %
-        for drive, lbl in self._disk_lbls.items():
-            try:
-                u = psutil.disk_usage(drive + '\\')
-                lbl.config(text=f'{drive[0]} {u.percent:.0f}%', fg=self._load_color(u.percent))
-            except Exception:
-                pass
+        # per-drive space % — throttled to every 5s (free space moves slowly,
+        # and disk_usage hits the filesystem on every call)
+        if self._disk_lbls:
+            now_d = time.time()
+            if now_d - getattr(self, '_diskspace_last_ts', 0) >= 5.0:
+                self._diskspace_last_ts = now_d
+                for drive, lbl in self._disk_lbls.items():
+                    try:
+                        u = psutil.disk_usage(drive + '\\')
+                        lbl.config(text=f'{drive[0]} {u.percent:.0f}%',
+                                   fg=self._load_color(u.percent))
+                    except Exception:
+                        pass
         if self.lbl_batt:
             b = psutil.sensors_battery()
             if b is not None:
@@ -1905,8 +4339,16 @@ class Widget:
                 self.lbl_batt.config(text=f'{plug}{pct}%', fg=col)
         if self.lbl_gpu:
             g = self._gpu
-            self.lbl_gpu.config(text=(f'{g:3.0f}%' if g is not None else '  —'),
-                                fg=self._load_color(g if g is not None else 0))
+            if (getattr(self, 'lbl_gpu_top', None) is None
+                    and self.cfg.get('single_row_mode') == 'detail'
+                    and self._gpu_mem is not None):
+                # single row in 'detail' mode → VRAM used/total
+                self.lbl_gpu.config(
+                    text=self._used_total(self._gpu_mem, self._vram_total),
+                    fg=self._load_color(g if g is not None else 0))
+            else:
+                self.lbl_gpu.config(text=(f'{g:3.0f}%' if g is not None else '  —'),
+                                    fg=self._load_color(g if g is not None else 0))
             if getattr(self, 'lbl_gpu_top', None) is not None:
                 self.lbl_gpu_top.config(
                     text=(self._used_total(self._gpu_mem, self._vram_total)
@@ -1921,14 +4363,52 @@ class Widget:
                 self.lbl_wx.config(text=f"{w['temp']}{sym}")
             else:
                 self.lbl_wx.config(text='—')
+        # ── power label (CPU+GPU estimated watts) ──
+        if getattr(self, 'lbl_power', None):
+            # throttle: power changes slowly — recompute at most every 2s
+            # (the estimate path is cheap, but the nvidia-smi probe isn't)
+            now_p = time.time()
+            if now_p - getattr(self, '_power_last_ts', 0) >= 2.0 or self._power is None:
+                gpu_util = self._gpu if self._gpu is not None else 0.0
+                self._power = get_power_estimate(cpu, gpu_util,
+                                                 self._cpu_name_cached, self._gpu_name_cached)
+                self._power_last_ts = now_p
+            p = self._power
+            total = int(round(p.get('total') or 0))
+            if self.lbl_power_top is not None:
+                # stacked: total on top, GPU watts (if available) below
+                self.lbl_power_top.config(text=f'{total} W')
+                gpu_w = p.get('gpu')
+                detail = f'{int(round(gpu_w))} g' if gpu_w is not None else p.get('source','')
+                self.lbl_power.config(text=detail)
+            else:
+                self.lbl_power.config(text=f'{total} W')
+        # ── earthquake dot: blink while active, clear when expired ──
+        if getattr(self, 'lbl_quake', None):
+            active = (self._quake_active is not None
+                      and time.time() < self._quake_active_until
+                      and not self.cfg.get('quakes_mute'))
+            if active:
+                # gentle blink driven by the existing animation tick
+                col = '#f85149' if (int(time.time() * 2) % 2 == 0) else '#7a1d1d'
+                self.lbl_quake.config(text='🚨', fg=col)
+            else:
+                self.lbl_quake.config(text='')
+                if self._quake_active and time.time() >= self._quake_active_until:
+                    self._quake_active = None
         self.root.after(self.cfg['interval'], self._update)
 
     # ── drag ───────────────────────────────────────────────────────────
     def _drag_start(self, e):
         if self.cfg.get('locked'): return
+        # the press must land on the BAR itself — never trust events that
+        # bubbled in from elsewhere (e.g. a dialog that got rebind-ed once)
+        self._drag_armed = True
         self._dx, self._dy = e.x, e.y; self._dragging = False
     def _drag_move(self, e):
         if self.cfg.get('locked'): return
+        if not getattr(self, '_drag_armed', False):
+            return   # no valid press on the bar → ignore orphan motion
         wa_bottom, taskbar_h, screen_w = get_taskbar_info()
         w = self.root.winfo_width(); h = self.root.winfo_height()
         x = self.root.winfo_x() + e.x - self._dx
@@ -1942,6 +4422,7 @@ class Widget:
         self._dragging = True
 
     def _drag_end(self, e):
+        self._drag_armed = False
         if self.cfg.get('locked'): return
         if getattr(self, '_dragging', False):
             self._dragging = False
@@ -1952,6 +4433,8 @@ class Widget:
             self.cfg['pos_x'] = min(max(0, self.root.winfo_x()), max(0, screen_w - w))
             self.cfg['pos_y'] = min(max(0, self.root.winfo_y()), max(0, max_y))
             save_config(self.cfg)
+            # the background under the new position may differ — resample key
+            self.root.after(300, self._adapt_key_color)
 
     # ── settings helpers ───────────────────────────────────────────────
     def _set(self, key, value):

@@ -1,10 +1,52 @@
 # Changelog
 
-All notable changes to **PulseBar** are documented here.
+All notable changes to **PulseDeck** (formerly **PulseBar**) are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [2.7.0] — 2026-06-12 — *PulseDeck rebrand · Customize window · System tab* ✨
+
+The biggest release yet: a full **Customize** window replacing the tray
+submenus, a detailed **System** tab, **earthquake alerts**, **power draw**,
+and the new **PulseDeck** name.
+
+### Added
+- **Customize window** — a proper 6-tab settings dialog (General, Metrics,
+  Appearance, Alerts, System, About) replacing the old nested tray menus.
+  Live preview, **drag-to-reorder** metrics (☰ handle), custom-drawn radio
+  pills and dropdowns themed to match the app.
+- **System tab** — full read-only hardware snapshot: CPU, RAM (with per-module
+  speed/vendor), GPU, **motherboard + BIOS**, **monitors** (via EDID),
+  **audio devices**, **optical drives**, storage and network — each with a
+  **brand wordmark** (AMD, Intel, NVIDIA, ASUS, MSI, Samsung, LG, AOC, …).
+  *Copy all* button for support tickets.
+- **Earthquake alerts** (EMSC + USGS) — felt-intensity (MMI) model based on
+  magnitude and hypocentral distance, configurable **alert radius** (default
+  100 km) and **duration** (default 20 min). A 🚨 dot pulses on the bar; click
+  it (or a history row) to dismiss. Recent-events history popup.
+- **Power draw** cell — estimated CPU + GPU watts (NVIDIA via `nvidia-smi`
+  when present; modelled from TDP + utilization otherwise).
+- **Single-row detail mode** — when two-row mode is off, choose whether the
+  single row shows the **percentage** or the **detail** (GHz / GB / VRAM).
+- **In-window donations** — PayPal & Revolut buttons live in the About tab.
+
+### Changed
+- **Rebrand to PulseDeck.** All user-visible surfaces (window title, About,
+  tray tooltip, notifications, installer) now read **PulseDeck**. The internal
+  package identity, config location and Store listing identity remain
+  unchanged so existing installs upgrade cleanly.
+- Smaller, sharper **Small** font scale; localized **Small / Normal / Large**
+  size labels.
+- Translations extended across all 8 languages for every new string.
+
+### Fixed
+- **Black fringes around bar icons** on light taskbars — icons are now hard
+  alpha-thresholded and the chroma key adapts to the sampled taskbar colour.
+- **Customize window freezes** while reordering metrics — replaced in-flight
+  repacking with a ghost-target drag that reorders once on release.
+- Throttled power, disk-usage and process sampling to keep the UI responsive.
 
 ## [2.5.1] — 2026-06-10 — *Auto-start fix for the Store build*
 
