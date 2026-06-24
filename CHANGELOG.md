@@ -6,6 +6,22 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [2.7.1] — 2026-06-24 — *Bug fixes: dropdown, VRAM, monitor name*
+
+### Fixed
+- **Language & theme dropdowns close instantly** — clicking a language or theme
+  option in the Customize window dismissed the menu before the selection
+  registered. The `FocusOut` handler now waits 150 ms so the click lands first.
+- **GPU VRAM total reports half the real capacity on AMD RX 6000 series** —
+  the Windows registry (`HardwareInformation.qwMemorySize`) can return 4 GB
+  for 8 GB cards due to an AMD driver quirk. The VRAM total is now read from
+  the PDH counter `\GPU Adapter Memory(*)\Dedicated Limit`, the same source
+  Task Manager uses, giving the correct value.
+- **ASUS monitors shown as "AUS"** in the System tab — the EDID manufacturer
+  code `AUS` (used by ASUS gaming monitors such as the VG279QR and ProArt
+  series) was missing from the lookup table. Added alongside the existing
+  `ACI` entry.
+
 ## [2.7.0] — 2026-06-12 — *PulseDeck rebrand · Customize window · System tab* ✨
 
 The biggest release yet: a full **Customize** window replacing the tray
