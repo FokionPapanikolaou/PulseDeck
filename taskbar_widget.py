@@ -693,6 +693,28 @@ TOOL_I18N = {
 for _lng, _d in TOOL_I18N.items():
     CUST_LABELS.setdefault(_lng, {}).update(_d)
 
+# ── Tools search + Uptime labels (v2.8) ────────────────────────────────
+EXTRA_28 = {
+ 'en':{'tool_search':'Search tools…','no_match':'No matching tools',
+       'sys_uptime':'Uptime','sys_booted':'Booted'},
+ 'el':{'tool_search':'Αναζήτηση εργαλείων…','no_match':'Κανένα εργαλείο',
+       'sys_uptime':'Χρόνος λειτουργίας','sys_booted':'Εκκίνηση'},
+ 'es':{'tool_search':'Buscar herramientas…','no_match':'Sin coincidencias',
+       'sys_uptime':'Tiempo activo','sys_booted':'Iniciado'},
+ 'de':{'tool_search':'Werkzeuge suchen…','no_match':'Keine Treffer',
+       'sys_uptime':'Betriebszeit','sys_booted':'Gestartet'},
+ 'fr':{'tool_search':'Rechercher des outils…','no_match':'Aucun outil',
+       'sys_uptime':'Temps de fonctionnement','sys_booted':'Démarré'},
+ 'it':{'tool_search':'Cerca strumenti…','no_match':'Nessuno strumento',
+       'sys_uptime':'Tempo di attività','sys_booted':'Avviato'},
+ 'pt':{'tool_search':'Procurar ferramentas…','no_match':'Nenhuma ferramenta',
+       'sys_uptime':'Tempo ativo','sys_booted':'Iniciado'},
+ 'ru':{'tool_search':'Поиск инструментов…','no_match':'Ничего не найдено',
+       'sys_uptime':'Время работы','sys_booted':'Запуск'},
+}
+for _lng, _d in EXTRA_28.items():
+    CUST_LABELS.setdefault(_lng, {}).update(_d)
+
 # Cell metadata for the Metrics tab (id -> friendly name, icon glyph, config key)
 CELL_META = (
     ('cpu',     'CPU',         '💻', 'show_cpu'),
@@ -2873,6 +2895,24 @@ class CustomizeWindow:
         bn_metrics = tk.Label(s, text='', fg=T['muted'], bg=T['panel'],
                               font=('Segoe UI', 8), anchor='w')
         bn_metrics.pack(fill='x', padx=18, pady=(0, 2))
+        # uptime (live) + boot time (static)
+        import datetime as _dt
+        try:
+            _boot_str = _dt.datetime.fromtimestamp(
+                psutil.boot_time()).strftime('%d/%m/%Y  %H:%M')
+        except Exception:
+            _boot_str = '—'
+        up_row = tk.Frame(s, bg=T['panel']); up_row.pack(fill='x', padx=18, pady=2)
+        tk.Label(up_row, text=L.get('sys_uptime', 'Uptime'), fg=T['muted'],
+                 bg=T['panel'], font=('Segoe UI', 9), width=20, anchor='w').pack(side='left')
+        up_val = tk.Label(up_row, text=_uptime_str(), fg=T['green'], bg=T['panel'],
+                          font=('Segoe UI', 9), anchor='w')
+        up_val.pack(side='left')
+        bt_row = tk.Frame(s, bg=T['panel']); bt_row.pack(fill='x', padx=18, pady=2)
+        tk.Label(bt_row, text=L.get('sys_booted', 'Booted'), fg=T['muted'],
+                 bg=T['panel'], font=('Segoe UI', 9), width=20, anchor='w').pack(side='left')
+        tk.Label(bt_row, text=_boot_str, fg=T['text'], bg=T['panel'],
+                 font=('Segoe UI', 9), anchor='w').pack(side='left')
         tk.Frame(s, bg=T['panel'], height=8).pack()
 
         # rolling smoothing buffers (~4 s) + per-disk busy-time tracker
@@ -2938,6 +2978,7 @@ class CustomizeWindow:
             try:
                 bn_val.config(text=label, fg=color)
                 bn_metrics.config(text=res.get('metrics', ''))
+                up_val.config(text=_uptime_str())
                 self._win.after(1000, _refresh_bn)
             except Exception:
                 pass
@@ -3056,7 +3097,7 @@ class CustomizeWindow:
             if os_.get('build'): v += f"  (build {os_['build']})"
             kv(s, 'Version', v)
         if os_.get('arch'): kv(s, 'Architecture', os_['arch'])
-        kv(s, 'Uptime', os_.get('uptime', '—'), T['green'])
+        # (uptime now lives in the live "Performance" section above)
         tk.Frame(s, bg=T['panel'], height=8).pack()
 
         # ── Disks ──
@@ -3142,6 +3183,36 @@ class CustomizeWindow:
                  bg=T['bg'], font=('Segoe UI', 9)).pack(side='top', anchor='w', padx=24)
         tk.Frame(self._content, bg=T['line'], height=1).pack(
             side='top', fill='x', padx=24, pady=(6, 0))
+        # search box
+        sr = tk.Frame(self._content, bg=T['bg'])
+        sr.pack(side='top', fill='x', padx=24, pady=(10, 2))
+        svar = tk.StringVar()
+        ent = tk.Entry(sr, textvariable=svar, bg=T['panel'], fg=T['text'],
+                       insertbackground=T['text'], relief='flat', font=('Segoe UI', 10),
+                       highlightthickness=1, highlightbackground=T['line'],
+                       highlightcolor=T['cyan'])
+        ent.pack(fill='x', ipady=5, ipadx=6)
+        placeholder = L.get('tool_search', 'Search tools…')
+        def _set_ph():
+            if not svar.get():
+                ent._ph = True
+                ent.config(fg=T['muted']); svar.set(placeholder)
+        def _clr_ph(_e=None):
+            if getattr(ent, '_ph', False):
+                ent._ph = False
+                ent.config(fg=T['text']); svar.set('')
+        ent._ph = False
+        _set_ph()
+        # the Customize window is overrideredirect, so it doesn't grab keyboard
+        # focus on its own — force it on click so typing reaches the Entry
+        def _focus_entry(_e=None):
+            try:
+                self._win.focus_force(); ent.focus_set()
+            except Exception:
+                pass
+        ent.bind('<Button-1>', _focus_entry)
+        ent.bind('<FocusIn>', _clr_ph)
+        ent.bind('<FocusOut>', lambda e: _set_ph())
         # scrollable body
         outer = tk.Frame(self._content, bg=T['bg'])
         outer.pack(fill='both', expand=True, padx=20, pady=4)
@@ -3184,14 +3255,32 @@ class CustomizeWindow:
                 wgt.bind('<Leave>', lambda e: _hover(T['panel']))
                 wgt.bind('<Button-1>', _click)
 
-        for cat_key, cicon, tools in TOOLS_CATALOG:
-            sf = tk.Frame(body, bg=T['panel']); sf.pack(fill='x', pady=(6, 4))
-            hdr = tk.Frame(sf, bg=T['panel']); hdr.pack(fill='x', padx=12, pady=(8, 4))
-            tk.Label(hdr, text=cicon + '  ' + L.get(cat_key, cat_key), fg=T['cyan'],
-                     bg=T['panel'], font=('Segoe UI', 11, 'bold')).pack(side='left')
-            for tkey, ticon, action in tools:
-                _tool_row(sf, ticon, L.get(tkey, tkey), action)
-            tk.Frame(sf, bg=T['panel'], height=8).pack()
+        def _paint(*_a):
+            q = '' if getattr(ent, '_ph', False) else svar.get().strip().lower()
+            for c in body.winfo_children():
+                c.destroy()
+            shown = False
+            for cat_key, cicon, tools in TOOLS_CATALOG:
+                matches = [(tkey, ticon, action) for tkey, ticon, action in tools
+                           if q in L.get(tkey, tkey).lower()]
+                if not matches:
+                    continue
+                shown = True
+                sf = tk.Frame(body, bg=T['panel']); sf.pack(fill='x', pady=(6, 4))
+                hdr = tk.Frame(sf, bg=T['panel']); hdr.pack(fill='x', padx=12, pady=(8, 4))
+                tk.Label(hdr, text=cicon + '  ' + L.get(cat_key, cat_key), fg=T['cyan'],
+                         bg=T['panel'], font=('Segoe UI', 11, 'bold')).pack(side='left')
+                for tkey, ticon, action in matches:
+                    _tool_row(sf, ticon, L.get(tkey, tkey), action)
+                tk.Frame(sf, bg=T['panel'], height=8).pack()
+            if not shown:
+                tk.Label(body, text=L.get('no_match', 'No matching tools'),
+                         fg=T['muted'], bg=T['bg'], font=('Segoe UI', 10)).pack(pady=24)
+            try: canvas.configure(scrollregion=canvas.bbox('all'))
+            except Exception: pass
+
+        svar.trace_add('write', _paint)
+        _paint()
 
     def _run_tool(self, action):
         """Open a tool, or run a confirmed safe action."""
