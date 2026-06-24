@@ -6,6 +6,44 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [2.8.0] — 2026-06-24 — *Bottleneck · Tools · DNS Boost · new 3D icons* 🧰
+
+A big toolkit release: a live performance analyzer, a full Tools tab, a DNS
+benchmark, fresh 3D icons, and a bar that can show text instead of glyphs.
+
+### Added
+- **Live bottleneck analysis** (System tab) — a "Performance (live)" section
+  that names the current limiting factor (CPU / GPU / RAM / VRAM / Disk) with
+  severity colouring, refreshed every second with ~4 s smoothing. A per-core
+  check catches single-thread loads that hide behind a low average.
+- **Live uptime & boot time** in the System tab.
+- **Tools tab** — 24 safe shortcuts to built-in Windows tools across 5
+  categories (Cleanup, Diagnostics, Performance, Network, System), with a
+  **search box**, a **List / Tiles** layout toggle (responsive grid), and a
+  one-line **hover description** for every tool. Three confirmed safe actions:
+  clear Temp, empty Recycle Bin, flush DNS.
+- **DNS Boost** (inside Tools → Network) — benchmarks 15 popular resolvers over
+  IPv4 + IPv6, ranks them by latency, and pins your machine's **current DNS**
+  at the top for comparison. Each result has Copy buttons; applying is done via
+  Windows' own network settings (Store-safe, no system changes).
+- **Bar marker: Icons or Text** — show CPU/GPU/RAM/NET/DISK/BAT labels on the
+  bar instead of glyphs (Appearance tab).
+- **Resizable Customize window** (bottom-right grip).
+
+### Changed
+- **New 3D glossy icon set** for the bar metrics and weather.
+- Removed the vertical separators between bar metrics and tightened spacing to
+  reclaim taskbar width.
+- VRAM total now read from the `\GPU Adapter Memory\Dedicated Limit` PDH
+  counter (correct on AMD RX 6000-series 8 GB cards).
+
+### Fixed
+- **No more pale/white fringe** around bar icons — icons use a binary-alpha
+  threshold with a 1 px erode so the chroma-key edges stay clean.
+- **Language & theme dropdowns** no longer close the instant they open (the
+  overrideredirect window never held focus; now dismissed by click-outside).
+- **ASUS monitors** no longer show as "AUS" (added the `AUS` EDID code).
+
 ## [2.7.1] — 2026-06-24 — *Bug fixes: dropdown, VRAM, monitor name*
 
 ### Fixed
