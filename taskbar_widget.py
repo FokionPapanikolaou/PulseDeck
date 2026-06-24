@@ -1016,7 +1016,7 @@ def collect_system_info():
             data = json.loads(r.stdout)
             data = data if isinstance(data, list) else [data]
             EDID_MFR = {  # 3-letter EDID codes → friendly name
-                'AOC':'AOC','ACI':'Asus','ACR':'Acer','AUO':'AU Optronics',
+                'AOC':'AOC','ACI':'Asus','AUS':'Asus','ACR':'Acer','AUO':'AU Optronics',
                 'BNQ':'BenQ','BOE':'BOE','CMN':'Innolux','DEL':'Dell',
                 'GSM':'LG','HPN':'HP','HSD':'HannStar','HWP':'HP',
                 'IVM':'Iiyama','LEN':'Lenovo','LGD':'LG Display','MEI':'Panasonic',
@@ -1526,8 +1526,9 @@ _PDH_MORE_DATA  = 0x800007D2
 
 class GpuCounter:
     """Reads GPU 3D-engine utilization % and dedicated VRAM usage via PDH."""
-    PATH_UTIL = r'\GPU Engine(*engtype_3D)\Utilization Percentage'
-    PATH_MEM  = r'\GPU Process Memory(*)\Dedicated Usage'
+    PATH_UTIL      = r'\GPU Engine(*engtype_3D)\Utilization Percentage'
+    PATH_MEM       = r'\GPU Process Memory(*)\Dedicated Usage'
+    PATH_MEM_LIMIT = r'\GPU Adapter Memory(*)\Dedicated Limit'
 
     def __init__(self):
         self.ok = False
@@ -1540,15 +1541,19 @@ class GpuCounter:
             self._c = _wt.HANDLE()
             if self._pdh.PdhAddEnglishCounterW(self._q, self.PATH_UTIL, 0, ctypes.byref(self._c)) != 0:
                 return
-            cm = _wt.HANDLE()   # VRAM counter is optional
+            cm = _wt.HANDLE()   # VRAM usage counter is optional
             if self._pdh.PdhAddEnglishCounterW(self._q, self.PATH_MEM, 0, ctypes.byref(cm)) == 0:
                 self._cm = cm
+            cl = _wt.HANDLE()   # VRAM limit counter is optional
+            self._cl = None
+            if self._pdh.PdhAddEnglishCounterW(self._q, self.PATH_MEM_LIMIT, 0, ctypes.byref(cl)) == 0:
+                self._cl = cl
             self._pdh.PdhCollectQueryData(self._q)   # prime
             self.ok = True
         except Exception:
             self.ok = False
 
-    def _sum(self, counter):
+    def _read_counter(self, counter, aggregate='sum'):
         if not counter:
             return None
         size = _wt.DWORD(0); count = _wt.DWORD(0)
@@ -1562,25 +1567,34 @@ class GpuCounter:
         if st != 0:
             return None
         items = ctypes.cast(buf, ctypes.POINTER(_PDH_FMT_COUNTERVALUE_ITEM_W))
-        total = 0.0
+        result = 0.0
         for i in range(count.value):
-            total += max(0.0, items[i].FmtValue.doubleValue)
-        return total
+            v = max(0.0, items[i].FmtValue.doubleValue)
+            if aggregate == 'max':
+                result = max(result, v)
+            else:
+                result += v
+        return result
+
+    def _sum(self, counter):
+        return self._read_counter(counter, 'sum')
 
     def read(self):
-        """Returns (utilization_percent | None, vram_gb | None)."""
+        """Returns (utilization_percent | None, vram_used_gb | None, vram_total_gb | None)."""
         if not self.ok:
-            return (None, None)
+            return (None, None, None)
         try:
             if (self._pdh.PdhCollectQueryData(self._q) & 0xFFFFFFFF) != 0:
-                return (None, None)
+                return (None, None, None)
             util = self._sum(self._c)
             mem = self._sum(self._cm)
+            limit = self._read_counter(self._cl, 'max')
             upct = int(min(100, round(util))) if util is not None else None
             mgb = (mem / 1073741824) if mem else None
-            return (upct, mgb)
+            lgb = (limit / 1073741824) if limit else None
+            return (upct, mgb, lgb)
         except Exception:
-            return (None, None)
+            return (None, None, None)
 
 # ── Live CPU frequency via PDH (psutil reports only the static base clock) ──
 class CpuFreq:
@@ -1992,8 +2006,10 @@ class CustomizeWindow:
                 row.bind('<Enter>', lambda e, r=row: r.config(bg=T['bg2']))
                 row.bind('<Leave>', lambda e, r=row, c=code:
                          r.config(bg=T['panel'] if c != cur_lang else T['bg2']))
-            # auto-close on focus-out
-            menu.bind('<FocusOut>', lambda e: menu.destroy())
+            # Delay destroy so Button-1 on a row fires before the menu is gone
+            def _lang_focus_out(e, m=menu):
+                m.after(150, lambda: m.destroy() if m.winfo_exists() else None)
+            menu.bind('<FocusOut>', _lang_focus_out)
             menu.focus_set()
         btn.bind('<Button-1>', _show_lang_menu)
         btn.bind('<Enter>', lambda e: btn.config(bg=T['bg2']))
@@ -2258,7 +2274,9 @@ class CustomizeWindow:
                 row.bind('<Enter>', lambda e, r=row: r.config(bg=T['bg2']))
                 row.bind('<Leave>', lambda e, r=row, n=name:
                          r.config(bg=T['panel'] if n != cur_theme else T['bg2']))
-            menu.bind('<FocusOut>', lambda e: menu.destroy())
+            def _theme_focus_out(e, m=menu):
+                m.after(150, lambda: m.destroy() if m.winfo_exists() else None)
+            menu.bind('<FocusOut>', _theme_focus_out)
             menu.focus_set()
         tbtn.bind('<Button-1>', _show_theme_menu)
         tbtn.bind('<Enter>', lambda e: tbtn.config(bg=T['bg2']))
@@ -3222,7 +3240,9 @@ class Widget:
             self._gpu_counter = GpuCounter()
         while self.cfg.get('show_gpu'):
             try:
-                self._gpu, self._gpu_mem = self._gpu_counter.read()
+                self._gpu, self._gpu_mem, _vram_limit = self._gpu_counter.read()
+                if _vram_limit and _vram_limit > 0:
+                    self._vram_total = _vram_limit
             except Exception:
                 self._gpu, self._gpu_mem = None, None
             time.sleep(1)
