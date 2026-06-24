@@ -1816,10 +1816,15 @@ def benchmark_dns(server, is_ipv6=False, rounds=4):
     return vals[len(vals) // 2]
 
 def _ipv6_available():
-    """True if the machine can open an IPv6 socket and reach a known resolver."""
+    """True if the machine can reach any well-known IPv6 resolver. Probes a few
+    so a single down/slow resolver doesn't hide IPv6 entirely."""
     if not socket.has_ipv6:
         return False
-    return dns_latency('2606:4700:4700::1111', is_ipv6=True, timeout=1.5) is not None
+    for ip in ('2606:4700:4700::1111', '2001:4860:4860::8888',
+               '2620:fe::fe', '2a10:50c0::ad1:ff'):
+        if dns_latency(ip, is_ipv6=True, timeout=1.5) is not None:
+            return True
+    return False
 
 # ── Weather (Open-Meteo, free, no API key) ─────────────────────────────
 def _http_json(url, timeout=6):
@@ -2566,11 +2571,29 @@ class CustomizeWindow:
                 row.bind('<Enter>', lambda e, r=row: r.config(bg=T['bg2']))
                 row.bind('<Leave>', lambda e, r=row, c=code:
                          r.config(bg=T['panel'] if c != cur_lang else T['bg2']))
-            # Delay destroy so Button-1 on a row fires before the menu is gone
-            def _lang_focus_out(e, m=menu):
-                m.after(150, lambda: m.destroy() if m.winfo_exists() else None)
-            menu.bind('<FocusOut>', _lang_focus_out)
-            menu.focus_set()
+            # Close on click-outside / Escape via a modal grab. FocusOut is
+            # unreliable here: the parent window is overrideredirect and never
+            # holds keyboard focus, which made the menu close instantly.
+            def _close(_e=None, m=menu):
+                try: m.grab_release()
+                except Exception: pass
+                try: m.destroy()
+                except Exception: pass
+            def _outside(e, m=menu):
+                try:
+                    if not m.winfo_exists():
+                        return
+                    inside = (m.winfo_rootx() <= e.x_root <= m.winfo_rootx() + m.winfo_width()
+                              and m.winfo_rooty() <= e.y_root <= m.winfo_rooty() + m.winfo_height())
+                    if not inside:
+                        _close()
+                except Exception:
+                    pass
+            menu.bind('<Button-1>', _outside, add='+')
+            menu.bind('<Escape>', _close)
+            menu.update_idletasks()
+            try: menu.grab_set()
+            except Exception: pass
         btn.bind('<Button-1>', _show_lang_menu)
         btn.bind('<Enter>', lambda e: btn.config(bg=T['bg2']))
         btn.bind('<Leave>', lambda e: btn.config(bg=T['panel']))
@@ -2834,10 +2857,27 @@ class CustomizeWindow:
                 row.bind('<Enter>', lambda e, r=row: r.config(bg=T['bg2']))
                 row.bind('<Leave>', lambda e, r=row, n=name:
                          r.config(bg=T['panel'] if n != cur_theme else T['bg2']))
-            def _theme_focus_out(e, m=menu):
-                m.after(150, lambda: m.destroy() if m.winfo_exists() else None)
-            menu.bind('<FocusOut>', _theme_focus_out)
-            menu.focus_set()
+            # Close on click-outside / Escape via a modal grab (see lang menu).
+            def _close(_e=None, m=menu):
+                try: m.grab_release()
+                except Exception: pass
+                try: m.destroy()
+                except Exception: pass
+            def _outside(e, m=menu):
+                try:
+                    if not m.winfo_exists():
+                        return
+                    inside = (m.winfo_rootx() <= e.x_root <= m.winfo_rootx() + m.winfo_width()
+                              and m.winfo_rooty() <= e.y_root <= m.winfo_rooty() + m.winfo_height())
+                    if not inside:
+                        _close()
+                except Exception:
+                    pass
+            menu.bind('<Button-1>', _outside, add='+')
+            menu.bind('<Escape>', _close)
+            menu.update_idletasks()
+            try: menu.grab_set()
+            except Exception: pass
         tbtn.bind('<Button-1>', _show_theme_menu)
         tbtn.bind('<Enter>', lambda e: tbtn.config(bg=T['bg2']))
         tbtn.bind('<Leave>', lambda e: tbtn.config(bg=T['panel']))
@@ -3654,6 +3694,19 @@ class CustomizeWindow:
         def _ms(v):
             return f'{v:.0f} ms' if v is not None else '—'
 
+        def _addr_line(parent, bg, tag, addr, ms, val_color):
+            ln = tk.Frame(parent, bg=bg); ln.pack(fill='x', pady=1)
+            tk.Label(ln, text=tag, fg=T['muted'], bg=bg, font=('Segoe UI', 8),
+                     width=5, anchor='w').pack(side='left')
+            tk.Label(ln, text=addr, fg=T['text'], bg=bg, font=('Consolas', 9),
+                     anchor='w').pack(side='left')
+            cp = tk.Label(ln, text='📋', fg=T['cyan'], bg=bg, font=('Segoe UI', 9),
+                          cursor='hand2', padx=6)
+            cp.pack(side='right')
+            cp.bind('<Button-1>', lambda e, ip=addr: _copy(ip))
+            tk.Label(ln, text=_ms(ms), fg=val_color, bg=bg, font=('Segoe UI', 9),
+                     width=8, anchor='e').pack(side='right', padx=6)
+
         def _render(results, ipv6_ok):
             for c in body.winfo_children():
                 c.destroy()
@@ -3661,31 +3714,20 @@ class CustomizeWindow:
                 best = idx == 0 and v4ms is not None
                 rowbg = T['bg2'] if best else T['panel']
                 row = tk.Frame(body, bg=rowbg); row.pack(fill='x', pady=2)
-                inner = tk.Frame(row, bg=rowbg); inner.pack(fill='x', padx=12, pady=8)
-                nm = tk.Frame(inner, bg=rowbg); nm.pack(side='left')
-                tk.Label(nm, text=name, fg=(T['green'] if best else T['text']),
-                         bg=rowbg, font=('Segoe UI', 10, 'bold' if best else 'normal'),
-                         anchor='w').pack(side='top', anchor='w')
-                tk.Label(nm, text=f'IPv4 {v4}' + (f'   ·   IPv6 {v6}' if ipv6_ok else ''),
-                         fg=T['muted'], bg=rowbg, font=('Segoe UI', 8),
-                         anchor='w').pack(side='top', anchor='w')
+                hd = tk.Frame(row, bg=rowbg); hd.pack(fill='x', padx=12, pady=(7, 2))
+                tk.Label(hd, text=name, fg=(T['green'] if best else T['text']), bg=rowbg,
+                         font=('Segoe UI', 10, 'bold' if best else 'normal'),
+                         anchor='w').pack(side='left')
                 if best:
-                    tk.Label(inner, text='⚡ ' + L.get('dns_best', 'Fastest'), fg=T['green'],
+                    tk.Label(hd, text='⚡ ' + L.get('dns_best', 'Fastest'), fg=T['green'],
                              bg=rowbg, font=('Segoe UI', 8, 'bold')).pack(side='left', padx=10)
-                # copy button (right)
-                cp = tk.Label(inner, text='📋 ' + L.get('dns_copy', 'Copy'), fg=T['cyan'],
-                              bg=rowbg, font=('Segoe UI', 9), cursor='hand2', padx=8)
-                cp.pack(side='right')
-                cp.bind('<Button-1>', lambda e, ip=v4: _copy(ip))
-                # latency figures (right)
-                lat = _ms(v4ms) + (('  /  ' + _ms(v6ms)) if ipv6_ok else '')
-                tk.Label(inner, text=lat, fg=(T['green'] if best else T['text']),
-                         bg=rowbg, font=('Segoe UI', 10), width=16,
-                         anchor='e').pack(side='right', padx=8)
+                bf = tk.Frame(row, bg=rowbg); bf.pack(fill='x', padx=12, pady=(0, 7))
+                _addr_line(bf, rowbg, 'IPv4', v4, v4ms, T['green'] if best else T['text'])
+                _addr_line(bf, rowbg, 'IPv6', v6, v6ms, T['text'])
             if not ipv6_ok:
                 tk.Label(body, text='ℹ ' + L.get('dns_no_ipv6', 'IPv6 not available'),
-                         fg=T['muted'], bg=T['bg'], font=('Segoe UI', 8)).pack(
-                             anchor='w', pady=(8, 0))
+                         fg=T['muted'], bg=T['bg'], font=('Segoe UI', 8),
+                         wraplength=440, justify='left').pack(anchor='w', pady=(8, 0))
             try: canvas.configure(scrollregion=canvas.bbox('all'))
             except Exception: pass
 
