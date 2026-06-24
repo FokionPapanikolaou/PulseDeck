@@ -776,6 +776,119 @@ DNS_I18N = {
 }
 for _lng, _d in DNS_I18N.items():
     CUST_LABELS.setdefault(_lng, {}).update(_d)
+# "DNS Boost" tool label is the same brand term in every language
+for _lng in CUST_LABELS:
+    CUST_LABELS[_lng]['t_dnsboost'] = 'DNS Boost'
+
+# ── One-line "what it does" descriptions shown on hover in the Tools tab ──
+TOOL_DESC = {
+ 'en':{'t_diskcleanup':'Free up disk space','t_storage':'Storage usage & cleanup',
+       't_optimize':'Defragment / optimize drives','t_apps':'Installed apps & uninstall',
+       't_tempfolder':'Open the Temp files folder','t_cleartemp':'Delete temporary files',
+       't_recyclebin':'Empty the Recycle Bin','t_ramcheck':'Test your RAM for errors',
+       't_taskmgr':'Processes & performance','t_resmon':'Live CPU/RAM/disk/network use',
+       't_msinfo':'Full hardware & system report','t_reliability':'Stability & crash history',
+       't_dxdiag':'DirectX & GPU diagnostics','t_power':'Power plan settings',
+       't_startup':'Apps that run at startup','t_visualfx':'Animations & visual effects',
+       't_graphics':'Per-app GPU preference','t_dnsboost':'Find the fastest DNS server',
+       't_netstatus':'Network status & properties','t_adapters':'Network adapter settings',
+       't_flushdns':'Clear the DNS cache','t_update':'Check for Windows updates',
+       't_security':'Antivirus & firewall','t_restore':'Restore to an earlier point',
+       't_devmgr':'Manage hardware devices'},
+ 'el':{'t_diskcleanup':'Ελευθέρωσε χώρο στον δίσκο','t_storage':'Χρήση & καθαρισμός αποθήκευσης',
+       't_optimize':'Ανασυγκρότηση / βελτιστοποίηση','t_apps':'Εγκατεστημένες εφαρμογές & απεγκατάσταση',
+       't_tempfolder':'Άνοιγμα φακέλου Temp','t_cleartemp':'Διαγραφή προσωρινών αρχείων',
+       't_recyclebin':'Άδειασμα Κάδου','t_ramcheck':'Έλεγχος RAM για σφάλματα',
+       't_taskmgr':'Διεργασίες & επιδόσεις','t_resmon':'Ζωντανή χρήση CPU/RAM/δίσκου/δικτύου',
+       't_msinfo':'Πλήρης αναφορά υλικού','t_reliability':'Σταθερότητα & ιστορικό σφαλμάτων',
+       't_dxdiag':'Διαγνωστικά DirectX & GPU','t_power':'Ρυθμίσεις σχεδίου ενέργειας',
+       't_startup':'Εφαρμογές που ξεκινούν με τα Windows','t_visualfx':'Κινήσεις & οπτικά εφέ',
+       't_graphics':'Προτίμηση GPU ανά εφαρμογή','t_dnsboost':'Βρες τον γρηγορότερο DNS',
+       't_netstatus':'Κατάσταση & ιδιότητες δικτύου','t_adapters':'Ρυθμίσεις προσαρμογέα δικτύου',
+       't_flushdns':'Καθαρισμός μνήμης DNS','t_update':'Έλεγχος για ενημερώσεις Windows',
+       't_security':'Antivirus & τείχος προστασίας','t_restore':'Επαναφορά σε προηγούμενο σημείο',
+       't_devmgr':'Διαχείριση συσκευών υλικού'},
+ 'es':{'t_diskcleanup':'Liberar espacio en disco','t_storage':'Uso y limpieza de almacenamiento',
+       't_optimize':'Desfragmentar / optimizar','t_apps':'Apps instaladas y desinstalar',
+       't_tempfolder':'Abrir la carpeta Temp','t_cleartemp':'Eliminar archivos temporales',
+       't_recyclebin':'Vaciar la papelera','t_ramcheck':'Probar la RAM en busca de errores',
+       't_taskmgr':'Procesos y rendimiento','t_resmon':'Uso en vivo CPU/RAM/disco/red',
+       't_msinfo':'Informe completo del sistema','t_reliability':'Estabilidad e historial de fallos',
+       't_dxdiag':'Diagnóstico DirectX y GPU','t_power':'Opciones del plan de energía',
+       't_startup':'Apps que inician con Windows','t_visualfx':'Animaciones y efectos visuales',
+       't_graphics':'Preferencia de GPU por app','t_dnsboost':'Encuentra el DNS más rápido',
+       't_netstatus':'Estado y propiedades de red','t_adapters':'Configuración del adaptador',
+       't_flushdns':'Vaciar la caché DNS','t_update':'Buscar actualizaciones de Windows',
+       't_security':'Antivirus y firewall','t_restore':'Restaurar a un punto anterior',
+       't_devmgr':'Administrar dispositivos'},
+ 'de':{'t_diskcleanup':'Speicherplatz freigeben','t_storage':'Speichernutzung & Bereinigung',
+       't_optimize':'Defragmentieren / optimieren','t_apps':'Installierte Apps & Deinstallation',
+       't_tempfolder':'Temp-Ordner öffnen','t_cleartemp':'Temporäre Dateien löschen',
+       't_recyclebin':'Papierkorb leeren','t_ramcheck':'RAM auf Fehler testen',
+       't_taskmgr':'Prozesse & Leistung','t_resmon':'Live CPU/RAM/Disk/Netz-Nutzung',
+       't_msinfo':'Vollständiger Systembericht','t_reliability':'Stabilität & Absturzverlauf',
+       't_dxdiag':'DirectX- & GPU-Diagnose','t_power':'Energieplan-Einstellungen',
+       't_startup':'Autostart-Apps','t_visualfx':'Animationen & visuelle Effekte',
+       't_graphics':'GPU-Präferenz pro App','t_dnsboost':'Schnellsten DNS finden',
+       't_netstatus':'Netzwerkstatus & Eigenschaften','t_adapters':'Netzwerkadapter-Einstellungen',
+       't_flushdns':'DNS-Cache leeren','t_update':'Nach Windows-Updates suchen',
+       't_security':'Antivirus & Firewall','t_restore':'Auf früheren Punkt zurücksetzen',
+       't_devmgr':'Geräte verwalten'},
+ 'fr':{'t_diskcleanup':'Libérer de l’espace disque','t_storage':'Stockage & nettoyage',
+       't_optimize':'Défragmenter / optimiser','t_apps':'Applications & désinstallation',
+       't_tempfolder':'Ouvrir le dossier Temp','t_cleartemp':'Supprimer les fichiers temporaires',
+       't_recyclebin':'Vider la corbeille','t_ramcheck':'Tester la RAM',
+       't_taskmgr':'Processus & performances','t_resmon':'Usage CPU/RAM/disque/réseau en direct',
+       't_msinfo':'Rapport système complet','t_reliability':'Stabilité & historique des pannes',
+       't_dxdiag':'Diagnostic DirectX & GPU','t_power':'Options d’alimentation',
+       't_startup':'Applications au démarrage','t_visualfx':'Animations & effets visuels',
+       't_graphics':'Préférence GPU par appli','t_dnsboost':'Trouver le DNS le plus rapide',
+       't_netstatus':'État & propriétés du réseau','t_adapters':'Paramètres de la carte réseau',
+       't_flushdns':'Vider le cache DNS','t_update':'Rechercher des mises à jour',
+       't_security':'Antivirus & pare-feu','t_restore':'Restaurer à un point antérieur',
+       't_devmgr':'Gérer les périphériques'},
+ 'it':{'t_diskcleanup':'Libera spazio su disco','t_storage':'Uso & pulizia archiviazione',
+       't_optimize':'Deframmenta / ottimizza','t_apps':'App installate & disinstalla',
+       't_tempfolder':'Apri la cartella Temp','t_cleartemp':'Elimina file temporanei',
+       't_recyclebin':'Svuota il cestino','t_ramcheck':'Verifica la RAM',
+       't_taskmgr':'Processi & prestazioni','t_resmon':'Uso live CPU/RAM/disco/rete',
+       't_msinfo':'Report completo del sistema','t_reliability':'Stabilità & cronologia errori',
+       't_dxdiag':'Diagnostica DirectX & GPU','t_power':'Opzioni risparmio energia',
+       't_startup':'App all’avvio','t_visualfx':'Animazioni & effetti visivi',
+       't_graphics':'Preferenza GPU per app','t_dnsboost':'Trova il DNS più veloce',
+       't_netstatus':'Stato & proprietà di rete','t_adapters':'Impostazioni scheda di rete',
+       't_flushdns':'Svuota la cache DNS','t_update':'Cerca aggiornamenti di Windows',
+       't_security':'Antivirus & firewall','t_restore':'Ripristina a un punto precedente',
+       't_devmgr':'Gestisci dispositivi'},
+ 'pt':{'t_diskcleanup':'Libertar espaço em disco','t_storage':'Uso & limpeza de armazenamento',
+       't_optimize':'Desfragmentar / otimizar','t_apps':'Apps instaladas & desinstalar',
+       't_tempfolder':'Abrir a pasta Temp','t_cleartemp':'Eliminar ficheiros temporários',
+       't_recyclebin':'Esvaziar a reciclagem','t_ramcheck':'Testar a RAM',
+       't_taskmgr':'Processos & desempenho','t_resmon':'Uso ao vivo CPU/RAM/disco/rede',
+       't_msinfo':'Relatório completo do sistema','t_reliability':'Estabilidade & histórico de falhas',
+       't_dxdiag':'Diagnóstico DirectX & GPU','t_power':'Opções de energia',
+       't_startup':'Apps no arranque','t_visualfx':'Animações & efeitos visuais',
+       't_graphics':'Preferência de GPU por app','t_dnsboost':'Encontra o DNS mais rápido',
+       't_netstatus':'Estado & propriedades de rede','t_adapters':'Definições da placa de rede',
+       't_flushdns':'Limpar a cache DNS','t_update':'Procurar atualizações do Windows',
+       't_security':'Antivírus & firewall','t_restore':'Restaurar a um ponto anterior',
+       't_devmgr':'Gerir dispositivos'},
+ 'ru':{'t_diskcleanup':'Освободить место на диске','t_storage':'Хранилище и очистка',
+       't_optimize':'Дефрагментация / оптимизация','t_apps':'Приложения и удаление',
+       't_tempfolder':'Открыть папку Temp','t_cleartemp':'Удалить временные файлы',
+       't_recyclebin':'Очистить корзину','t_ramcheck':'Проверить ОЗУ на ошибки',
+       't_taskmgr':'Процессы и производительность','t_resmon':'Живое использование ресурсов',
+       't_msinfo':'Полный отчёт о системе','t_reliability':'Стабильность и история сбоев',
+       't_dxdiag':'Диагностика DirectX и GPU','t_power':'Параметры электропитания',
+       't_startup':'Автозагрузка приложений','t_visualfx':'Анимации и визуальные эффекты',
+       't_graphics':'Предпочтение GPU для приложений','t_dnsboost':'Найти самый быстрый DNS',
+       't_netstatus':'Состояние и свойства сети','t_adapters':'Параметры сетевого адаптера',
+       't_flushdns':'Очистить кэш DNS','t_update':'Проверить обновления Windows',
+       't_security':'Антивирус и брандмауэр','t_restore':'Восстановить к точке',
+       't_devmgr':'Управление устройствами'},
+}
+for _lng, _d in TOOL_DESC.items():
+    CUST_LABELS.setdefault(_lng, {}).update({'desc__' + k: v for k, v in _d.items()})
 
 # Cell metadata for the Metrics tab (id -> friendly name, icon glyph, config key)
 CELL_META = (
@@ -1735,6 +1848,7 @@ TOOLS_CATALOG = [
         ('t_graphics',    '🖥', ('settings', 'ms-settings:display-advancedgraphics')),
     ]),
     ('cat_net', '🌐', [
+        ('t_dnsboost',    '🚀', ('action', 'dns_boost')),
         ('t_netstatus',   '📶', ('settings', 'ms-settings:network-status')),
         ('t_adapters',    '🔌', ('applet', 'ncpa.cpl')),
         ('t_flushdns',    '♻', ('action', 'flush_dns')),
@@ -2303,7 +2417,6 @@ class CustomizeWindow:
             ('alerts',     'alerts',     '🚨'),
             ('system',     'system',     '💻'),
             ('tools',      'tools',      '🧰'),
-            ('dns',        'dns',        '🚀'),
             ('about',      'about',      'ℹ'),
         ):
             b = tk.Label(tabs, text=f'  {icon}  {self.L[key]}', fg=T['muted'],
@@ -3385,8 +3498,17 @@ class CustomizeWindow:
         f.pack(side='top', fill='x', padx=24, pady=(14, 2))
         tk.Label(f, text='🧰  ' + L.get('tools', 'Tools'), fg=T['text'], bg=T['bg'],
                  font=('Segoe UI', 12, 'bold')).pack(side='left')
-        tk.Label(self._content, text='   ' + L.get('tools_sub', ''), fg=T['muted'],
-                 bg=T['bg'], font=('Segoe UI', 9)).pack(side='top', anchor='w', padx=24)
+        # subtitle doubles as a hover hint: shows each tool's description on hover
+        _default_sub = '   ' + L.get('tools_sub', '')
+        sub_lbl = tk.Label(self._content, text=_default_sub, fg=T['muted'],
+                           bg=T['bg'], font=('Segoe UI', 9), anchor='w')
+        sub_lbl.pack(side='top', anchor='w', padx=24, fill='x')
+        def _hint(tkey):
+            d = L.get('desc__' + tkey, '')
+            sub_lbl.config(text='   ' + d, fg=T['cyan']) if d else sub_lbl.config(
+                text=_default_sub, fg=T['muted'])
+        def _hint_clear():
+            sub_lbl.config(text=_default_sub, fg=T['muted'])
         tk.Frame(self._content, bg=T['line'], height=1).pack(
             side='top', fill='x', padx=24, pady=(6, 0))
         # search box + layout toggle (one row)
@@ -3478,7 +3600,7 @@ class CustomizeWindow:
         canvas.bind_all('<MouseWheel>',
                         lambda e: canvas.yview_scroll(int(-e.delta / 120), 'units'))
 
-        def _tool_row(parent, ticon, label, action):
+        def _tool_row(parent, tkey, ticon, label, action):
             destructive = action[0] == 'action' and action[1] != 'flush_dns'
             row = tk.Frame(parent, bg=T['panel'], cursor='hand2')
             row.pack(fill='x', padx=10, pady=2)
@@ -3491,16 +3613,20 @@ class CustomizeWindow:
             tk.Label(inner, text='›', bg=T['panel'], fg=T['muted'],
                      font=('Segoe UI', 12)).pack(side='right')
             kids = [inner] + list(inner.winfo_children())
-            def _hover(bg):
-                row.config(bg=bg)
-                for c in kids: c.config(bg=bg)
+            def _enter(_e):
+                row.config(bg=T['bg2'])
+                for c in kids: c.config(bg=T['bg2'])
+                _hint(tkey)
+            def _leave(_e):
+                row.config(bg=T['panel'])
+                for c in kids: c.config(bg=T['panel'])
+                _hint_clear()
             def _click(_e): self._run_tool(action)
             for wgt in (row, *kids):
-                wgt.bind('<Enter>', lambda e: _hover(T['bg2']))
-                wgt.bind('<Leave>', lambda e: _hover(T['panel']))
+                wgt.bind('<Enter>', _enter); wgt.bind('<Leave>', _leave)
                 wgt.bind('<Button-1>', _click)
 
-        def _tool_tile(parent, ticon, label, action):
+        def _tool_tile(parent, tkey, ticon, label, action):
             destructive = action[0] == 'action' and action[1] != 'flush_dns'
             tile = tk.Frame(parent, bg=T['panel'], cursor='hand2',
                             highlightbackground=T['line'], highlightthickness=1,
@@ -3513,12 +3639,15 @@ class CustomizeWindow:
                      font=('Segoe UI', 8), wraplength=TILE_W - 24,
                      justify='center').pack()
             kids = [tile] + list(tile.winfo_children())
-            def _hover(bg):
-                for c in kids: c.config(bg=bg)
+            def _enter(_e):
+                for c in kids: c.config(bg=T['bg2'])
+                _hint(tkey)
+            def _leave(_e):
+                for c in kids: c.config(bg=T['panel'])
+                _hint_clear()
             def _click(_e): self._run_tool(action)
             for wgt in kids:
-                wgt.bind('<Enter>', lambda e: _hover(T['bg2']))
-                wgt.bind('<Leave>', lambda e: _hover(T['panel']))
+                wgt.bind('<Enter>', _enter); wgt.bind('<Leave>', _leave)
                 wgt.bind('<Button-1>', _click)
             return tile
 
@@ -3542,12 +3671,12 @@ class CustomizeWindow:
                 if mode == 'grid':
                     cont = tk.Frame(sf, bg=T['panel'])
                     cont.pack(fill='x', padx=10, pady=(0, 8))
-                    tiles = [_tool_tile(cont, ticon, L.get(tkey, tkey), action)
+                    tiles = [_tool_tile(cont, tkey, ticon, L.get(tkey, tkey), action)
                              for tkey, ticon, action in matches]
                     _grid_groups.append((cont, tiles))
                 else:
                     for tkey, ticon, action in matches:
-                        _tool_row(sf, ticon, L.get(tkey, tkey), action)
+                        _tool_row(sf, tkey, ticon, L.get(tkey, tkey), action)
                     tk.Frame(sf, bg=T['panel'], height=8).pack()
             if not shown:
                 tk.Label(body, text=L.get('no_match', 'No matching tools'),
@@ -3567,6 +3696,9 @@ class CustomizeWindow:
         kind, target = action
         if kind != 'action':
             launch_tool(action)
+            return
+        if target == 'dns_boost':
+            self.show_tab('dns')          # full DNS Boost panel, returns via its Back link
             return
         if target == 'flush_dns':
             action_flush_dns()
@@ -3639,8 +3771,13 @@ class CustomizeWindow:
         T = self.T; L = self.L
         f = tk.Frame(self._content, bg=T['bg'])
         f.pack(side='top', fill='x', padx=24, pady=(14, 2))
-        tk.Label(f, text='🚀  ' + L.get('dns', 'DNS'), fg=T['text'], bg=T['bg'],
+        tk.Label(f, text='🚀  DNS Boost', fg=T['text'], bg=T['bg'],
                  font=('Segoe UI', 12, 'bold')).pack(side='left')
+        # back to Tools (DNS Boost lives inside the Tools tab now)
+        back = tk.Label(f, text='←  ' + L.get('tools', 'Tools'), fg=T['cyan'], bg=T['bg'],
+                        font=('Segoe UI', 9), cursor='hand2')
+        back.pack(side='right')
+        back.bind('<Button-1>', lambda e: self.show_tab('tools'))
         tk.Label(self._content, text='   ' + L.get('dns_sub', ''), fg=T['muted'],
                  bg=T['bg'], font=('Segoe UI', 9)).pack(side='top', anchor='w', padx=24)
         tk.Frame(self._content, bg=T['line'], height=1).pack(
@@ -4625,10 +4762,13 @@ class Widget:
             # keyed out cleanly — so there is NO pale/white fringe around the
             # icon (the old anti-aliased edges left semi-transparent pixels that
             # blended toward the key but never matched it exactly).
-            from PIL import Image, ImageTk
+            from PIL import Image, ImageTk, ImageFilter
             icon = Image.open(path).convert('RGBA')
             r, g, b, a = icon.split()
             a = a.point(lambda v: 255 if v >= 110 else 0)
+            # erode the alpha by 1px so the outermost (often light) anti-aliased
+            # edge ring is dropped — kills the faint white outline on the bar.
+            a = a.filter(ImageFilter.MinFilter(3))
             icon = Image.merge('RGBA', (r, g, b, a))
             img = ImageTk.PhotoImage(icon)
         except Exception:
@@ -4637,7 +4777,7 @@ class Widget:
             try: img = tk.PhotoImage(file=path)
             except Exception: return   # never let a missing icon crash the widget
         self._imgs.append(img)
-        tk.Label(self.root, image=img, bg=self.bg, bd=0).pack(side='left', padx=(4, 1))
+        tk.Label(self.root, image=img, bg=self.bg, bd=0).pack(side='left', padx=(2, 0))
 
     def _rebuild(self, _attempts=0):
         """Rebuild the UI safely (deferred until any menu grab is gone)."""
@@ -4897,19 +5037,13 @@ class Widget:
             except Exception:
                 pass
 
-        # place cells according to orientation
+        # place cells according to orientation (no separators; tight spacing
+        # to save taskbar room — just a small gap between cells)
         for i, f in enumerate(cells):
             if vertical:
                 f.pack(side='top', anchor='w')
             else:
-                if i > 0:
-                    # in transparent mode the dark theme accent reads as a
-                    # harsh black line on light taskbars — use a soft gray
-                    sep_col = '#9aa7b8' if self.cfg.get('transparent_bg') else th['accent']
-                    s = tk.Label(mc, text='│', fg=sep_col, bg=self.bg,
-                                 font=('Consolas', big+1), padx=3)
-                    s.pack(side='left'); self._sep_labels.append(s)
-                f.pack(side='left')
+                f.pack(side='left', padx=(0 if i == 0 else 7, 0))
 
         # hover tooltips with details
         if self.cfg.get('tooltips'):
