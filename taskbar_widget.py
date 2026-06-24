@@ -13,6 +13,8 @@ import urllib.request
 import urllib.parse
 import traceback
 import faulthandler
+import socket
+import random
 
 APP_NAME = 'PulseBar'        # internal identity: config dir, mutex, registry, Store package
 DISPLAY_NAME = 'PulseDeck'   # user-visible product name (rebrand)
@@ -727,6 +729,52 @@ LAYOUT_I18N = {
  'ru':{'view_list':'Список','view_grid':'Плитки'},
 }
 for _lng, _d in LAYOUT_I18N.items():
+    CUST_LABELS.setdefault(_lng, {}).update(_d)
+
+# ── DNS Boost tab labels (v2.8) ────────────────────────────────────────
+DNS_I18N = {
+ 'en':{'dns':'DNS','dns_sub':'Find the fastest DNS for your connection',
+       'dns_find':'Find fastest DNS','dns_again':'Test again','dns_testing':'Testing…',
+       'dns_best':'Fastest','dns_copy':'Copy','dns_copied':'Copied ✓',
+       'dns_opennet':'Open network settings','dns_no_ipv6':'IPv6 not available here',
+       'dns_howto':'To change: open network settings → your adapter → DNS, then paste the address.'},
+ 'el':{'dns':'DNS','dns_sub':'Βρες το γρηγορότερο DNS για τη σύνδεσή σου',
+       'dns_find':'Εύρεση γρηγορότερου DNS','dns_again':'Ξανά','dns_testing':'Έλεγχος…',
+       'dns_best':'Γρηγορότερο','dns_copy':'Αντιγραφή','dns_copied':'Αντιγράφηκε ✓',
+       'dns_opennet':'Άνοιγμα ρυθμίσεων δικτύου','dns_no_ipv6':'Το IPv6 δεν είναι διαθέσιμο',
+       'dns_howto':'Για αλλαγή: ρυθμίσεις δικτύου → προσαρμογέας → DNS, και επικόλλησε τη διεύθυνση.'},
+ 'es':{'dns':'DNS','dns_sub':'Encuentra el DNS más rápido para tu conexión',
+       'dns_find':'Buscar DNS más rápido','dns_again':'Repetir','dns_testing':'Probando…',
+       'dns_best':'Más rápido','dns_copy':'Copiar','dns_copied':'Copiado ✓',
+       'dns_opennet':'Abrir configuración de red','dns_no_ipv6':'IPv6 no disponible',
+       'dns_howto':'Para cambiar: configuración de red → adaptador → DNS, y pega la dirección.'},
+ 'de':{'dns':'DNS','dns_sub':'Finde das schnellste DNS für deine Verbindung',
+       'dns_find':'Schnellstes DNS finden','dns_again':'Erneut','dns_testing':'Test läuft…',
+       'dns_best':'Schnellstes','dns_copy':'Kopieren','dns_copied':'Kopiert ✓',
+       'dns_opennet':'Netzwerkeinstellungen öffnen','dns_no_ipv6':'IPv6 nicht verfügbar',
+       'dns_howto':'Zum Ändern: Netzwerkeinstellungen → Adapter → DNS, Adresse einfügen.'},
+ 'fr':{'dns':'DNS','dns_sub':'Trouvez le DNS le plus rapide pour votre connexion',
+       'dns_find':'Trouver le DNS le plus rapide','dns_again':'Relancer','dns_testing':'Test…',
+       'dns_best':'Le plus rapide','dns_copy':'Copier','dns_copied':'Copié ✓',
+       'dns_opennet':'Ouvrir les paramètres réseau','dns_no_ipv6':'IPv6 indisponible',
+       'dns_howto':'Pour changer : paramètres réseau → carte → DNS, puis collez l’adresse.'},
+ 'it':{'dns':'DNS','dns_sub':'Trova il DNS più veloce per la tua connessione',
+       'dns_find':'Trova DNS più veloce','dns_again':'Riprova','dns_testing':'Test…',
+       'dns_best':'Più veloce','dns_copy':'Copia','dns_copied':'Copiato ✓',
+       'dns_opennet':'Apri impostazioni di rete','dns_no_ipv6':'IPv6 non disponibile',
+       'dns_howto':'Per cambiare: impostazioni di rete → scheda → DNS, e incolla l’indirizzo.'},
+ 'pt':{'dns':'DNS','dns_sub':'Encontra o DNS mais rápido para a tua ligação',
+       'dns_find':'Encontrar DNS mais rápido','dns_again':'Repetir','dns_testing':'A testar…',
+       'dns_best':'Mais rápido','dns_copy':'Copiar','dns_copied':'Copiado ✓',
+       'dns_opennet':'Abrir definições de rede','dns_no_ipv6':'IPv6 indisponível',
+       'dns_howto':'Para mudar: definições de rede → adaptador → DNS, e cola o endereço.'},
+ 'ru':{'dns':'DNS','dns_sub':'Найдите самый быстрый DNS для вашего подключения',
+       'dns_find':'Найти быстрый DNS','dns_again':'Заново','dns_testing':'Проверка…',
+       'dns_best':'Быстрейший','dns_copy':'Копировать','dns_copied':'Скопировано ✓',
+       'dns_opennet':'Открыть параметры сети','dns_no_ipv6':'IPv6 недоступен',
+       'dns_howto':'Чтобы сменить: параметры сети → адаптер → DNS, вставьте адрес.'},
+}
+for _lng, _d in DNS_I18N.items():
     CUST_LABELS.setdefault(_lng, {}).update(_d)
 
 # Cell metadata for the Metrics tab (id -> friendly name, icon glyph, config key)
@@ -1699,6 +1747,80 @@ TOOLS_CATALOG = [
     ]),
 ]
 
+# ── DNS Boost: benchmark popular resolvers, IPv4 + IPv6 (v2.8) ──────────
+# Pure measurement — sends real DNS queries over UDP/53 and times the reply,
+# like DNS Benchmark. PulseDeck never changes the system DNS itself (that
+# needs admin and is blocked in the MSIX sandbox); it shows the fastest and
+# lets the user switch via Windows' own network settings.
+import struct as _struct
+
+DNS_PROVIDERS = [
+    ('Cloudflare',         ['1.1.1.1', '1.0.0.1'],
+                           ['2606:4700:4700::1111', '2606:4700:4700::1001']),
+    ('Google',             ['8.8.8.8', '8.8.4.4'],
+                           ['2001:4860:4860::8888', '2001:4860:4860::8844']),
+    ('Quad9',              ['9.9.9.9', '149.112.112.112'],
+                           ['2620:fe::fe', '2620:fe::9']),
+    ('OpenDNS',            ['208.67.222.222', '208.67.220.220'],
+                           ['2620:119:35::35', '2620:119:53::53']),
+    ('AdGuard',            ['94.140.14.14', '94.140.15.15'],
+                           ['2a10:50c0::ad1:ff', '2a10:50c0::ad2:ff']),
+    ('Cloudflare Malware', ['1.1.1.2', '1.0.0.2'],
+                           ['2606:4700:4700::1112', '2606:4700:4700::1002']),
+    ('Quad9 Unsecured',    ['9.9.9.10', '149.112.112.10'],
+                           ['2620:fe::10', '2620:fe::fe:10']),
+    ('DNS.SB',             ['185.222.222.222', '45.11.45.11'],
+                           ['2a09::', '2a11::']),
+]
+
+def _dns_query_packet(hostname, qtype=1):
+    """Build a minimal DNS query packet. Returns (transaction_id, bytes)."""
+    tid = random.randint(0, 0xFFFF)
+    header = _struct.pack('>HHHHHH', tid, 0x0100, 1, 0, 0, 0)  # RD set
+    q = b''.join(bytes([len(p)]) + p.encode('ascii')
+                 for p in hostname.split('.')) + b'\x00'
+    q += _struct.pack('>HH', qtype, 1)   # QTYPE, QCLASS=IN
+    return tid, header + q
+
+def dns_latency(server, is_ipv6=False, qtype=1, timeout=1.0,
+                host='www.microsoft.com'):
+    """One DNS query latency in ms, or None on timeout/error."""
+    tid, pkt = _dns_query_packet(host, qtype)
+    fam = socket.AF_INET6 if is_ipv6 else socket.AF_INET
+    s = socket.socket(fam, socket.SOCK_DGRAM)
+    s.settimeout(timeout)
+    try:
+        t0 = time.perf_counter()
+        s.sendto(pkt, (server, 53))
+        data, _ = s.recvfrom(512)
+        dt = (time.perf_counter() - t0) * 1000.0
+        if len(data) >= 2 and _struct.unpack('>H', data[:2])[0] == tid:
+            return dt
+        return None
+    except Exception:
+        return None
+    finally:
+        try: s.close()
+        except Exception: pass
+
+def benchmark_dns(server, is_ipv6=False, rounds=4):
+    """Median latency (ms) over a few queries; None if every query failed."""
+    vals = []
+    for _ in range(rounds):
+        ms = dns_latency(server, is_ipv6)
+        if ms is not None:
+            vals.append(ms)
+    if not vals:
+        return None
+    vals.sort()
+    return vals[len(vals) // 2]
+
+def _ipv6_available():
+    """True if the machine can open an IPv6 socket and reach a known resolver."""
+    if not socket.has_ipv6:
+        return False
+    return dns_latency('2606:4700:4700::1111', is_ipv6=True, timeout=1.5) is not None
+
 # ── Weather (Open-Meteo, free, no API key) ─────────────────────────────
 def _http_json(url, timeout=6):
     req = urllib.request.Request(url, headers={'User-Agent': 'PulseBar'})
@@ -2176,6 +2298,7 @@ class CustomizeWindow:
             ('alerts',     'alerts',     '🚨'),
             ('system',     'system',     '💻'),
             ('tools',      'tools',      '🧰'),
+            ('dns',        'dns',        '🚀'),
             ('about',      'about',      'ℹ'),
         ):
             b = tk.Label(tabs, text=f'  {icon}  {self.L[key]}', fg=T['muted'],
@@ -3470,6 +3593,135 @@ class CustomizeWindow:
         dlg.lift(); dlg.update()
         try: dlg.grab_set()
         except Exception: pass
+
+    # ── DNS Boost tab (v2.8): benchmark resolvers, no system changes ──
+    def _tab_dns(self):
+        T = self.T; L = self.L
+        f = tk.Frame(self._content, bg=T['bg'])
+        f.pack(side='top', fill='x', padx=24, pady=(14, 2))
+        tk.Label(f, text='🚀  ' + L.get('dns', 'DNS'), fg=T['text'], bg=T['bg'],
+                 font=('Segoe UI', 12, 'bold')).pack(side='left')
+        tk.Label(self._content, text='   ' + L.get('dns_sub', ''), fg=T['muted'],
+                 bg=T['bg'], font=('Segoe UI', 9)).pack(side='top', anchor='w', padx=24)
+        tk.Frame(self._content, bg=T['line'], height=1).pack(
+            side='top', fill='x', padx=24, pady=(6, 0))
+        # action row
+        ar = tk.Frame(self._content, bg=T['bg'])
+        ar.pack(side='top', fill='x', padx=24, pady=(12, 6))
+        find_btn = tk.Label(ar, text='🚀  ' + L.get('dns_find', 'Find fastest DNS'),
+                            fg='white', bg=T['cyan'], font=('Segoe UI', 10, 'bold'),
+                            padx=16, pady=8, cursor='hand2')
+        find_btn.pack(side='left')
+        status = tk.Label(ar, text='', fg=T['muted'], bg=T['bg'], font=('Segoe UI', 9))
+        status.pack(side='left', padx=12)
+        # bottom: open network settings + how-to (packed before the scroll body
+        # so it always stays visible at the bottom)
+        bottom = tk.Frame(self._content, bg=T['bg'])
+        bottom.pack(side='bottom', fill='x', padx=24, pady=(4, 12))
+        opennet = tk.Label(bottom, text='🔧  ' + L.get('dns_opennet', 'Open network settings'),
+                           fg=T['cyan'], bg=T['panel'], font=('Segoe UI', 9),
+                           padx=12, pady=6, cursor='hand2')
+        opennet.pack(side='left')
+        opennet.bind('<Button-1>', lambda e: launch_tool(('applet', 'ncpa.cpl')))
+        tk.Label(bottom, text=L.get('dns_howto', ''), fg=T['muted'], bg=T['bg'],
+                 font=('Segoe UI', 8), wraplength=420, justify='left').pack(
+                     side='left', padx=12)
+        # results area (scrollable)
+        outer = tk.Frame(self._content, bg=T['bg'])
+        outer.pack(fill='both', expand=True, padx=20, pady=4)
+        canvas = tk.Canvas(outer, bg=T['bg'], highlightthickness=0, bd=0)
+        sb = tk.Scrollbar(outer, orient='vertical', command=canvas.yview,
+                          bg=T['panel'], troughcolor=T['bg2'], activebackground=T['cyan'],
+                          bd=0, highlightthickness=0, width=10)
+        canvas.configure(yscrollcommand=sb.set)
+        sb.pack(side='right', fill='y'); canvas.pack(side='left', fill='both', expand=True)
+        body = tk.Frame(canvas, bg=T['bg'])
+        body_window = canvas.create_window((0, 0), window=body, anchor='nw')
+        canvas.bind('<Configure>',
+                    lambda e: canvas.itemconfig(body_window, width=e.width))
+        body.bind('<Configure>',
+                  lambda e: canvas.configure(scrollregion=canvas.bbox('all')))
+        canvas.bind_all('<MouseWheel>',
+                        lambda e: canvas.yview_scroll(int(-e.delta / 120), 'units'))
+
+        def _copy(ip):
+            try:
+                self._win.clipboard_clear(); self._win.clipboard_append(ip)
+                self.w._toast(L.get('dns_copied', 'Copied'))
+            except Exception:
+                pass
+
+        def _ms(v):
+            return f'{v:.0f} ms' if v is not None else '—'
+
+        def _render(results, ipv6_ok):
+            for c in body.winfo_children():
+                c.destroy()
+            for idx, (name, v4, v4ms, v6, v6ms) in enumerate(results):
+                best = idx == 0 and v4ms is not None
+                rowbg = T['bg2'] if best else T['panel']
+                row = tk.Frame(body, bg=rowbg); row.pack(fill='x', pady=2)
+                inner = tk.Frame(row, bg=rowbg); inner.pack(fill='x', padx=12, pady=8)
+                nm = tk.Frame(inner, bg=rowbg); nm.pack(side='left')
+                tk.Label(nm, text=name, fg=(T['green'] if best else T['text']),
+                         bg=rowbg, font=('Segoe UI', 10, 'bold' if best else 'normal'),
+                         anchor='w').pack(side='top', anchor='w')
+                tk.Label(nm, text=f'IPv4 {v4}' + (f'   ·   IPv6 {v6}' if ipv6_ok else ''),
+                         fg=T['muted'], bg=rowbg, font=('Segoe UI', 8),
+                         anchor='w').pack(side='top', anchor='w')
+                if best:
+                    tk.Label(inner, text='⚡ ' + L.get('dns_best', 'Fastest'), fg=T['green'],
+                             bg=rowbg, font=('Segoe UI', 8, 'bold')).pack(side='left', padx=10)
+                # copy button (right)
+                cp = tk.Label(inner, text='📋 ' + L.get('dns_copy', 'Copy'), fg=T['cyan'],
+                              bg=rowbg, font=('Segoe UI', 9), cursor='hand2', padx=8)
+                cp.pack(side='right')
+                cp.bind('<Button-1>', lambda e, ip=v4: _copy(ip))
+                # latency figures (right)
+                lat = _ms(v4ms) + (('  /  ' + _ms(v6ms)) if ipv6_ok else '')
+                tk.Label(inner, text=lat, fg=(T['green'] if best else T['text']),
+                         bg=rowbg, font=('Segoe UI', 10), width=16,
+                         anchor='e').pack(side='right', padx=8)
+            if not ipv6_ok:
+                tk.Label(body, text='ℹ ' + L.get('dns_no_ipv6', 'IPv6 not available'),
+                         fg=T['muted'], bg=T['bg'], font=('Segoe UI', 8)).pack(
+                             anchor='w', pady=(8, 0))
+            try: canvas.configure(scrollregion=canvas.bbox('all'))
+            except Exception: pass
+
+        def _worker():
+            ipv6 = _ipv6_available()
+            results = []
+            total = len(DNS_PROVIDERS)
+            for i, (name, v4s, v6s) in enumerate(DNS_PROVIDERS):
+                try:
+                    self._win.after(0, lambda i=i: status.config(
+                        text=f"{L.get('dns_testing', 'Testing…')}  {i+1}/{total}")
+                        if status.winfo_exists() else None)
+                except Exception:
+                    return   # window closed
+                a = benchmark_dns(v4s[0], False)
+                b = benchmark_dns(v6s[0], True) if ipv6 else None
+                results.append((name, v4s[0], a, v6s[0], b))
+            results.sort(key=lambda r: (r[2] is None, r[2] if r[2] is not None else 9e9))
+            def _finish():
+                if not status.winfo_exists():
+                    return
+                _render(results, ipv6)
+                status.config(text='')
+                find_btn.config(text='🔄  ' + L.get('dns_again', 'Test again'))
+                self._dns_running = False
+            try: self._win.after(0, _finish)
+            except Exception: pass
+
+        def _start(_e=None):
+            if getattr(self, '_dns_running', False):
+                return
+            self._dns_running = True
+            status.config(text=L.get('dns_testing', 'Testing…'))
+            find_btn.config(text='⏳  ' + L.get('dns_testing', 'Testing…'))
+            threading.Thread(target=_worker, daemon=True).start()
+        find_btn.bind('<Button-1>', _start)
 
     def _tab_about(self):
         T = self.T; L = self.L
