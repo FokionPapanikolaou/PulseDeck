@@ -5,8 +5,8 @@ import math, os
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'icons')
 os.makedirs(OUT, exist_ok=True)
 
-SS = 4          # supersample factor
-SIZE = 28       # final icon size (px)
+SS = 6          # supersample factor (higher = smoother anti-aliased edges)
+SIZE = 32       # final icon size (px)
 S = SIZE * SS
 
 WHITE = (255, 255, 255, 255)

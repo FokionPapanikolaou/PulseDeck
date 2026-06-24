@@ -4616,12 +4616,28 @@ class Widget:
 
     # ── icon loader ───────────────────────────────────────────────────
     def _icon(self, name):
+        path = os.path.join(ICON_DIR, name)
+        img = None
         try:
-            img = tk.PhotoImage(file=os.path.join(ICON_DIR, name))
-            self._imgs.append(img)
-            tk.Label(self.root, image=img, bg=self.bg, bd=0).pack(side='left', padx=(4, 1))
+            # Hard-threshold the alpha to binary: a pixel is either fully opaque
+            # (the icon) or fully transparent. Transparent pixels fall through to
+            # the Label's background colour, which is the chroma key and gets
+            # keyed out cleanly — so there is NO pale/white fringe around the
+            # icon (the old anti-aliased edges left semi-transparent pixels that
+            # blended toward the key but never matched it exactly).
+            from PIL import Image, ImageTk
+            icon = Image.open(path).convert('RGBA')
+            r, g, b, a = icon.split()
+            a = a.point(lambda v: 255 if v >= 110 else 0)
+            icon = Image.merge('RGBA', (r, g, b, a))
+            img = ImageTk.PhotoImage(icon)
         except Exception:
-            pass   # never let a missing icon crash the widget
+            img = None
+        if img is None:
+            try: img = tk.PhotoImage(file=path)
+            except Exception: return   # never let a missing icon crash the widget
+        self._imgs.append(img)
+        tk.Label(self.root, image=img, bg=self.bg, bd=0).pack(side='left', padx=(4, 1))
 
     def _rebuild(self, _attempts=0):
         """Rebuild the UI safely (deferred until any menu grab is gone)."""
