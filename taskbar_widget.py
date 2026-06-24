@@ -779,6 +779,11 @@ for _lng, _d in DNS_I18N.items():
 # "DNS Boost" tool label is the same brand term in every language
 for _lng in CUST_LABELS:
     CUST_LABELS[_lng]['t_dnsboost'] = 'DNS Boost'
+# "Current" (the machine's current DNS, shown for comparison)
+_DNS_CUR = {'en':'Current','el':'Τρέχων','es':'Actual','de':'Aktuell',
+            'fr':'Actuel','it':'Attuale','pt':'Atual','ru':'Текущий'}
+for _lng, _v in _DNS_CUR.items():
+    CUST_LABELS.setdefault(_lng, {})['dns_current'] = _v
 
 # ── One-line "what it does" descriptions shown on hover in the Tools tab ──
 TOOL_DESC = {
@@ -889,6 +894,20 @@ TOOL_DESC = {
 }
 for _lng, _d in TOOL_DESC.items():
     CUST_LABELS.setdefault(_lng, {}).update({'desc__' + k: v for k, v in _d.items()})
+
+# ── Bar marker (icons vs text) labels (v2.8) ───────────────────────────
+MARKER_I18N = {
+ 'en':{'bar_marker':'Bar marker','marker_icon':'Icons','marker_text':'Text'},
+ 'el':{'bar_marker':'Μπάρα','marker_icon':'Εικονίδια','marker_text':'Κείμενο'},
+ 'es':{'bar_marker':'Barra','marker_icon':'Iconos','marker_text':'Texto'},
+ 'de':{'bar_marker':'Leiste','marker_icon':'Symbole','marker_text':'Text'},
+ 'fr':{'bar_marker':'Barre','marker_icon':'Icônes','marker_text':'Texte'},
+ 'it':{'bar_marker':'Barra','marker_icon':'Icone','marker_text':'Testo'},
+ 'pt':{'bar_marker':'Barra','marker_icon':'Ícones','marker_text':'Texto'},
+ 'ru':{'bar_marker':'Панель','marker_icon':'Значки','marker_text':'Текст'},
+}
+for _lng, _d in MARKER_I18N.items():
+    CUST_LABELS.setdefault(_lng, {}).update(_d)
 
 # Cell metadata for the Metrics tab (id -> friendly name, icon glyph, config key)
 CELL_META = (
@@ -1573,6 +1592,7 @@ DEFAULTS = {
     'sparklines':False,      # mini history graphs
     'disks':     [],         # drive letters to show space % for, e.g. ['C:']
     'tooltips':  True,       # hover a metric -> details popup
+    'bar_labels': 'icon',    # bar metric marker: 'icon' (glyph) or 'text' (CPU/RAM/…)
     'tools_layout': 'list',  # Tools tab view: 'list' or 'grid' (responsive tiles)
     'check_updates': True,   # check GitHub for a newer release on launch
     'last_update_check': 0,  # epoch seconds of the last check (throttle)
@@ -1885,6 +1905,18 @@ DNS_PROVIDERS = [
                            ['2620:fe::10', '2620:fe::fe:10']),
     ('DNS.SB',             ['185.222.222.222', '45.11.45.11'],
                            ['2a09::', '2a11::']),
+    ('Mullvad',            ['194.242.2.2', '194.242.2.3'],
+                           ['2a07:e340::2', '2a07:e340::3']),
+    ('ControlD',           ['76.76.2.0', '76.76.10.0'],
+                           ['2606:1a40::', '2606:1a40:1::']),
+    ('CleanBrowsing',      ['185.228.168.9', '185.228.169.9'],
+                           ['2a0d:2a00:1::2', '2a0d:2a00:2::2']),
+    ('Yandex',             ['77.88.8.8', '77.88.8.1'],
+                           ['2a02:6b8::feed:0ff', '2a02:6b8:0:1::feed:0ff']),
+    ('Verisign',           ['64.6.64.6', '64.6.65.6'],
+                           ['2620:74:1b::1:1', '2620:74:1c::2:2']),
+    ('Comodo Secure',      ['8.26.56.26', '8.20.247.20'], ['']),
+    ('Level3',             ['4.2.2.1', '4.2.2.2'], ['']),
 ]
 
 def _dns_query_packet(hostname, qtype=1):
@@ -1939,6 +1971,24 @@ def _ipv6_available():
         if dns_latency(ip, is_ipv6=True, timeout=1.5) is not None:
             return True
     return False
+
+def get_current_dns():
+    """The IPv4 DNS server(s) the machine is currently using, so the user can
+    compare their latency against the public resolvers. Best-effort."""
+    try:
+        cmd = ['powershell', '-NoProfile', '-NonInteractive', '-Command',
+               '(Get-DnsClientServerAddress -AddressFamily IPv4).ServerAddresses']
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=6,
+                           startupinfo=_silent_startupinfo())
+        out = []
+        for line in (r.stdout or '').splitlines():
+            a = line.strip()
+            if (a and a not in out and not a.startswith('127.')
+                    and not a.startswith('169.254.') and ':' not in a):
+                out.append(a)
+        return out
+    except Exception:
+        return []
 
 # ── Weather (Open-Meteo, free, no API key) ─────────────────────────────
 def _http_json(url, timeout=6):
@@ -3000,6 +3050,9 @@ class CustomizeWindow:
                            ('large', t('large'))])
         self._radio_group(body, L['orientation'], 'orientation',
                           [('horizontal', '⇔'), ('vertical', '⇕')])
+        self._radio_group(body, L.get('bar_marker', 'Bar marker'), 'bar_labels',
+                          [('icon', L.get('marker_icon', 'Icons')),
+                           ('text', L.get('marker_text', 'Text'))])
         self._check_row(body, L['stacked'], 'stacked')
         # When two-row mode is OFF, which of the two rows survives?
         self._radio_group(body, '└ ' + L['single_row'], 'single_row_mode',
@@ -3847,20 +3900,30 @@ class CustomizeWindow:
         def _render(results, ipv6_ok):
             for c in body.winfo_children():
                 c.destroy()
-            for idx, (name, v4, v4ms, v6, v6ms) in enumerate(results):
-                best = idx == 0 and v4ms is not None
-                rowbg = T['bg2'] if best else T['panel']
+            # the fastest badge goes to the quickest non-current resolver
+            best_i = None
+            for i, r in enumerate(results):
+                if not r[5] and r[2] is not None:
+                    best_i = i; break
+            for idx, (name, v4, v4ms, v6, v6ms, is_cur) in enumerate(results):
+                best = idx == best_i
+                rowbg = T['bg2'] if (best or is_cur) else T['panel']
+                hicol = T['cyan'] if is_cur else (T['green'] if best else T['text'])
                 row = tk.Frame(body, bg=rowbg); row.pack(fill='x', pady=2)
                 hd = tk.Frame(row, bg=rowbg); hd.pack(fill='x', padx=12, pady=(7, 2))
-                tk.Label(hd, text=name, fg=(T['green'] if best else T['text']), bg=rowbg,
-                         font=('Segoe UI', 10, 'bold' if best else 'normal'),
+                tk.Label(hd, text=name, fg=hicol, bg=rowbg,
+                         font=('Segoe UI', 10, 'bold' if (best or is_cur) else 'normal'),
                          anchor='w').pack(side='left')
-                if best:
+                if is_cur:
+                    tk.Label(hd, text='📍 ' + L.get('dns_current', 'Current'), fg=T['cyan'],
+                             bg=rowbg, font=('Segoe UI', 8, 'bold')).pack(side='left', padx=10)
+                elif best:
                     tk.Label(hd, text='⚡ ' + L.get('dns_best', 'Fastest'), fg=T['green'],
                              bg=rowbg, font=('Segoe UI', 8, 'bold')).pack(side='left', padx=10)
                 bf = tk.Frame(row, bg=rowbg); bf.pack(fill='x', padx=12, pady=(0, 7))
-                _addr_line(bf, rowbg, 'IPv4', v4, v4ms, T['green'] if best else T['text'])
-                _addr_line(bf, rowbg, 'IPv6', v6, v6ms, T['text'])
+                _addr_line(bf, rowbg, 'IPv4', v4, v4ms, hicol)
+                if v6:
+                    _addr_line(bf, rowbg, 'IPv6', v6, v6ms, T['text'])
             if not ipv6_ok:
                 tk.Label(body, text='ℹ ' + L.get('dns_no_ipv6', 'IPv6 not available'),
                          fg=T['muted'], bg=T['bg'], font=('Segoe UI', 8),
@@ -3881,8 +3944,14 @@ class CustomizeWindow:
                     return   # window closed
                 a = benchmark_dns(v4s[0], False)
                 b = benchmark_dns(v6s[0], True) if ipv6 else None
-                results.append((name, v4s[0], a, v6s[0], b))
+                results.append([name, v4s[0], a, v6s[0], b, False])
             results.sort(key=lambda r: (r[2] is None, r[2] if r[2] is not None else 9e9))
+            # prepend the machine's current DNS server(s) for comparison
+            cur_rows = []
+            for ip in get_current_dns()[:2]:
+                ms = benchmark_dns(ip, False)
+                cur_rows.append([L.get('dns_current', 'Current'), ip, ms, '', None, True])
+            results = cur_rows + results
             def _finish():
                 if not status.winfo_exists():
                     return
@@ -4851,11 +4920,33 @@ class Widget:
         self.spark_cpu = self.spark_ram = None
 
         # ── helpers (operate on a given parent frame = "cell") ──
+        ICON_TEXT = {'cpu.png': 'CPU', 'gpu.png': 'GPU', 'ram.png': 'RAM',
+                     'net.png': 'NET', 'disk.png': 'DISK', 'battery.png': 'BAT'}
+        text_mode = self.cfg.get('bar_labels') == 'text'
+
         def icon(name, parent):
+            # text mode: show a short label instead of the glyph (weather/quake
+            # have no sensible text form, so they keep their icon)
+            if text_mode and name in ICON_TEXT:
+                tk.Label(parent, text=ICON_TEXT[name], fg=th.get('accent', valcol),
+                         bg=self.bg, font=('Consolas', small, 'bold'),
+                         padx=2).pack(side='left', padx=(2, 1))
+                return
             try:
-                img = tk.PhotoImage(file=os.path.join(ICON_DIR, name))
+                # binary-alpha + 1px erode so the chroma-key edges stay clean
+                # (no pale fringe) — same treatment as the standalone _icon.
+                key = self.bg if isinstance(self.bg, str) else ''
+                if key.startswith('#') and len(key) == 7:
+                    from PIL import Image, ImageTk, ImageFilter
+                    im = Image.open(os.path.join(ICON_DIR, name)).convert('RGBA')
+                    r, g, b, a = im.split()
+                    a = a.point(lambda v: 255 if v >= 110 else 0)
+                    a = a.filter(ImageFilter.MinFilter(3))
+                    img = ImageTk.PhotoImage(Image.merge('RGBA', (r, g, b, a)))
+                else:
+                    img = tk.PhotoImage(file=os.path.join(ICON_DIR, name))
                 self._imgs.append(img)
-                tk.Label(parent, image=img, bg=self.bg, bd=0).pack(side='left', padx=(4, 1))
+                tk.Label(parent, image=img, bg=self.bg, bd=0).pack(side='left', padx=(2, 0))
             except Exception:
                 pass
 
