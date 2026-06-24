@@ -511,6 +511,188 @@ CUST_EXTRA = {
 for _lng, _d in CUST_EXTRA.items():
     CUST_LABELS.setdefault(_lng, {}).update(_d)
 
+# ── Bottleneck / live-performance labels (v2.8) ────────────────────────
+# Component names (CPU/GPU/RAM/VRAM/Disk) stay as universal tech terms;
+# only the surrounding phrases are localized.
+BN_EXTRA = {
+ 'en':{'sys_perf':'Performance (live)','bn_label':'Limiting factor',
+       'bn_idle':'Idle — system not under load',
+       'bn_none':'Balanced — all components have headroom',
+       'bn_cpu':'CPU-bound','bn_gpu':'GPU-bound','bn_ram':'RAM near full',
+       'bn_vram':'VRAM near full','bn_disk':'Disk-bound (I/O)'},
+ 'el':{'sys_perf':'Επιδόσεις (ζωντανά)','bn_label':'Περιοριστικός παράγοντας',
+       'bn_idle':'Σε αδράνεια — χωρίς φόρτο',
+       'bn_none':'Ισορροπημένο — όλα έχουν περιθώριο',
+       'bn_cpu':'Όριο CPU','bn_gpu':'Όριο GPU','bn_ram':'RAM σχεδόν πλήρης',
+       'bn_vram':'VRAM σχεδόν πλήρης','bn_disk':'Όριο δίσκου (I/O)'},
+ 'es':{'sys_perf':'Rendimiento (en vivo)','bn_label':'Factor limitante',
+       'bn_idle':'Inactivo — sin carga',
+       'bn_none':'Equilibrado — todo tiene margen',
+       'bn_cpu':'Límite de CPU','bn_gpu':'Límite de GPU','bn_ram':'RAM casi llena',
+       'bn_vram':'VRAM casi llena','bn_disk':'Límite de disco (E/S)'},
+ 'de':{'sys_perf':'Leistung (live)','bn_label':'Begrenzender Faktor',
+       'bn_idle':'Leerlauf — keine Last',
+       'bn_none':'Ausgewogen — alle haben Reserven',
+       'bn_cpu':'CPU-limitiert','bn_gpu':'GPU-limitiert','bn_ram':'RAM fast voll',
+       'bn_vram':'VRAM fast voll','bn_disk':'Datenträger-limitiert (E/A)'},
+ 'fr':{'sys_perf':'Performances (en direct)','bn_label':'Facteur limitant',
+       'bn_idle':'Inactif — aucune charge',
+       'bn_none':'Équilibré — tout a de la marge',
+       'bn_cpu':'Limité par le CPU','bn_gpu':'Limité par le GPU','bn_ram':'RAM presque pleine',
+       'bn_vram':'VRAM presque pleine','bn_disk':'Limité par le disque (E/S)'},
+ 'it':{'sys_perf':'Prestazioni (live)','bn_label':'Fattore limitante',
+       'bn_idle':'Inattivo — nessun carico',
+       'bn_none':'Bilanciato — tutto ha margine',
+       'bn_cpu':'Limite CPU','bn_gpu':'Limite GPU','bn_ram':'RAM quasi piena',
+       'bn_vram':'VRAM quasi piena','bn_disk':'Limite disco (I/O)'},
+ 'pt':{'sys_perf':'Desempenho (ao vivo)','bn_label':'Fator limitante',
+       'bn_idle':'Inativo — sem carga',
+       'bn_none':'Equilibrado — tudo com margem',
+       'bn_cpu':'Limite de CPU','bn_gpu':'Limite de GPU','bn_ram':'RAM quase cheia',
+       'bn_vram':'VRAM quase cheia','bn_disk':'Limite de disco (E/S)'},
+ 'ru':{'sys_perf':'Производительность (вживую)','bn_label':'Ограничивающий фактор',
+       'bn_idle':'Простой — нет нагрузки',
+       'bn_none':'Сбалансировано — есть запас',
+       'bn_cpu':'Упор в CPU','bn_gpu':'Упор в GPU','bn_ram':'ОЗУ почти заполнена',
+       'bn_vram':'VRAM почти заполнена','bn_disk':'Упор в диск (I/O)'},
+}
+for _lng, _d in BN_EXTRA.items():
+    CUST_LABELS.setdefault(_lng, {}).update(_d)
+
+# ── Tools tab labels (v2.8) ────────────────────────────────────────────
+TOOL_I18N = {
+ 'en':{'tools':'Tools','tools_sub':'Shortcuts to built-in Windows tools',
+       'cat_cleanup':'Cleanup & Storage','cat_diag':'Diagnostics & Health',
+       'cat_perf':'Performance & Power','cat_net':'Network','cat_sys':'System & Security',
+       't_diskcleanup':'Disk Cleanup','t_storage':'Storage settings','t_optimize':'Optimize drives',
+       't_apps':'Apps & uninstall','t_tempfolder':'Open Temp folder','t_cleartemp':'Clear Temp files',
+       't_recyclebin':'Empty Recycle Bin','t_ramcheck':'Memory check (RAM)','t_taskmgr':'Task Manager',
+       't_resmon':'Resource Monitor','t_msinfo':'System Information','t_reliability':'Reliability Monitor',
+       't_dxdiag':'DirectX Diagnostics','t_power':'Power options','t_startup':'Startup apps',
+       't_visualfx':'Visual effects','t_graphics':'Graphics settings','t_netstatus':'Network status',
+       't_adapters':'Network adapters','t_flushdns':'Flush DNS cache','t_update':'Windows Update',
+       't_security':'Windows Security','t_restore':'System Restore','t_devmgr':'Device Manager',
+       'cf_yes':'Yes','cf_no':'Cancel',
+       'cf_temp':'Delete temporary files? In-use files are skipped.',
+       'cf_bin':'Empty the Recycle Bin? Its contents are permanently deleted.',
+       'tt_dns':'DNS cache flushed ✓','tt_temp':'Temp cleared — {n} freed ✓',
+       'tt_bin':'Recycle Bin emptied ✓','tt_open':'Opening…'},
+ 'el':{'tools':'Εργαλεία','tools_sub':'Συντομεύσεις σε ενσωματωμένα εργαλεία των Windows',
+       'cat_cleanup':'Καθαρισμός & Χώρος','cat_diag':'Διαγνωστικά & Υγεία',
+       'cat_perf':'Επιδόσεις & Ισχύς','cat_net':'Δίκτυο','cat_sys':'Σύστημα & Ασφάλεια',
+       't_diskcleanup':'Καθαρισμός δίσκου','t_storage':'Ρυθμίσεις αποθήκευσης','t_optimize':'Βελτιστοποίηση δίσκων',
+       't_apps':'Εφαρμογές & απεγκατάσταση','t_tempfolder':'Άνοιγμα φακέλου Temp','t_cleartemp':'Καθαρισμός Temp',
+       't_recyclebin':'Άδειασμα Κάδου','t_ramcheck':'Έλεγχος μνήμης (RAM)','t_taskmgr':'Διαχείριση εργασιών',
+       't_resmon':'Παρακολούθηση πόρων','t_msinfo':'Πληροφορίες συστήματος','t_reliability':'Παρακολούθηση αξιοπιστίας',
+       't_dxdiag':'Διαγνωστικά DirectX','t_power':'Επιλογές ενέργειας','t_startup':'Εφαρμογές εκκίνησης',
+       't_visualfx':'Οπτικά εφέ','t_graphics':'Ρυθμίσεις γραφικών','t_netstatus':'Κατάσταση δικτύου',
+       't_adapters':'Προσαρμογείς δικτύου','t_flushdns':'Καθαρισμός DNS','t_update':'Windows Update',
+       't_security':'Ασφάλεια των Windows','t_restore':'Επαναφορά συστήματος','t_devmgr':'Διαχείριση συσκευών',
+       'cf_yes':'Ναι','cf_no':'Άκυρο',
+       'cf_temp':'Διαγραφή προσωρινών αρχείων; Τα αρχεία σε χρήση παραλείπονται.',
+       'cf_bin':'Άδειασμα του Κάδου Ανακύκλωσης; Τα περιεχόμενα διαγράφονται οριστικά.',
+       'tt_dns':'Η μνήμη DNS καθαρίστηκε ✓','tt_temp':'Καθαρίστηκαν τα Temp — {n} ✓',
+       'tt_bin':'Ο Κάδος άδειασε ✓','tt_open':'Άνοιγμα…'},
+ 'es':{'tools':'Herramientas','tools_sub':'Accesos directos a herramientas de Windows',
+       'cat_cleanup':'Limpieza y almacenamiento','cat_diag':'Diagnóstico y estado',
+       'cat_perf':'Rendimiento y energía','cat_net':'Red','cat_sys':'Sistema y seguridad',
+       't_diskcleanup':'Liberador de espacio','t_storage':'Ajustes de almacenamiento','t_optimize':'Optimizar unidades',
+       't_apps':'Aplicaciones y desinstalar','t_tempfolder':'Abrir carpeta Temp','t_cleartemp':'Limpiar archivos Temp',
+       't_recyclebin':'Vaciar papelera','t_ramcheck':'Prueba de memoria (RAM)','t_taskmgr':'Administrador de tareas',
+       't_resmon':'Monitor de recursos','t_msinfo':'Información del sistema','t_reliability':'Monitor de confiabilidad',
+       't_dxdiag':'Diagnóstico DirectX','t_power':'Opciones de energía','t_startup':'Apps de inicio',
+       't_visualfx':'Efectos visuales','t_graphics':'Configuración de gráficos','t_netstatus':'Estado de la red',
+       't_adapters':'Adaptadores de red','t_flushdns':'Vaciar caché DNS','t_update':'Windows Update',
+       't_security':'Seguridad de Windows','t_restore':'Restaurar sistema','t_devmgr':'Administrador de dispositivos',
+       'cf_yes':'Sí','cf_no':'Cancelar',
+       'cf_temp':'¿Eliminar archivos temporales? Se omiten los archivos en uso.',
+       'cf_bin':'¿Vaciar la papelera? Su contenido se elimina permanentemente.',
+       'tt_dns':'Caché DNS vaciada ✓','tt_temp':'Temp limpiado — {n} ✓',
+       'tt_bin':'Papelera vaciada ✓','tt_open':'Abriendo…'},
+ 'de':{'tools':'Werkzeuge','tools_sub':'Verknüpfungen zu integrierten Windows-Tools',
+       'cat_cleanup':'Bereinigung & Speicher','cat_diag':'Diagnose & Zustand',
+       'cat_perf':'Leistung & Energie','cat_net':'Netzwerk','cat_sys':'System & Sicherheit',
+       't_diskcleanup':'Datenträgerbereinigung','t_storage':'Speichereinstellungen','t_optimize':'Laufwerke optimieren',
+       't_apps':'Apps & Deinstallation','t_tempfolder':'Temp-Ordner öffnen','t_cleartemp':'Temp-Dateien löschen',
+       't_recyclebin':'Papierkorb leeren','t_ramcheck':'Speichertest (RAM)','t_taskmgr':'Task-Manager',
+       't_resmon':'Ressourcenmonitor','t_msinfo':'Systeminformationen','t_reliability':'Zuverlässigkeitsverlauf',
+       't_dxdiag':'DirectX-Diagnose','t_power':'Energieoptionen','t_startup':'Autostart-Apps',
+       't_visualfx':'Visuelle Effekte','t_graphics':'Grafikeinstellungen','t_netstatus':'Netzwerkstatus',
+       't_adapters':'Netzwerkadapter','t_flushdns':'DNS-Cache leeren','t_update':'Windows Update',
+       't_security':'Windows-Sicherheit','t_restore':'Systemwiederherstellung','t_devmgr':'Geräte-Manager',
+       'cf_yes':'Ja','cf_no':'Abbrechen',
+       'cf_temp':'Temporäre Dateien löschen? Dateien in Verwendung werden übersprungen.',
+       'cf_bin':'Papierkorb leeren? Der Inhalt wird endgültig gelöscht.',
+       'tt_dns':'DNS-Cache geleert ✓','tt_temp':'Temp geleert — {n} ✓',
+       'tt_bin':'Papierkorb geleert ✓','tt_open':'Wird geöffnet…'},
+ 'fr':{'tools':'Outils','tools_sub':'Raccourcis vers les outils intégrés de Windows',
+       'cat_cleanup':'Nettoyage & stockage','cat_diag':'Diagnostic & état',
+       'cat_perf':'Performances & alimentation','cat_net':'Réseau','cat_sys':'Système & sécurité',
+       't_diskcleanup':'Nettoyage de disque','t_storage':'Paramètres de stockage','t_optimize':'Optimiser les lecteurs',
+       't_apps':'Applications & désinstaller','t_tempfolder':'Ouvrir le dossier Temp','t_cleartemp':'Effacer les fichiers Temp',
+       't_recyclebin':'Vider la corbeille','t_ramcheck':'Test mémoire (RAM)','t_taskmgr':'Gestionnaire des tâches',
+       't_resmon':'Moniteur de ressources','t_msinfo':'Informations système','t_reliability':'Moniteur de fiabilité',
+       't_dxdiag':'Diagnostic DirectX','t_power':'Options d’alimentation','t_startup':'Applications de démarrage',
+       't_visualfx':'Effets visuels','t_graphics':'Paramètres graphiques','t_netstatus':'État du réseau',
+       't_adapters':'Cartes réseau','t_flushdns':'Vider le cache DNS','t_update':'Windows Update',
+       't_security':'Sécurité Windows','t_restore':'Restauration du système','t_devmgr':'Gestionnaire de périphériques',
+       'cf_yes':'Oui','cf_no':'Annuler',
+       'cf_temp':'Supprimer les fichiers temporaires ? Les fichiers en cours d’utilisation sont ignorés.',
+       'cf_bin':'Vider la corbeille ? Son contenu est supprimé définitivement.',
+       'tt_dns':'Cache DNS vidé ✓','tt_temp':'Temp nettoyé — {n} ✓',
+       'tt_bin':'Corbeille vidée ✓','tt_open':'Ouverture…'},
+ 'it':{'tools':'Strumenti','tools_sub':'Scorciatoie agli strumenti integrati di Windows',
+       'cat_cleanup':'Pulizia e archiviazione','cat_diag':'Diagnostica e stato',
+       'cat_perf':'Prestazioni e alimentazione','cat_net':'Rete','cat_sys':'Sistema e sicurezza',
+       't_diskcleanup':'Pulizia disco','t_storage':'Impostazioni archiviazione','t_optimize':'Ottimizza unità',
+       't_apps':'App e disinstalla','t_tempfolder':'Apri cartella Temp','t_cleartemp':'Pulisci file Temp',
+       't_recyclebin':'Svuota cestino','t_ramcheck':'Test memoria (RAM)','t_taskmgr':'Gestione attività',
+       't_resmon':'Monitor risorse','t_msinfo':'Informazioni di sistema','t_reliability':'Monitor affidabilità',
+       't_dxdiag':'Diagnostica DirectX','t_power':'Opzioni risparmio energia','t_startup':'App all’avvio',
+       't_visualfx':'Effetti visivi','t_graphics':'Impostazioni grafica','t_netstatus':'Stato della rete',
+       't_adapters':'Schede di rete','t_flushdns':'Svuota cache DNS','t_update':'Windows Update',
+       't_security':'Sicurezza di Windows','t_restore':'Ripristino configurazione','t_devmgr':'Gestione dispositivi',
+       'cf_yes':'Sì','cf_no':'Annulla',
+       'cf_temp':'Eliminare i file temporanei? I file in uso vengono ignorati.',
+       'cf_bin':'Svuotare il cestino? Il contenuto viene eliminato definitivamente.',
+       'tt_dns':'Cache DNS svuotata ✓','tt_temp':'Temp pulito — {n} ✓',
+       'tt_bin':'Cestino svuotato ✓','tt_open':'Apertura…'},
+ 'pt':{'tools':'Ferramentas','tools_sub':'Atalhos para ferramentas integradas do Windows',
+       'cat_cleanup':'Limpeza e armazenamento','cat_diag':'Diagnóstico e estado',
+       'cat_perf':'Desempenho e energia','cat_net':'Rede','cat_sys':'Sistema e segurança',
+       't_diskcleanup':'Limpeza de disco','t_storage':'Definições de armazenamento','t_optimize':'Otimizar unidades',
+       't_apps':'Aplicações e desinstalar','t_tempfolder':'Abrir pasta Temp','t_cleartemp':'Limpar ficheiros Temp',
+       't_recyclebin':'Esvaziar reciclagem','t_ramcheck':'Teste de memória (RAM)','t_taskmgr':'Gestor de tarefas',
+       't_resmon':'Monitor de recursos','t_msinfo':'Informações do sistema','t_reliability':'Monitor de fiabilidade',
+       't_dxdiag':'Diagnóstico DirectX','t_power':'Opções de energia','t_startup':'Apps de arranque',
+       't_visualfx':'Efeitos visuais','t_graphics':'Definições de gráficos','t_netstatus':'Estado da rede',
+       't_adapters':'Placas de rede','t_flushdns':'Limpar cache DNS','t_update':'Windows Update',
+       't_security':'Segurança do Windows','t_restore':'Restauro do sistema','t_devmgr':'Gestor de dispositivos',
+       'cf_yes':'Sim','cf_no':'Cancelar',
+       'cf_temp':'Eliminar ficheiros temporários? Os ficheiros em uso são ignorados.',
+       'cf_bin':'Esvaziar a reciclagem? O conteúdo é eliminado permanentemente.',
+       'tt_dns':'Cache DNS limpa ✓','tt_temp':'Temp limpo — {n} ✓',
+       'tt_bin':'Reciclagem esvaziada ✓','tt_open':'A abrir…'},
+ 'ru':{'tools':'Инструменты','tools_sub':'Ярлыки к встроенным средствам Windows',
+       'cat_cleanup':'Очистка и хранилище','cat_diag':'Диагностика и состояние',
+       'cat_perf':'Производительность и питание','cat_net':'Сеть','cat_sys':'Система и безопасность',
+       't_diskcleanup':'Очистка диска','t_storage':'Параметры хранилища','t_optimize':'Оптимизация дисков',
+       't_apps':'Приложения и удаление','t_tempfolder':'Открыть папку Temp','t_cleartemp':'Очистить файлы Temp',
+       't_recyclebin':'Очистить корзину','t_ramcheck':'Проверка памяти (RAM)','t_taskmgr':'Диспетчер задач',
+       't_resmon':'Монитор ресурсов','t_msinfo':'Сведения о системе','t_reliability':'Монитор стабильности',
+       't_dxdiag':'Средство DirectX','t_power':'Электропитание','t_startup':'Автозагрузка',
+       't_visualfx':'Визуальные эффекты','t_graphics':'Параметры графики','t_netstatus':'Состояние сети',
+       't_adapters':'Сетевые адаптеры','t_flushdns':'Очистить кэш DNS','t_update':'Центр обновления',
+       't_security':'Безопасность Windows','t_restore':'Восстановление системы','t_devmgr':'Диспетчер устройств',
+       'cf_yes':'Да','cf_no':'Отмена',
+       'cf_temp':'Удалить временные файлы? Используемые файлы пропускаются.',
+       'cf_bin':'Очистить корзину? Содержимое удаляется безвозвратно.',
+       'tt_dns':'Кэш DNS очищен ✓','tt_temp':'Temp очищен — {n} ✓',
+       'tt_bin':'Корзина очищена ✓','tt_open':'Открытие…'},
+}
+for _lng, _d in TOOL_I18N.items():
+    CUST_LABELS.setdefault(_lng, {}).update(_d)
+
 # Cell metadata for the Metrics tab (id -> friendly name, icon glyph, config key)
 CELL_META = (
     ('cpu',     'CPU',         '💻', 'show_cpu'),
@@ -826,6 +1008,70 @@ def get_gpu_name():
         if name:
             return name
     return ''
+
+# ── Live bottleneck analysis (v2.8) ────────────────────────────────────
+# Identify which component is the current limiting factor, using only the OS
+# performance metrics the widget already gathers. This is *live* load analysis
+# (which resource is pegged right now), NOT a static "your CPU is weaker than
+# your GPU" benchmark score — that needs a hardware database and can't be
+# derived from the OS.
+def analyze_bottleneck(cpu, percpu, gpu, ram, vram_pct, disk_active):
+    """Return the live limiting component as a dict.
+
+    Inputs are smoothed 0-100 percentages; any may be None when unavailable.
+    `percpu` is the per-core utilisation list (catches single-thread loads
+    that hide behind a low average). Returns:
+        {'key':     'cpu'|'gpu'|'ram'|'vram'|'disk'|'balanced'|'idle',
+         'load':    float | None,   # the limiter's utilisation %
+         'metrics': str}            # e.g. "CPU 98%  ·  GPU 61%  ·  RAM 44%"
+    """
+    def _n(x):
+        return None if x is None else max(0.0, min(100.0, float(x)))
+    cpu = _n(cpu); gpu = _n(gpu); ram = _n(ram)
+    vram_pct = _n(vram_pct); disk_active = _n(disk_active)
+    max_core = max(percpu) if percpu else None
+
+    # one-line metric summary for the UI
+    bits = []
+    if cpu is not None:         bits.append(f'CPU {cpu:.0f}%')
+    if gpu is not None:         bits.append(f'GPU {gpu:.0f}%')
+    if ram is not None:         bits.append(f'RAM {ram:.0f}%')
+    if vram_pct is not None:    bits.append(f'VRAM {vram_pct:.0f}%')
+    if disk_active is not None: bits.append(f'Disk {disk_active:.0f}%')
+    metrics = '  ·  '.join(bits)
+
+    # effective CPU load: a single pegged core bottlenecks too (single-thread
+    # games sit at ~100% on one core while the average looks low)
+    cpu_eff = cpu
+    if cpu_eff is not None and max_core is not None:
+        cpu_eff = max(cpu_eff, max_core)
+
+    # idle: nothing is really working and memory isn't tight
+    busy = any(v is not None and v >= 20 for v in (cpu_eff, gpu, disk_active))
+    if (not busy and (ram is None or ram < 85)
+            and (vram_pct is None or vram_pct < 90)):
+        return {'key': 'idle', 'load': None, 'metrics': metrics}
+
+    # memory exhaustion first — it causes the worst stutter / swapping
+    if vram_pct is not None and vram_pct >= 95:
+        return {'key': 'vram', 'load': vram_pct, 'metrics': metrics}
+    if ram is not None and ram >= 90:
+        return {'key': 'ram', 'load': ram, 'metrics': metrics}
+    # disk I/O wait
+    if disk_active is not None and disk_active >= 85:
+        return {'key': 'disk', 'load': disk_active, 'metrics': metrics}
+    # GPU-bound: GPU pegged while the CPU still has headroom (classic gaming)
+    if gpu is not None and gpu >= 97 and (cpu_eff is None or cpu_eff < 90):
+        return {'key': 'gpu', 'load': gpu, 'metrics': metrics}
+    # CPU-bound: whole CPU saturated or a single thread maxed out
+    if cpu_eff is not None and (cpu_eff >= 90
+                                or (max_core is not None and max_core >= 98)):
+        return {'key': 'cpu', 'load': cpu_eff, 'metrics': metrics}
+    # GPU pegged with the CPU also high → the GPU is still the wall
+    if gpu is not None and gpu >= 97:
+        return {'key': 'gpu', 'load': gpu, 'metrics': metrics}
+    # everything has headroom
+    return {'key': 'balanced', 'load': None, 'metrics': metrics}
 
 # ── System Info collector (v2.7) ───────────────────────────────────────
 # Gathers a comprehensive read-only snapshot of the machine for display in
@@ -1291,6 +1537,131 @@ def sync_startup():
         except Exception:
             pass
 
+# ── Tools: safe shortcuts to built-in Windows utilities (v2.8) ─────────
+# Every entry just *opens* a tool Windows already ships — PulseDeck never
+# changes a setting on its own. The three "action" items (flush DNS, clear
+# Temp, empty Recycle Bin) are the only ones that do something, are 100%
+# reversible-safe, and always ask for confirmation first. This keeps the
+# feature fully Microsoft-Store compliant inside the MSIX sandbox.
+def _sys32(name):
+    return os.path.join(os.environ.get('WINDIR', r'C:\Windows'), 'System32', name)
+
+def _silent_startupinfo():
+    si = subprocess.STARTUPINFO()
+    si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    return si
+
+def launch_tool(action):
+    """Open a built-in Windows tool. `action` is (kind, target).
+    settings/protocol URIs go through os.startfile; classic tools launch from
+    System32 so the MSIX sandbox can't redirect the path. Returns True on
+    success. Read-only: opens the tool, changes nothing."""
+    kind, target = action
+    try:
+        if kind in ('settings', 'shell'):
+            os.startfile(os.path.expandvars(target))
+        elif kind == 'exe':
+            subprocess.Popen([_sys32(target[0])] + list(target[1:]))
+        elif kind == 'applet':
+            subprocess.Popen([_sys32('control.exe'), target])
+        elif kind == 'msc':
+            subprocess.Popen([_sys32('mmc.exe'), _sys32(target)])
+        else:
+            return False
+        return True
+    except Exception:
+        try:
+            os.startfile(target if isinstance(target, str) else target[0])
+            return True
+        except Exception:
+            return False
+
+def _dir_size(path):
+    total = 0
+    for root, _dirs, files in os.walk(path):
+        for f in files:
+            try: total += os.path.getsize(os.path.join(root, f))
+            except Exception: pass
+    return total
+
+def action_flush_dns():
+    """ipconfig /flushdns — harmless, no admin needed."""
+    try:
+        subprocess.run([_sys32('ipconfig.exe'), '/flushdns'],
+                       startupinfo=_silent_startupinfo(), timeout=10,
+                       capture_output=True)
+        return True
+    except Exception:
+        return False
+
+def action_clear_temp():
+    """Delete what we can from %TEMP%; locked/in-use files are skipped.
+    Returns bytes freed. Same scope as Disk Cleanup's temp pass."""
+    import shutil
+    base = os.environ.get('TEMP') or os.environ.get('TMP')
+    if not base or not os.path.isdir(base):
+        return 0
+    freed = 0
+    for name in os.listdir(base):
+        p = os.path.join(base, name)
+        try:
+            if os.path.isfile(p) or os.path.islink(p):
+                sz = os.path.getsize(p); os.remove(p); freed += sz
+            elif os.path.isdir(p):
+                sz = _dir_size(p); shutil.rmtree(p, ignore_errors=True); freed += sz
+        except Exception:
+            pass   # in use → leave it
+    return freed
+
+def action_empty_recyclebin():
+    """SHEmptyRecycleBin on all drives, no extra prompts/sound."""
+    try:
+        SHERB_NOCONFIRMATION = 0x1; SHERB_NOPROGRESSUI = 0x2; SHERB_NOSOUND = 0x4
+        ctypes.windll.shell32.SHEmptyRecycleBinW(
+            None, None,
+            SHERB_NOCONFIRMATION | SHERB_NOPROGRESSUI | SHERB_NOSOUND)
+        return True
+    except Exception:
+        return False
+
+# catalog: (category_key, icon, [(tool_key, icon, (kind, target)), ...])
+TOOLS_CATALOG = [
+    ('cat_cleanup', '🧹', [
+        ('t_diskcleanup', '🧽', ('exe', ['cleanmgr.exe'])),
+        ('t_storage',     '💾', ('settings', 'ms-settings:storagesense')),
+        ('t_optimize',    '🧩', ('exe', ['dfrgui.exe'])),
+        ('t_apps',        '📦', ('settings', 'ms-settings:appsfeatures')),
+        ('t_tempfolder',  '📂', ('shell', '%TEMP%')),
+        ('t_cleartemp',   '✨', ('action', 'clear_temp')),
+        ('t_recyclebin',  '🗑', ('action', 'empty_recyclebin')),
+    ]),
+    ('cat_diag', '🩺', [
+        ('t_ramcheck',    '🧠', ('exe', ['mdsched.exe'])),
+        ('t_taskmgr',     '📋', ('exe', ['taskmgr.exe'])),
+        ('t_resmon',      '📈', ('exe', ['resmon.exe'])),
+        ('t_msinfo',      'ℹ', ('exe', ['msinfo32.exe'])),
+        ('t_reliability', '📊', ('exe', ['perfmon.exe', '/rel'])),
+        ('t_dxdiag',      '🎮', ('exe', ['dxdiag.exe'])),
+    ]),
+    ('cat_perf', '⚡', [
+        ('t_power',       '🔋', ('applet', 'powercfg.cpl')),
+        ('t_startup',     '🚀', ('settings', 'ms-settings:startupapps')),
+        ('t_visualfx',    '🎚', ('exe', ['SystemPropertiesPerformance.exe'])),
+        ('t_graphics',    '🖥', ('settings', 'ms-settings:display-advancedgraphics')),
+    ]),
+    ('cat_net', '🌐', [
+        ('t_netstatus',   '📶', ('settings', 'ms-settings:network-status')),
+        ('t_adapters',    '🔌', ('applet', 'ncpa.cpl')),
+        ('t_flushdns',    '♻', ('action', 'flush_dns')),
+    ]),
+    ('cat_sys', '🛡', [
+        ('t_update',      '⬇', ('settings', 'ms-settings:windowsupdate')),
+        ('t_security',    '🛡', ('settings', 'windowsdefender:')),
+        ('t_restore',     '⏮', ('exe', ['rstrui.exe'])),
+        ('t_devmgr',      '🧷', ('msc', 'devmgmt.msc')),
+    ]),
+]
+
 # ── Weather (Open-Meteo, free, no API key) ─────────────────────────────
 def _http_json(url, timeout=6):
     req = urllib.request.Request(url, headers={'User-Agent': 'PulseBar'})
@@ -1739,6 +2110,7 @@ class CustomizeWindow:
             ('appearance', 'appearance', '🎨'),
             ('alerts',     'alerts',     '🚨'),
             ('system',     'system',     '💻'),
+            ('tools',      'tools',      '🧰'),
             ('about',      'about',      'ℹ'),
         ):
             b = tk.Label(tabs, text=f'  {icon}  {self.L[key]}', fg=T['muted'],
@@ -2488,6 +2860,90 @@ class CustomizeWindow:
             tk.Label(r, text=str(v), fg=(value_color or T['text']), bg=T['panel'],
                      font=('Segoe UI', 9), anchor='w').pack(side='left')
 
+        # ── Performance / live bottleneck (v2.8) ──
+        L = self.L
+        s = section(L.get('sys_perf', 'Performance (live)'), '⚡', T['cyan'])
+        bn_row = tk.Frame(s, bg=T['panel']); bn_row.pack(fill='x', padx=18, pady=2)
+        tk.Label(bn_row, text=L.get('bn_label', 'Limiting factor'),
+                 fg=T['muted'], bg=T['panel'], font=('Segoe UI', 9),
+                 width=20, anchor='w').pack(side='left')
+        bn_val = tk.Label(bn_row, text='…', fg=T['text'], bg=T['panel'],
+                          font=('Segoe UI', 9, 'bold'), anchor='w')
+        bn_val.pack(side='left')
+        bn_metrics = tk.Label(s, text='', fg=T['muted'], bg=T['panel'],
+                              font=('Segoe UI', 8), anchor='w')
+        bn_metrics.pack(fill='x', padx=18, pady=(0, 2))
+        tk.Frame(s, bg=T['panel'], height=8).pack()
+
+        # rolling smoothing buffers (~4 s) + per-disk busy-time tracker
+        from collections import deque as _dq
+        _buf = {k: _dq(maxlen=4) for k in ('cpu', 'gpu', 'ram', 'vram', 'disk')}
+        _disk_prev = {}   # disk name -> (busy_time_ms, wall_time_s)
+        _VERDICT = {
+            'idle':     (L.get('bn_idle', 'Idle — system not under load'), T['green']),
+            'balanced': (L.get('bn_none', 'Balanced — all components have headroom'), T['green']),
+            'cpu':  (L.get('bn_cpu',  'CPU-bound'),        T['orange']),
+            'gpu':  (L.get('bn_gpu',  'GPU-bound'),        T['orange']),
+            'disk': (L.get('bn_disk', 'Disk-bound (I/O)'), T['orange']),
+            'ram':  (L.get('bn_ram',  'RAM near full'),    T['red']),
+            'vram': (L.get('bn_vram', 'VRAM near full'),   T['red']),
+        }
+
+        def _avg(dq):
+            vals = [v for v in dq if v is not None]
+            return (sum(vals) / len(vals)) if vals else None
+
+        def _refresh_bn():
+            try:
+                if not bn_val.winfo_exists():
+                    return   # tab switched or window closed → stop the loop
+            except Exception:
+                return
+            w = self.w
+            per = list(getattr(w, '_percpu', []) or [])
+            cpu_now = (sum(per) / len(per)) if per else None
+            gpu_now = getattr(w, '_gpu', None)
+            vram_now = None
+            gm = getattr(w, '_gpu_mem', None); vt = getattr(w, '_vram_total', None)
+            if gm is not None and vt:
+                vram_now = gm / vt * 100.0
+            try:    ram_now = psutil.virtual_memory().percent
+            except Exception: ram_now = None
+            # disk active-time %: max busy ratio across physical disks
+            disk_now = None
+            try:
+                now = time.time()
+                for name, d in psutil.disk_io_counters(perdisk=True).items():
+                    bt = getattr(d, 'busy_time', None)
+                    if bt is None:
+                        continue
+                    prev = _disk_prev.get(name)
+                    if prev is not None and now > prev[1]:
+                        act = (bt - prev[0]) / ((now - prev[1]) * 1000.0) * 100.0
+                        act = max(0.0, min(100.0, act))
+                        disk_now = act if disk_now is None else max(disk_now, act)
+                    _disk_prev[name] = (bt, now)
+            except Exception:
+                pass
+            for k, v in (('cpu', cpu_now), ('gpu', gpu_now), ('ram', ram_now),
+                         ('vram', vram_now), ('disk', disk_now)):
+                _buf[k].append(v)
+            res = analyze_bottleneck(_avg(_buf['cpu']), per, _avg(_buf['gpu']),
+                                     _avg(_buf['ram']), _avg(_buf['vram']),
+                                     _avg(_buf['disk']))
+            label, color = _VERDICT.get(res['key'], (res['key'], T['text']))
+            if res.get('load') is not None and res['key'] in (
+                    'cpu', 'gpu', 'ram', 'vram', 'disk'):
+                label = f"{label}  ({res['load']:.0f}%)"
+            try:
+                bn_val.config(text=label, fg=color)
+                bn_metrics.config(text=res.get('metrics', ''))
+                self._win.after(1000, _refresh_bn)
+            except Exception:
+                pass
+
+        _refresh_bn()
+
         # ── CPU ──
         cpu = info.get('cpu', {})
         s = section('CPU', '💻', T['cyan'], badge_src=cpu.get('name', ''))
@@ -2673,6 +3129,142 @@ class CustomizeWindow:
         for n in info.get('net', []):
             lines.append(f"Net {n['name']}: IP {n.get('ip','?')}  MAC {n.get('mac','?')}  speed {n.get('speed_mbps','?')} Mbps")
         return '\n'.join(lines)
+
+    # ── Tools tab (v2.8): safe shortcuts to built-in Windows utilities ──
+    def _tab_tools(self):
+        T = self.T; L = self.L
+        # header + subtitle
+        f = tk.Frame(self._content, bg=T['bg'])
+        f.pack(side='top', fill='x', padx=24, pady=(14, 2))
+        tk.Label(f, text='🧰  ' + L.get('tools', 'Tools'), fg=T['text'], bg=T['bg'],
+                 font=('Segoe UI', 12, 'bold')).pack(side='left')
+        tk.Label(self._content, text='   ' + L.get('tools_sub', ''), fg=T['muted'],
+                 bg=T['bg'], font=('Segoe UI', 9)).pack(side='top', anchor='w', padx=24)
+        tk.Frame(self._content, bg=T['line'], height=1).pack(
+            side='top', fill='x', padx=24, pady=(6, 0))
+        # scrollable body
+        outer = tk.Frame(self._content, bg=T['bg'])
+        outer.pack(fill='both', expand=True, padx=20, pady=4)
+        canvas = tk.Canvas(outer, bg=T['bg'], highlightthickness=0, bd=0)
+        sb = tk.Scrollbar(outer, orient='vertical', command=canvas.yview,
+                          bg=T['panel'], troughcolor=T['bg2'], activebackground=T['cyan'],
+                          bd=0, highlightthickness=0, width=10)
+        canvas.configure(yscrollcommand=sb.set)
+        sb.pack(side='right', fill='y'); canvas.pack(side='left', fill='both', expand=True)
+        body = tk.Frame(canvas, bg=T['bg'])
+        body_window = canvas.create_window((0, 0), window=body, anchor='nw')
+        def _resize_body(e, _wid=body_window):
+            try: canvas.itemconfig(_wid, width=e.width)
+            except Exception: pass
+        canvas.bind('<Configure>', _resize_body)
+        body.bind('<Configure>',
+                  lambda e: canvas.configure(scrollregion=canvas.bbox('all')))
+        canvas.bind_all('<MouseWheel>',
+                        lambda e: canvas.yview_scroll(int(-e.delta / 120), 'units'))
+
+        def _tool_row(parent, ticon, label, action):
+            destructive = action[0] == 'action' and action[1] != 'flush_dns'
+            row = tk.Frame(parent, bg=T['panel'], cursor='hand2')
+            row.pack(fill='x', padx=10, pady=2)
+            inner = tk.Frame(row, bg=T['panel']); inner.pack(fill='x', padx=8, pady=7)
+            tk.Label(inner, text=ticon, bg=T['panel'], fg=T['text'],
+                     font=('Segoe UI', 11), width=2).pack(side='left')
+            tk.Label(inner, text=label, bg=T['panel'],
+                     fg=(T['orange'] if destructive else T['text']),
+                     font=('Segoe UI', 10), anchor='w').pack(side='left', padx=(4, 0))
+            tk.Label(inner, text='›', bg=T['panel'], fg=T['muted'],
+                     font=('Segoe UI', 12)).pack(side='right')
+            kids = [inner] + list(inner.winfo_children())
+            def _hover(bg):
+                row.config(bg=bg)
+                for c in kids: c.config(bg=bg)
+            def _click(_e): self._run_tool(action)
+            for wgt in (row, *kids):
+                wgt.bind('<Enter>', lambda e: _hover(T['bg2']))
+                wgt.bind('<Leave>', lambda e: _hover(T['panel']))
+                wgt.bind('<Button-1>', _click)
+
+        for cat_key, cicon, tools in TOOLS_CATALOG:
+            sf = tk.Frame(body, bg=T['panel']); sf.pack(fill='x', pady=(6, 4))
+            hdr = tk.Frame(sf, bg=T['panel']); hdr.pack(fill='x', padx=12, pady=(8, 4))
+            tk.Label(hdr, text=cicon + '  ' + L.get(cat_key, cat_key), fg=T['cyan'],
+                     bg=T['panel'], font=('Segoe UI', 11, 'bold')).pack(side='left')
+            for tkey, ticon, action in tools:
+                _tool_row(sf, ticon, L.get(tkey, tkey), action)
+            tk.Frame(sf, bg=T['panel'], height=8).pack()
+
+    def _run_tool(self, action):
+        """Open a tool, or run a confirmed safe action."""
+        L = self.L
+        kind, target = action
+        if kind != 'action':
+            launch_tool(action)
+            return
+        if target == 'flush_dns':
+            action_flush_dns()
+            self._tool_toast(L.get('tt_dns', 'DNS cache flushed'))
+        elif target == 'clear_temp':
+            self._confirm(L.get('cf_temp', 'Delete temporary files?'),
+                          self._do_clear_temp)
+        elif target == 'empty_recyclebin':
+            self._confirm(L.get('cf_bin', 'Empty the Recycle Bin?'),
+                          self._do_empty_bin)
+
+    def _do_clear_temp(self):
+        freed = action_clear_temp()
+        msg = self.L.get('tt_temp', 'Temp cleared — {n}').format(
+            n=_human_bytes(freed))
+        self._tool_toast(msg)
+
+    def _do_empty_bin(self):
+        action_empty_recyclebin()
+        self._tool_toast(self.L.get('tt_bin', 'Recycle Bin emptied'))
+
+    def _tool_toast(self, msg):
+        try:
+            self.w._toast(msg)
+        except Exception:
+            pass
+
+    def _confirm(self, msg, on_yes):
+        """Small modal yes/cancel dialog centered over the Customize window."""
+        T = self.T; L = self.L
+        W = 380   # fixed width so the message wraps predictably
+        dlg = tk.Toplevel(self._win); dlg.overrideredirect(True)
+        dlg.configure(bg=T['panel'], highlightbackground=T['line'],
+                      highlightthickness=1)
+        try: dlg.attributes('-topmost', True)
+        except Exception: pass
+        tk.Label(dlg, text=msg, fg=T['text'], bg=T['panel'], font=('Segoe UI', 10),
+                 wraplength=W - 44, justify='left').pack(
+                     anchor='w', padx=20, pady=(18, 14))
+        btns = tk.Frame(dlg, bg=T['panel']); btns.pack(fill='x', padx=20, pady=(0, 16))
+        def _close():
+            try: dlg.grab_release()
+            except Exception: pass
+            try: dlg.destroy()
+            except Exception: pass
+        no = tk.Label(btns, text=L.get('cf_no', 'Cancel'), fg=T['muted'], bg=T['bg2'],
+                      font=('Segoe UI', 10), padx=16, pady=6, cursor='hand2')
+        no.pack(side='right')
+        no.bind('<Button-1>', lambda e: _close())
+        yes = tk.Label(btns, text=L.get('cf_yes', 'Yes'), fg='white', bg=T['red'],
+                       font=('Segoe UI', 10, 'bold'), padx=16, pady=6, cursor='hand2')
+        yes.pack(side='right', padx=(0, 8))
+        def _go(_e):
+            _close()
+            try: on_yes()
+            except Exception: pass
+        yes.bind('<Button-1>', _go)
+        # height from content (width is fixed), then center over the window
+        dlg.update_idletasks()
+        h_ = max(108, dlg.winfo_reqheight())
+        px = self._win.winfo_rootx() + (self._win.winfo_width() - W) // 2
+        py = self._win.winfo_rooty() + (self._win.winfo_height() - h_) // 2
+        dlg.geometry(f'{W}x{h_}+{max(0, px)}+{max(0, py)}')
+        dlg.lift(); dlg.update()
+        try: dlg.grab_set()
+        except Exception: pass
 
     def _tab_about(self):
         T = self.T; L = self.L
