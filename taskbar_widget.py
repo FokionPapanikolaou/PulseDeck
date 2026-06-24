@@ -909,6 +909,14 @@ MARKER_I18N = {
 for _lng, _d in MARKER_I18N.items():
     CUST_LABELS.setdefault(_lng, {}).update(_d)
 
+# "Rate" — Store review link (tray menu uses T, About tab uses CUST_LABELS)
+_RATE = {'en':'Rate','el':'Αξιολόγηση','es':'Valorar','de':'Bewerten',
+         'fr':'Noter','it':'Valuta','pt':'Avaliar','ru':'Оценить'}
+for _lng, _v in _RATE.items():
+    CUST_LABELS.setdefault(_lng, {})['rate'] = _v
+    if _lng in T:
+        T[_lng]['rate'] = _v
+
 # Cell metadata for the Metrics tab (id -> friendly name, icon glyph, config key)
 CELL_META = (
     ('cpu',     'CPU',         '💻', 'show_cpu'),
@@ -4003,6 +4011,14 @@ class CustomizeWindow:
                  'https://github.com/FokionPapanikolaou/PulseDeck')
         link_btn('🌐', L['website'],
                  'https://fokionpapanikolaou.github.io/PulseDeck/')
+        # ── rate: opens the Store review page directly (deep link in MSIX) ──
+        rb = tk.Label(lrow, text='⭐\n' + L.get('rate', 'Rate'), fg=T['text'],
+                      bg=T['panel'], font=('Segoe UI', 10), padx=22, pady=10,
+                      cursor='hand2', justify='center')
+        rb.pack(side='left', padx=6)
+        rb.bind('<Button-1>', lambda e: self.w._open_review())
+        rb.bind('<Enter>', lambda e: rb.config(bg=T['bg2'], fg='#ffd34d'))
+        rb.bind('<Leave>', lambda e: rb.config(bg=T['panel'], fg=T['text']))
         # ── donate: direct in-window buttons (no extra popup) ──
         tk.Label(body, text='💜  ' + L['donate'], fg='#d8b6ff', bg=T['bg'],
                  font=('Segoe UI', 11, 'bold')).pack(pady=(18, 6))
@@ -5944,6 +5960,8 @@ class Widget:
         m.add_command(label='  '+st, image=ic.get('power'),
                       compound='left', command=self._toggle_startup)
         m.add_separator()
+        m.add_command(label='  ⭐  ' + self.t('rate'),
+                      command=lambda: self.root.after(1, self._open_review))
         m.add_command(label='  💜  ' + DONATE_LABEL.get(self.lang, DONATE_LABEL['en']),
                       image=ic.get('heart'), compound='left',
                       command=lambda: self.root.after(1, self._show_donate))
@@ -5986,6 +6004,22 @@ class Widget:
         self.cfg['free_pos'] = False
         save_config(self.cfg)
         self._position()
+
+    def _open_review(self):
+        """Open the Microsoft Store review page for PulseDeck. Inside MSIX the
+        deep link jumps straight to the rating dialog; otherwise it opens the
+        Store product page (falling back to the web listing)."""
+        pid = '9P128R4SVXLC'
+        try:
+            if _is_msix():
+                os.startfile(f'ms-windows-store://review/?ProductId={pid}')
+            else:
+                os.startfile(f'ms-windows-store://pdp/?ProductId={pid}')
+        except Exception:
+            try:
+                webbrowser.open(f'https://apps.microsoft.com/detail/{pid}')
+            except Exception:
+                pass
 
     def _show_donate(self):
         """A small donation card with PayPal & Revolut buttons."""
