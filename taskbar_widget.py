@@ -715,6 +715,20 @@ EXTRA_28 = {
 for _lng, _d in EXTRA_28.items():
     CUST_LABELS.setdefault(_lng, {}).update(_d)
 
+# ── Tools layout toggle labels (v2.8) ──────────────────────────────────
+LAYOUT_I18N = {
+ 'en':{'view_list':'List','view_grid':'Tiles'},
+ 'el':{'view_list':'Λίστα','view_grid':'Πλακίδια'},
+ 'es':{'view_list':'Lista','view_grid':'Mosaico'},
+ 'de':{'view_list':'Liste','view_grid':'Kacheln'},
+ 'fr':{'view_list':'Liste','view_grid':'Tuiles'},
+ 'it':{'view_list':'Elenco','view_grid':'Riquadri'},
+ 'pt':{'view_list':'Lista','view_grid':'Mosaicos'},
+ 'ru':{'view_list':'Список','view_grid':'Плитки'},
+}
+for _lng, _d in LAYOUT_I18N.items():
+    CUST_LABELS.setdefault(_lng, {}).update(_d)
+
 # Cell metadata for the Metrics tab (id -> friendly name, icon glyph, config key)
 CELL_META = (
     ('cpu',     'CPU',         '💻', 'show_cpu'),
@@ -1398,6 +1412,7 @@ DEFAULTS = {
     'sparklines':False,      # mini history graphs
     'disks':     [],         # drive letters to show space % for, e.g. ['C:']
     'tooltips':  True,       # hover a metric -> details popup
+    'tools_layout': 'list',  # Tools tab view: 'list' or 'grid' (responsive tiles)
     'check_updates': True,   # check GitHub for a newer release on launch
     'last_update_check': 0,  # epoch seconds of the last check (throttle)
     # ── earthquakes (v2.6) ──
@@ -2078,6 +2093,34 @@ class CustomizeWindow:
         win.geometry(f'{ww}x{wh}+{(sw-ww)//2}+{(sh-wh)//2}')
         self._build_chrome()
         win.bind('<Escape>', lambda e: self.close())
+        # ── resize grip (bottom-right) so the window can grow; tabs that use
+        #    fill/expand (incl. the responsive Tools grid) adapt automatically ──
+        grip = tk.Label(win, text='◢', fg=self.T['muted'], bg=self.T['titlebar'],
+                        font=('Segoe UI', 9), cursor='size_nw_se')
+        grip.place(relx=1.0, rely=1.0, anchor='se', x=-1, y=-1)
+        grip.bind('<ButtonPress-1>', self._rz_press)
+        grip.bind('<B1-Motion>', self._rz_drag)
+        grip.bind('<ButtonRelease-1>', self._rz_release)
+
+    def _rz_press(self, e):
+        self._rz = (e.x_root, e.y_root,
+                    self._win.winfo_width(), self._win.winfo_height())
+
+    def _rz_drag(self, e):
+        rz = getattr(self, '_rz', None)
+        if not rz:
+            return
+        x0, y0, w0, h0 = rz
+        nw = max(620, w0 + (e.x_root - x0))
+        nh = max(460, h0 + (e.y_root - y0))
+        self._win.geometry(f'{nw}x{nh}')
+
+    def _rz_release(self, e):
+        self._rz = None
+        try:
+            self._round_corners(self._win, 12)
+        except Exception:
+            pass
 
     def _round_corners(self, win, radius):
         # Win32 SetWindowRgn for soft rounded look
@@ -3183,15 +3226,37 @@ class CustomizeWindow:
                  bg=T['bg'], font=('Segoe UI', 9)).pack(side='top', anchor='w', padx=24)
         tk.Frame(self._content, bg=T['line'], height=1).pack(
             side='top', fill='x', padx=24, pady=(6, 0))
-        # search box
+        # search box + layout toggle (one row)
         sr = tk.Frame(self._content, bg=T['bg'])
         sr.pack(side='top', fill='x', padx=24, pady=(10, 2))
+        # layout toggle on the right (List / Tiles)
+        toggle = tk.Frame(sr, bg=T['bg']); toggle.pack(side='right', padx=(8, 0))
+        _btns = {}
+        def _style_toggle():
+            cur = self.w.cfg.get('tools_layout', 'list')
+            for m, b in _btns.items():
+                if m == cur:
+                    b.config(bg=T['cyan'], fg='#0d1117')
+                else:
+                    b.config(bg=T['panel'], fg=T['muted'])
+        def _set_layout(mode):
+            if self.w.cfg.get('tools_layout') == mode:
+                return
+            self.w._set('tools_layout', mode)
+            _style_toggle(); _paint()
+        for mode, icon in (('list', '≣'), ('grid', '▦')):
+            b = tk.Label(toggle, text=icon, font=('Segoe UI', 13), padx=10, pady=2,
+                         bg=T['panel'], fg=T['muted'], cursor='hand2')
+            b.pack(side='left', padx=1)
+            b.bind('<Button-1>', lambda e, m=mode: _set_layout(m))
+            _btns[mode] = b
+        # search entry fills the rest
         svar = tk.StringVar()
         ent = tk.Entry(sr, textvariable=svar, bg=T['panel'], fg=T['text'],
                        insertbackground=T['text'], relief='flat', font=('Segoe UI', 10),
                        highlightthickness=1, highlightbackground=T['line'],
                        highlightcolor=T['cyan'])
-        ent.pack(fill='x', ipady=5, ipadx=6)
+        ent.pack(side='left', fill='x', expand=True, ipady=5, ipadx=6)
         placeholder = L.get('tool_search', 'Search tools…')
         def _set_ph():
             if not svar.get():
@@ -3224,10 +3289,27 @@ class CustomizeWindow:
         sb.pack(side='right', fill='y'); canvas.pack(side='left', fill='both', expand=True)
         body = tk.Frame(canvas, bg=T['bg'])
         body_window = canvas.create_window((0, 0), window=body, anchor='nw')
-        def _resize_body(e, _wid=body_window):
+        TILE_W = 150
+        _grid_groups = []   # [(container_frame, [tile_widgets])]
+
+        def _relayout_grid(cols=None):
+            if cols is None:
+                w = canvas.winfo_width() or 400
+                cols = max(1, (w - 10) // TILE_W)
+            for cont, tiles in _grid_groups:
+                for c in range(cols):
+                    cont.grid_columnconfigure(c, weight=1, uniform='tile')
+                for i, t in enumerate(tiles):
+                    t.grid(row=i // cols, column=i % cols, padx=4, pady=4, sticky='nsew')
+            try: canvas.configure(scrollregion=canvas.bbox('all'))
+            except Exception: pass
+
+        def _on_canvas_configure(e, _wid=body_window):
             try: canvas.itemconfig(_wid, width=e.width)
             except Exception: pass
-        canvas.bind('<Configure>', _resize_body)
+            if self.w.cfg.get('tools_layout') == 'grid' and _grid_groups:
+                _relayout_grid()
+        canvas.bind('<Configure>', _on_canvas_configure)
         body.bind('<Configure>',
                   lambda e: canvas.configure(scrollregion=canvas.bbox('all')))
         canvas.bind_all('<MouseWheel>',
@@ -3255,10 +3337,34 @@ class CustomizeWindow:
                 wgt.bind('<Leave>', lambda e: _hover(T['panel']))
                 wgt.bind('<Button-1>', _click)
 
+        def _tool_tile(parent, ticon, label, action):
+            destructive = action[0] == 'action' and action[1] != 'flush_dns'
+            tile = tk.Frame(parent, bg=T['panel'], cursor='hand2',
+                            highlightbackground=T['line'], highlightthickness=1,
+                            width=TILE_W - 14, height=82)
+            tile.pack_propagate(False)
+            tk.Label(tile, text=ticon, bg=T['panel'], fg=T['text'],
+                     font=('Segoe UI', 16)).pack(pady=(13, 1))
+            tk.Label(tile, text=label, bg=T['panel'],
+                     fg=(T['orange'] if destructive else T['text']),
+                     font=('Segoe UI', 8), wraplength=TILE_W - 24,
+                     justify='center').pack()
+            kids = [tile] + list(tile.winfo_children())
+            def _hover(bg):
+                for c in kids: c.config(bg=bg)
+            def _click(_e): self._run_tool(action)
+            for wgt in kids:
+                wgt.bind('<Enter>', lambda e: _hover(T['bg2']))
+                wgt.bind('<Leave>', lambda e: _hover(T['panel']))
+                wgt.bind('<Button-1>', _click)
+            return tile
+
         def _paint(*_a):
             q = '' if getattr(ent, '_ph', False) else svar.get().strip().lower()
             for c in body.winfo_children():
                 c.destroy()
+            _grid_groups.clear()
+            mode = self.w.cfg.get('tools_layout', 'list')
             shown = False
             for cat_key, cicon, tools in TOOLS_CATALOG:
                 matches = [(tkey, ticon, action) for tkey, ticon, action in tools
@@ -3270,15 +3376,25 @@ class CustomizeWindow:
                 hdr = tk.Frame(sf, bg=T['panel']); hdr.pack(fill='x', padx=12, pady=(8, 4))
                 tk.Label(hdr, text=cicon + '  ' + L.get(cat_key, cat_key), fg=T['cyan'],
                          bg=T['panel'], font=('Segoe UI', 11, 'bold')).pack(side='left')
-                for tkey, ticon, action in matches:
-                    _tool_row(sf, ticon, L.get(tkey, tkey), action)
-                tk.Frame(sf, bg=T['panel'], height=8).pack()
+                if mode == 'grid':
+                    cont = tk.Frame(sf, bg=T['panel'])
+                    cont.pack(fill='x', padx=10, pady=(0, 8))
+                    tiles = [_tool_tile(cont, ticon, L.get(tkey, tkey), action)
+                             for tkey, ticon, action in matches]
+                    _grid_groups.append((cont, tiles))
+                else:
+                    for tkey, ticon, action in matches:
+                        _tool_row(sf, ticon, L.get(tkey, tkey), action)
+                    tk.Frame(sf, bg=T['panel'], height=8).pack()
             if not shown:
                 tk.Label(body, text=L.get('no_match', 'No matching tools'),
                          fg=T['muted'], bg=T['bg'], font=('Segoe UI', 10)).pack(pady=24)
+            if mode == 'grid' and _grid_groups:
+                self._win.after_idle(_relayout_grid)
             try: canvas.configure(scrollregion=canvas.bbox('all'))
             except Exception: pass
 
+        _style_toggle()
         svar.trace_add('write', _paint)
         _paint()
 
