@@ -917,6 +917,20 @@ for _lng, _v in _RATE.items():
     if _lng in T:
         T[_lng]['rate'] = _v
 
+# ── Weather location settings (moved into Appearance from the old tray) ──
+WEATHER_I18N = {
+ 'en':{'weather_lbl':'Weather','weather_city':'Weather city','weather_city_hint':'Leave empty to locate automatically by your IP.'},
+ 'el':{'weather_lbl':'Καιρός','weather_city':'Πόλη καιρού','weather_city_hint':'Άφησέ το κενό για αυτόματο εντοπισμό μέσω IP.'},
+ 'es':{'weather_lbl':'Tiempo','weather_city':'Ciudad del tiempo','weather_city_hint':'Déjalo vacío para localizar automáticamente por IP.'},
+ 'de':{'weather_lbl':'Wetter','weather_city':'Wetter-Stadt','weather_city_hint':'Leer lassen, um automatisch per IP zu lokalisieren.'},
+ 'fr':{'weather_lbl':'Météo','weather_city':'Ville météo','weather_city_hint':'Laissez vide pour localiser automatiquement par IP.'},
+ 'it':{'weather_lbl':'Meteo','weather_city':'Città meteo','weather_city_hint':'Lascia vuoto per localizzare automaticamente tramite IP.'},
+ 'pt':{'weather_lbl':'Tempo','weather_city':'Cidade do tempo','weather_city_hint':'Deixe vazio para localizar automaticamente por IP.'},
+ 'ru':{'weather_lbl':'Погода','weather_city':'Город погоды','weather_city_hint':'Оставьте пустым для автоопределения по IP.'},
+}
+for _lng, _d in WEATHER_I18N.items():
+    CUST_LABELS.setdefault(_lng, {}).update(_d)
+
 # Cell metadata for the Metrics tab (id -> friendly name, icon glyph, config key)
 CELL_META = (
     ('cpu',     'CPU',         '💻', 'show_cpu'),
@@ -2375,7 +2389,7 @@ class CustomizeWindow:
         win = tk.Toplevel(self.w.root)
         win.title('PulseDeck')
         win.overrideredirect(True)
-        win.geometry('760x540')
+        win.geometry('760x600')
         win.configure(bg=self.T['bg'])
         try: win.iconbitmap(os.path.join(_base_dir(), 'app.ico'))
         except Exception: pass
@@ -2388,7 +2402,7 @@ class CustomizeWindow:
         # center on screen
         win.update_idletasks()
         sw = win.winfo_screenwidth(); sh = win.winfo_screenheight()
-        ww, wh = 760, 540
+        ww, wh = 760, 600
         win.geometry(f'{ww}x{wh}+{(sw-ww)//2}+{(sh-wh)//2}')
         self._build_chrome()
         win.bind('<Escape>', lambda e: self.close())
@@ -3077,11 +3091,46 @@ class CustomizeWindow:
         self._radio_group(body, 'Network', 'net_unit',
                           [('bytes', 'MB/s'), ('bits', 'Mbps')])
 
+    def _weather_settings(self, body):
+        """Weather unit + city row (moved out of the old tray menu)."""
+        T = self.T; L = self.L
+        self._radio_group(body, L.get('weather_lbl', 'Weather') + ' °', 'weather_unit',
+                          [('C', '°C'), ('F', '°F')],
+                          on_change=lambda v: setattr(self.w, '_weather_dirty', True))
+        cr = tk.Frame(body, bg=T['bg']); cr.pack(fill='x', padx=24, pady=6)
+        tk.Label(cr, text=L.get('weather_city', 'Weather city'), fg=T['muted'],
+                 bg=T['bg'], font=('Segoe UI', 10), width=20, anchor='w').pack(side='left')
+        cvar = tk.StringVar(value=self.w.cfg.get('weather_city', ''))
+        cent = tk.Entry(cr, textvariable=cvar, bg=T['panel'], fg=T['text'],
+                        insertbackground=T['text'], relief='flat', font=('Segoe UI', 10),
+                        highlightthickness=1, highlightbackground=T['line'],
+                        highlightcolor=T['cyan'])
+        cent.pack(side='left', fill='x', expand=True, ipady=4, ipadx=6)
+        # overrideredirect window doesn't grab keyboard focus on its own
+        cent.bind('<Button-1>', lambda e: (self._win.focus_force(), cent.focus_set()))
+        def _apply_city(_e=None):
+            try:
+                self.w._set('weather_city', cvar.get().strip())
+                self.w._weather_dirty = True
+                self.w._ensure_weather_thread()
+            except Exception:
+                pass
+        cent.bind('<Return>', _apply_city)
+        cent.bind('<FocusOut>', _apply_city)
+        tk.Label(body, text='   ' + L.get('weather_city_hint', '(empty = auto by IP)'),
+                 fg=T['muted'], bg=T['bg'], font=('Segoe UI', 8),
+                 anchor='w').pack(anchor='w', padx=24)
+
     # ── Alerts tab ──
     def _tab_alerts(self):
         T = self.T; L = self.L
         self._section('🚨  ' + L['alerts'])
         body = tk.Frame(self._content, bg=T['bg']); body.pack(fill='both', expand=True)
+        # weather location + unit (lives here now that the tray submenu is gone)
+        tk.Label(body, text='🌤  ' + L.get('weather_lbl', 'Weather'), fg=T['cyan'],
+                 bg=T['bg'], font=('Segoe UI', 10, 'bold')).pack(anchor='w', padx=24, pady=(6, 0))
+        self._weather_settings(body)
+        tk.Frame(body, bg=T['line'], height=1).pack(fill='x', padx=24, pady=(8, 4))
         self._check_row(body, L['quakes_on'], 'quakes_on',
                         on_toggle=lambda v: (self.w._rebuild(),
                                               self.w._ensure_quakes_thread() if v else None))
