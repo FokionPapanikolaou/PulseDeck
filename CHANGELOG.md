@@ -6,6 +6,20 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [2.8.1] — 2026-06-25 — *Fixes: weather location, tab-switch*
+
+### Fixed
+- **Weather location/unit setting was missing.** When the tray menu was
+  slimmed to "Customize…", the weather city/unit submenu was left behind and
+  never moved into the window — so there was no way to set your city. It now
+  lives under **Customize → Alerts → 🌤 Weather** (°C/°F + city, empty = auto
+  by IP), with a live refresh on change.
+- **Switching tabs while the System scan was loading broke the layout.** The
+  background hardware scan could paint its widgets into whichever tab you had
+  switched to (e.g. Tools); it now discards the result if you've moved on.
+- Customize window is a little taller (and still resizable) so every Appearance
+  / Alerts row fits.
+
 ## [2.8.0] — 2026-06-24 — *Bottleneck · Tools · DNS Boost · new 3D icons* 🧰
 
 A big toolkit release: a live performance analyzer, a full Tools tab, a DNS
