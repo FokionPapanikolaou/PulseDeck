@@ -953,6 +953,129 @@ DIAG_I18N = {
 for _lng, _d in DIAG_I18N.items():
     CUST_LABELS.setdefault(_lng, {}).update(_d)
 
+# ── More tools (GPU reset, lock, restart Explorer, hibernate, sound, …) ──
+NEW_TOOLS_I18N = {
+ 'en':{'t_gpureset':'Reset GPU driver','t_explorer':'Restart Explorer',
+       't_hibernate':'Hibernate now','t_lock':'Lock screen',
+       't_sound':'Sound devices','t_micpriv':'Microphone privacy',
+       't_campriv':'Camera privacy','t_proxy':'Proxy settings','t_vpn':'VPN',
+       'desc__t_gpureset':'Recover from a frozen GPU (Win+Ctrl+Shift+B)',
+       'desc__t_explorer':'Refresh the taskbar & desktop',
+       'desc__t_hibernate':'Save your session and power off',
+       'desc__t_lock':'Lock the workstation (Win+L)',
+       'desc__t_sound':'Playback / recording devices',
+       'desc__t_micpriv':'Which apps can use the microphone',
+       'desc__t_campriv':'Which apps can use the camera',
+       'desc__t_proxy':'Manual / automatic proxy', 'desc__t_vpn':'VPN connections',
+       'cf_gpu':'Reset the graphics driver? The screen will briefly black out — no data is lost.',
+       'cf_expl':'Restart Explorer? Open File Explorer windows will close.',
+       'cf_hib':'Hibernate the PC now? Your open work is saved.'},
+ 'el':{'t_gpureset':'Reset GPU driver','t_explorer':'Επανεκκίνηση Explorer',
+       't_hibernate':'Αδρανοποίηση','t_lock':'Κλείδωμα οθόνης',
+       't_sound':'Συσκευές ήχου','t_micpriv':'Απόρρητο μικροφώνου',
+       't_campriv':'Απόρρητο κάμερας','t_proxy':'Ρυθμίσεις proxy','t_vpn':'VPN',
+       'desc__t_gpureset':'Επαναφορά κολλημένης GPU (Win+Ctrl+Shift+B)',
+       'desc__t_explorer':'Ανανέωση μπάρας & επιφάνειας εργασίας',
+       'desc__t_hibernate':'Αποθήκευση συνεδρίας και απενεργοποίηση',
+       'desc__t_lock':'Κλείδωμα σταθμού (Win+L)',
+       'desc__t_sound':'Συσκευές αναπαραγωγής / εγγραφής',
+       'desc__t_micpriv':'Ποιες εφαρμογές χρησιμοποιούν το μικρόφωνο',
+       'desc__t_campriv':'Ποιες εφαρμογές χρησιμοποιούν την κάμερα',
+       'desc__t_proxy':'Χειροκίνητο / αυτόματο proxy','desc__t_vpn':'Συνδέσεις VPN',
+       'cf_gpu':'Επαναφορά οδηγού γραφικών; Η οθόνη θα μαυρίσει στιγμιαία — δεν χάνεται τίποτα.',
+       'cf_expl':'Επανεκκίνηση Explorer; Τα ανοιχτά παράθυρα του File Explorer θα κλείσουν.',
+       'cf_hib':'Αδρανοποίηση τώρα; Η εργασία σου αποθηκεύεται.'},
+ 'es':{'t_gpureset':'Reset GPU driver','t_explorer':'Reiniciar Explorer',
+       't_hibernate':'Hibernar ahora','t_lock':'Bloquear pantalla',
+       't_sound':'Dispositivos de sonido','t_micpriv':'Privacidad del micrófono',
+       't_campriv':'Privacidad de la cámara','t_proxy':'Proxy','t_vpn':'VPN',
+       'desc__t_gpureset':'Recupera una GPU congelada (Win+Ctrl+Shift+B)',
+       'desc__t_explorer':'Refrescar barra y escritorio',
+       'desc__t_hibernate':'Guarda la sesión y apaga','desc__t_lock':'Bloquear (Win+L)',
+       'desc__t_sound':'Reproducción / grabación',
+       'desc__t_micpriv':'Apps con acceso al micrófono',
+       'desc__t_campriv':'Apps con acceso a la cámara',
+       'desc__t_proxy':'Proxy manual / automático','desc__t_vpn':'Conexiones VPN',
+       'cf_gpu':'¿Reiniciar el controlador de gráficos? La pantalla parpadeará — no se pierden datos.',
+       'cf_expl':'¿Reiniciar Explorer? Las ventanas abiertas se cerrarán.',
+       'cf_hib':'¿Hibernar ahora? Tu trabajo se guarda.'},
+ 'de':{'t_gpureset':'GPU-Treiber zurücksetzen','t_explorer':'Explorer neu starten',
+       't_hibernate':'Ruhezustand','t_lock':'Bildschirm sperren',
+       't_sound':'Audiogeräte','t_micpriv':'Mikrofon-Privatsphäre',
+       't_campriv':'Kamera-Privatsphäre','t_proxy':'Proxy','t_vpn':'VPN',
+       'desc__t_gpureset':'Hängende GPU zurücksetzen (Win+Strg+Umsch+B)',
+       'desc__t_explorer':'Taskleiste & Desktop aktualisieren',
+       'desc__t_hibernate':'Sitzung speichern und ausschalten',
+       'desc__t_lock':'Arbeitsplatz sperren (Win+L)',
+       'desc__t_sound':'Wiedergabe / Aufnahme',
+       'desc__t_micpriv':'Welche Apps das Mikrofon nutzen',
+       'desc__t_campriv':'Welche Apps die Kamera nutzen',
+       'desc__t_proxy':'Manueller / automatischer Proxy','desc__t_vpn':'VPN-Verbindungen',
+       'cf_gpu':'Grafiktreiber zurücksetzen? Der Bildschirm wird kurz schwarz — keine Daten gehen verloren.',
+       'cf_expl':'Explorer neu starten? Offene Fenster werden geschlossen.',
+       'cf_hib':'PC jetzt in Ruhezustand? Ihre Arbeit wird gespeichert.'},
+ 'fr':{'t_gpureset':'Réinitialiser le pilote GPU','t_explorer':'Redémarrer Explorer',
+       't_hibernate':'Veille prolongée','t_lock':'Verrouiller',
+       't_sound':'Périphériques audio','t_micpriv':'Confidentialité micro',
+       't_campriv':'Confidentialité caméra','t_proxy':'Proxy','t_vpn':'VPN',
+       'desc__t_gpureset':'Récupérer une GPU figée (Win+Ctrl+Maj+B)',
+       'desc__t_explorer':'Actualiser barre et bureau',
+       'desc__t_hibernate':'Enregistre la session et éteint',
+       'desc__t_lock':'Verrouiller (Win+L)',
+       'desc__t_sound':'Lecture / enregistrement',
+       'desc__t_micpriv':'Applications utilisant le micro',
+       'desc__t_campriv':'Applications utilisant la caméra',
+       'desc__t_proxy':'Proxy manuel / automatique','desc__t_vpn':'Connexions VPN',
+       'cf_gpu':'Réinitialiser le pilote graphique ? L\'écran clignote — aucune donnée perdue.',
+       'cf_expl':'Redémarrer Explorer ? Les fenêtres ouvertes se fermeront.',
+       'cf_hib':'Mettre en veille prolongée ? Votre travail est sauvegardé.'},
+ 'it':{'t_gpureset':'Reset driver GPU','t_explorer':'Riavvia Explorer',
+       't_hibernate':'Sospensione','t_lock':'Blocca schermo',
+       't_sound':'Dispositivi audio','t_micpriv':'Privacy microfono',
+       't_campriv':'Privacy fotocamera','t_proxy':'Proxy','t_vpn':'VPN',
+       'desc__t_gpureset':'Recupera GPU bloccata (Win+Ctrl+Maiusc+B)',
+       'desc__t_explorer':'Aggiorna barra e desktop',
+       'desc__t_hibernate':'Salva sessione e spegne',
+       'desc__t_lock':'Blocca (Win+L)','desc__t_sound':'Riproduzione / registrazione',
+       'desc__t_micpriv':'App che usano il microfono',
+       'desc__t_campriv':'App che usano la fotocamera',
+       'desc__t_proxy':'Proxy manuale / automatico','desc__t_vpn':'Connessioni VPN',
+       'cf_gpu':'Resettare il driver grafico? Lo schermo lampeggia — nessun dato perso.',
+       'cf_expl':'Riavviare Explorer? Le finestre aperte si chiuderanno.',
+       'cf_hib':'Sospendere ora? Il tuo lavoro viene salvato.'},
+ 'pt':{'t_gpureset':'Reset driver GPU','t_explorer':'Reiniciar Explorer',
+       't_hibernate':'Hibernar agora','t_lock':'Bloquear ecrã',
+       't_sound':'Dispositivos de som','t_micpriv':'Privacidade do microfone',
+       't_campriv':'Privacidade da câmara','t_proxy':'Proxy','t_vpn':'VPN',
+       'desc__t_gpureset':'Recupera GPU bloqueada (Win+Ctrl+Shift+B)',
+       'desc__t_explorer':'Atualizar barra e ambiente',
+       'desc__t_hibernate':'Guarda a sessão e desliga',
+       'desc__t_lock':'Bloquear (Win+L)','desc__t_sound':'Reprodução / gravação',
+       'desc__t_micpriv':'Apps que usam o microfone',
+       'desc__t_campriv':'Apps que usam a câmara',
+       'desc__t_proxy':'Proxy manual / automático','desc__t_vpn':'Ligações VPN',
+       'cf_gpu':'Reiniciar o driver gráfico? O ecrã pisca — não se perdem dados.',
+       'cf_expl':'Reiniciar o Explorer? As janelas abertas serão fechadas.',
+       'cf_hib':'Hibernar agora? O seu trabalho é guardado.'},
+ 'ru':{'t_gpureset':'Сброс GPU','t_explorer':'Перезапуск Explorer',
+       't_hibernate':'Гибернация','t_lock':'Блокировка экрана',
+       't_sound':'Звуковые устройства','t_micpriv':'Конфиденциальность микрофона',
+       't_campriv':'Конфиденциальность камеры','t_proxy':'Прокси','t_vpn':'VPN',
+       'desc__t_gpureset':'Восстановить зависшую GPU (Win+Ctrl+Shift+B)',
+       'desc__t_explorer':'Обновить панель и рабочий стол',
+       'desc__t_hibernate':'Сохранить сеанс и выключить',
+       'desc__t_lock':'Блокировать (Win+L)',
+       'desc__t_sound':'Воспроизведение / запись',
+       'desc__t_micpriv':'Какие приложения используют микрофон',
+       'desc__t_campriv':'Какие приложения используют камеру',
+       'desc__t_proxy':'Ручной / автоматический прокси','desc__t_vpn':'VPN-подключения',
+       'cf_gpu':'Сбросить графический драйвер? Экран мигнёт — данные не теряются.',
+       'cf_expl':'Перезапустить Explorer? Открытые окна закроются.',
+       'cf_hib':'Включить гибернацию? Ваша работа сохраняется.'},
+}
+for _lng, _d in NEW_TOOLS_I18N.items():
+    CUST_LABELS.setdefault(_lng, {}).update(_d)
+
 # Cell metadata for the Metrics tab (id -> friendly name, icon glyph, config key)
 CELL_META = (
     ('cpu',     'CPU',         '💻', 'show_cpu'),
@@ -1886,6 +2009,57 @@ def action_empty_recyclebin():
     except Exception:
         return False
 
+def action_reset_gpu_driver():
+    """Send Win + Ctrl + Shift + B — the Windows shortcut to reset the
+    display driver. Briefly blacks the screen and beeps; the desktop redraws
+    a moment later. Safe (no apps/data lost) and built into Windows."""
+    try:
+        u = ctypes.windll.user32
+        KEYEVENTF_KEYUP = 0x0002
+        VK_LWIN, VK_CTRL, VK_SHIFT, VK_B = 0x5B, 0x11, 0x10, 0x42
+        for k in (VK_LWIN, VK_CTRL, VK_SHIFT, VK_B):
+            u.keybd_event(k, 0, 0, 0)
+        for k in (VK_B, VK_SHIFT, VK_CTRL, VK_LWIN):
+            u.keybd_event(k, 0, KEYEVENTF_KEYUP, 0)
+        return True
+    except Exception:
+        return False
+
+def action_lock_screen():
+    """Lock the workstation (same as Win+L)."""
+    try:
+        ctypes.windll.user32.LockWorkStation()
+        return True
+    except Exception:
+        return False
+
+def action_restart_explorer():
+    """Kill and relaunch explorer.exe — refreshes the taskbar/desktop without
+    a reboot. Useful when icons stop responding."""
+    try:
+        subprocess.run(['taskkill', '/F', '/IM', 'explorer.exe'],
+                       startupinfo=_silent_startupinfo(), timeout=10,
+                       capture_output=True)
+        # Windows auto-restarts explorer; if it doesn't, kick it manually.
+        time.sleep(0.6)
+        try:
+            os.startfile(os.path.join(os.environ.get('WINDIR', r'C:\Windows'),
+                                      'explorer.exe'))
+        except Exception:
+            pass
+        return True
+    except Exception:
+        return False
+
+def action_hibernate():
+    """Put the PC into hibernation. Falls back gracefully if hibernation is
+    disabled in power settings."""
+    try:
+        ctypes.windll.powrprof.SetSuspendState(True, False, False)
+        return True
+    except Exception:
+        return False
+
 # catalog: (category_key, icon, [(tool_key, icon, (kind, target)), ...])
 TOOLS_CATALOG = [
     ('cat_cleanup', '🧹', [
@@ -1904,24 +2078,33 @@ TOOLS_CATALOG = [
         ('t_msinfo',      'ℹ', ('exe', ['msinfo32.exe'])),
         ('t_reliability', '📊', ('exe', ['perfmon.exe', '/rel'])),
         ('t_dxdiag',      '🎮', ('exe', ['dxdiag.exe'])),
+        ('t_gpureset',    '⚡', ('action', 'reset_gpu')),
     ]),
     ('cat_perf', '⚡', [
         ('t_power',       '🔋', ('applet', 'powercfg.cpl')),
         ('t_startup',     '🚀', ('settings', 'ms-settings:startupapps')),
         ('t_visualfx',    '🎚', ('exe', ['SystemPropertiesPerformance.exe'])),
         ('t_graphics',    '🖥', ('settings', 'ms-settings:display-advancedgraphics')),
+        ('t_explorer',    '🔄', ('action', 'restart_explorer')),
+        ('t_hibernate',   '🛌', ('action', 'hibernate')),
     ]),
     ('cat_net', '🌐', [
         ('t_dnsboost',    '🚀', ('action', 'dns_boost')),
         ('t_netstatus',   '📶', ('settings', 'ms-settings:network-status')),
         ('t_adapters',    '🔌', ('applet', 'ncpa.cpl')),
         ('t_flushdns',    '♻', ('action', 'flush_dns')),
+        ('t_proxy',       '🔐', ('settings', 'ms-settings:network-proxy')),
+        ('t_vpn',         '🛡', ('settings', 'ms-settings:network-vpn')),
     ]),
     ('cat_sys', '🛡', [
         ('t_update',      '⬇', ('settings', 'ms-settings:windowsupdate')),
         ('t_security',    '🛡', ('settings', 'windowsdefender:')),
         ('t_restore',     '⏮', ('exe', ['rstrui.exe'])),
         ('t_devmgr',      '🧷', ('msc', 'devmgmt.msc')),
+        ('t_lock',        '🔒', ('action', 'lock_screen')),
+        ('t_sound',       '🔊', ('exe', ['mmsys.cpl'])),
+        ('t_micpriv',     '🎤', ('settings', 'ms-settings:privacy-microphone')),
+        ('t_campriv',     '📷', ('settings', 'ms-settings:privacy-webcam')),
     ]),
 ]
 
@@ -3919,6 +4102,17 @@ class CustomizeWindow:
         elif target == 'empty_recyclebin':
             self._confirm(L.get('cf_bin', 'Empty the Recycle Bin?'),
                           self._do_empty_bin)
+        elif target == 'reset_gpu':
+            self._confirm(L.get('cf_gpu', 'Reset the graphics driver?'),
+                          self._do_gpu_reset)
+        elif target == 'restart_explorer':
+            self._confirm(L.get('cf_expl', 'Restart Explorer? Your open File Explorer windows will close.'),
+                          self._do_restart_explorer)
+        elif target == 'hibernate':
+            self._confirm(L.get('cf_hib', 'Hibernate the PC now? Open work will be saved.'),
+                          self._do_hibernate)
+        elif target == 'lock_screen':
+            action_lock_screen()
 
     def _do_clear_temp(self):
         freed = action_clear_temp()
@@ -3929,6 +4123,16 @@ class CustomizeWindow:
     def _do_empty_bin(self):
         action_empty_recyclebin()
         self._tool_toast(self.L.get('tt_bin', 'Recycle Bin emptied'))
+
+    def _do_gpu_reset(self):
+        action_reset_gpu_driver()
+        # No toast — the screen blanks for ~0.5 s; another popup would feel busy.
+
+    def _do_restart_explorer(self):
+        action_restart_explorer()
+
+    def _do_hibernate(self):
+        action_hibernate()
 
     def _tool_toast(self, msg):
         try:
