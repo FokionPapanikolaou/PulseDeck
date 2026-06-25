@@ -6,6 +6,38 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [2.8.2] — 2026-06-25 — *Robustness · Diagnostics · 10 new Tools* 🛡️
+
+### Added
+- **Diagnostic self-test** (🩺 button in System tab) — 18 read-only hardware
+  probes (CPU, RAM, GPU, disk, battery, network, PDH counters, weather) with a
+  pass / warn / fail verdict per check and a **Copy report** button for sharing.
+- **10 new Tools** (34 total) across every category:
+  - ⚡ Reset GPU driver — sends built-in `Win+Ctrl+Shift+B`; screen flickers and
+    the driver recovers without a reboot. (with confirmation)
+  - 🔄 Restart Explorer — kills and relaunches `explorer.exe` to unfreeze a
+    stuck taskbar or desktop. (with confirmation)
+  - 🛌 Hibernate — puts the PC into hibernate immediately. (with confirmation)
+  - 🔐 Proxy settings · 🛡 VPN — open the matching Windows Settings pages.
+  - 🔒 Lock screen — equivalent to `Win+L`, runs instantly.
+  - 🔊 Sound devices — opens the Sound Control Panel applet.
+  - 🎤 Microphone privacy · 📷 Camera privacy · 📋 Clipboard history.
+- All new actions are **Store-safe** (no admin required) and **translated across
+  all 8 languages** (labels + descriptions + confirm dialogs).
+
+### Changed
+- `_update()` split into a wrapper (always reschedules) + `_update_tick()` (logic),
+  so a crash in one tick never stops the polling loop.
+- Weather fetch loop now catches all exceptions and reschedules cleanly.
+
+### Fixed
+- **Crash-proof hardware init** — every hardware read in startup (`taskbar height`,
+  `net counters`, `battery`, `VRAM`, `CPU freq`, `CPU/GPU name`) is now wrapped
+  in its own `try/except` with a safe fallback; the app launches even on unusual
+  hardware configurations.
+- `mmsys.cpl` (Sound devices) now opens as a Control Panel applet instead of as
+  an executable (which failed silently on some systems).
+
 ## [2.8.1] — 2026-06-25 — *Fixes: weather location, tab-switch*
 
 ### Fixed

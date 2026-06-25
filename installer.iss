@@ -1,6 +1,6 @@
 ; Inno Setup script — PulseDeck (internal identity stays "PulseBar")
 #define AppName "PulseDeck"
-#define AppVer "2.8.1"
+#define AppVer "2.8.2"
 #define AppPublisher "Fokion Papanikolaou"
 #define AppExe "PulseBar.exe"
 
