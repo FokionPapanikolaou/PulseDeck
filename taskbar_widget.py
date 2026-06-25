@@ -3197,6 +3197,12 @@ class CustomizeWindow:
         threading.Thread(target=_bg, daemon=True).start()
 
     def _render_system(self, info, loading_lbl):
+        # The hardware scan runs in a background thread; by the time it calls
+        # back the user may have switched tabs. If System is no longer the
+        # active tab, drop the result — otherwise we'd paint the System widgets
+        # into whatever tab is now showing (e.g. Tools) and break the layout.
+        if self._active_tab != 'system':
+            return
         try: loading_lbl.destroy()
         except Exception: pass
         T = self.T
