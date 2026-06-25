@@ -931,6 +931,28 @@ WEATHER_I18N = {
 for _lng, _d in WEATHER_I18N.items():
     CUST_LABELS.setdefault(_lng, {}).update(_d)
 
+# ── Diagnostics labels (v2.8.2) ───────────────────────────────────────
+DIAG_I18N = {
+ 'en':{'run_diag':'Run diagnostics','diag_done':'{ok}/{n} OK · copied to clipboard',
+       'diag_fail':'Diagnostics failed','diag_hint':'Paste this in a bug report so we can help.'},
+ 'el':{'run_diag':'Εκτέλεση διαγνωστικών','diag_done':'{ok}/{n} OK · αντιγράφηκε',
+       'diag_fail':'Αποτυχία διαγνωστικών','diag_hint':'Επικόλλησέ το σε αναφορά σφάλματος για να βοηθήσουμε.'},
+ 'es':{'run_diag':'Ejecutar diagnóstico','diag_done':'{ok}/{n} OK · copiado al portapapeles',
+       'diag_fail':'Diagnóstico falló','diag_hint':'Pégalo en un informe de error para ayudarte.'},
+ 'de':{'run_diag':'Diagnose ausführen','diag_done':'{ok}/{n} OK · in Zwischenablage',
+       'diag_fail':'Diagnose fehlgeschlagen','diag_hint':'Füge dies in einen Fehlerbericht ein.'},
+ 'fr':{'run_diag':'Lancer le diagnostic','diag_done':'{ok}/{n} OK · copié dans le presse-papiers',
+       'diag_fail':'Diagnostic échoué','diag_hint':'Collez ceci dans un rapport de bug.'},
+ 'it':{'run_diag':'Esegui diagnostica','diag_done':'{ok}/{n} OK · copiato negli appunti',
+       'diag_fail':'Diagnostica fallita','diag_hint':'Incollalo in una segnalazione di bug.'},
+ 'pt':{'run_diag':'Executar diagnóstico','diag_done':'{ok}/{n} OK · copiado para a área',
+       'diag_fail':'Diagnóstico falhou','diag_hint':'Cole isto num relatório de erro.'},
+ 'ru':{'run_diag':'Запустить диагностику','diag_done':'{ok}/{n} OK · скопировано',
+       'diag_fail':'Диагностика не удалась','diag_hint':'Вставьте это в отчёт об ошибке.'},
+}
+for _lng, _d in DIAG_I18N.items():
+    CUST_LABELS.setdefault(_lng, {}).update(_d)
+
 # Cell metadata for the Metrics tab (id -> friendly name, icon glyph, config key)
 CELL_META = (
     ('cpu',     'CPU',         '💻', 'show_cpu'),
@@ -2011,6 +2033,56 @@ def get_current_dns():
         return out
     except Exception:
         return []
+
+# ── Diagnostics: hardware self-test (v2.8.2) ───────────────────────────
+# Runs every read-only hardware probe and collects what worked / what failed.
+# Users hit "Copy" and paste the report into a bug ticket so we can fix things
+# on hardware we don't own (e.g. the AMD VRAM bug was a single missing data
+# point that this report would have caught at first launch).
+def run_diagnostics():
+    out = []
+    def probe(label, fn):
+        try:
+            v = fn()
+            ok = v not in (None, '', [], 0) and not isinstance(v, bool) or v is True
+            out.append((label, 'OK' if ok else 'EMPTY', repr(v)[:120]))
+        except Exception as e:
+            out.append((label, 'FAIL', f'{type(e).__name__}: {e}'[:120]))
+    # CPU / RAM / battery via psutil
+    probe('psutil cpu_percent',        lambda: psutil.cpu_percent(0.05))
+    probe('psutil cpu_count',          lambda: psutil.cpu_count())
+    probe('psutil cpu_freq',           lambda: getattr(psutil.cpu_freq(), 'current', None))
+    probe('psutil virtual_memory',     lambda: psutil.virtual_memory().percent)
+    probe('psutil sensors_battery',    lambda: getattr(psutil.sensors_battery(), 'percent', None))
+    probe('psutil net_io_counters',    lambda: psutil.net_io_counters().bytes_sent)
+    probe('psutil disk_io_counters',   lambda: psutil.disk_io_counters().read_bytes)
+    probe('psutil disk_partitions',    lambda: len(psutil.disk_partitions(all=False)))
+    # Registry / Win32 hardware identity
+    probe('CPU name (registry)',       lambda: get_cpu_name())
+    probe('GPU name (registry)',       lambda: get_gpu_name())
+    probe('VRAM total (registry GB)',  lambda: get_total_vram_gb())
+    probe('Taskbar info',              lambda: get_taskbar_info())
+    # PDH counters
+    probe('CpuFreq PDH',               lambda: CpuFreq().read_ghz())
+    def _gpu_probe():
+        g = GpuCounter()
+        return g.read() if g.ok else None
+    probe('GpuCounter PDH',            _gpu_probe)
+    # Optional/external
+    probe('nvidia-smi power',          _nvidia_smi_power)
+    probe('Battery discharge W',       _battery_discharge_w)
+    probe('WMI Win32_Processor',       lambda: _wmi_query('Win32_Processor', 'Name')[:1])
+    probe('Current DNS',               get_current_dns)
+    return out
+
+def format_diagnostics(rows):
+    head = (f'PulseDeck {VERSION} — diagnostics\n'
+            f'OS: {sys.platform}  ·  Python: {sys.version.split()[0]}\n'
+            f'{"-"*68}\n')
+    lines = [f'{lbl:30}  {status:5}  {detail}' for lbl, status, detail in rows]
+    fails = sum(1 for _, s, _ in rows if s != 'OK')
+    summary = f'\n{"-"*68}\n{len(rows) - fails}/{len(rows)} probes OK  ·  {fails} failing'
+    return head + '\n'.join(lines) + summary
 
 # ── Weather (Open-Meteo, free, no API key) ─────────────────────────────
 def _http_json(url, timeout=6):
@@ -3572,6 +3644,28 @@ class CustomizeWindow:
                           font=('Segoe UI', 10), padx=12, pady=6, cursor='hand2')
         cp_btn.pack(anchor='w', padx=4, pady=8)
         cp_btn.bind('<Button-1>', lambda e: _copy_all())
+        # ── Diagnostics: hardware self-test ──
+        _diag_lbl = '🩺  ' + self.L.get('run_diag', 'Run diagnostics')
+        def _run_diag():
+            try:
+                rows = run_diagnostics()
+                txt = format_diagnostics(rows)
+                self._win.clipboard_clear(); self._win.clipboard_append(txt)
+                fails = sum(1 for _, s, _ in rows if s != 'OK')
+                msg = self.L.get('diag_done', '{ok}/{n} OK · copied to clipboard').format(
+                    ok=len(rows) - fails, n=len(rows))
+                diag_btn.config(text='✓  ' + msg)
+                self._win.after(3500, lambda: diag_btn.config(text=_diag_lbl))
+            except Exception:
+                diag_btn.config(text='⚠  ' + self.L.get('diag_fail', 'Diagnostics failed'))
+        diag_btn = tk.Label(body, text=_diag_lbl, fg=T['cyan'], bg=T['bg'],
+                            font=('Segoe UI', 10), padx=12, pady=6, cursor='hand2')
+        diag_btn.pack(anchor='w', padx=4, pady=(0, 8))
+        diag_btn.bind('<Button-1>', lambda e: _run_diag())
+        tk.Label(body, text='   ' + self.L.get('diag_hint',
+                 'Paste this in a bug report so we can help.'),
+                 fg=T['muted'], bg=T['bg'], font=('Segoe UI', 8),
+                 anchor='w').pack(anchor='w', padx=4, pady=(0, 10))
 
     def _format_sysinfo_text(self, info):
         """Plain-text version of the system info for clipboard / support."""
@@ -4120,14 +4214,19 @@ class Widget:
         self.root.attributes('-topmost', True)
         self._apply_bg_mode()
 
-        _, taskbar_h, _ = get_taskbar_info()
-        self.H = taskbar_h
+        # Every hardware read below is wrapped: a single failing reader (a
+        # missing PDH counter, a stripped-down VM image, a quirky GPU driver,
+        # an OS without disk I/O, …) must NEVER stop the app from starting.
+        # When a value can't be read it falls back to a safe default; the
+        # cell that needs it then shows "—" instead of crashing the widget.
+        try:    _, taskbar_h, _ = get_taskbar_info()
+        except Exception: taskbar_h = 40
+        self.H = taskbar_h or 40
 
-        self._prev_net = psutil.net_io_counters()
-        try:
-            self._prev_disk = psutil.disk_io_counters()
-        except Exception:
-            self._prev_disk = None
+        try:    self._prev_net = psutil.net_io_counters()
+        except Exception: self._prev_net = None
+        try:    self._prev_disk = psutil.disk_io_counters()
+        except Exception: self._prev_disk = None
         # tooltip + per-disk + process-sampler state
         self._perdisk_prev = None
         self._perdisk_rates = {}        # {disk: (read_bytes_s, write_bytes_s)}
@@ -4139,13 +4238,20 @@ class Widget:
         self._tip_cells = []            # [(frame, kind, extra), ...]
         self._disk_lbls = {}            # {drive: label}
         self._update_tag = None         # set if a newer GitHub release exists
-        self._has_batt = psutil.sensors_battery() is not None
+        try:    self._has_batt = psutil.sensors_battery() is not None
+        except Exception: self._has_batt = False
         self._gpu = None
         self._gpu_mem = None
-        self._vram_total = get_total_vram_gb()   # total dedicated VRAM (GB) or None
+        try:    self._vram_total = get_total_vram_gb()
+        except Exception: self._vram_total = None
         self._gpu_counter = None
         self._gpu_running = False
-        self._cpufreq = CpuFreq()
+        try:    self._cpufreq = CpuFreq()
+        except Exception:
+            class _NoFreq:
+                ok = False
+                def read_ghz(self): return None
+            self._cpufreq = _NoFreq()
         self._weather = None
         self._weather_running = False
         self._weather_dirty = False
@@ -4154,9 +4260,11 @@ class Widget:
         self._quake_active_until = 0   # epoch when the dot should clear
         self._quake_recent = []        # last 20 felt events (for the menu)
         self._quakes_running = False
-        # power (v2.7)
-        self._cpu_name_cached = get_cpu_name()
-        self._gpu_name_cached = get_gpu_name()
+        # power (v2.7) — name lookups go through the registry/WMI; tolerate failure
+        try:    self._cpu_name_cached = get_cpu_name()
+        except Exception: self._cpu_name_cached = ''
+        try:    self._gpu_name_cached = get_gpu_name()
+        except Exception: self._gpu_name_cached = ''
         self._power = None             # last {'cpu','gpu','total','source','cpu_tdp','gpu_tdp'} or None
         # customize window (v2.6)
         self._customize = None
@@ -4624,8 +4732,12 @@ class Widget:
 
     def _weather_loop(self):
         while self.cfg.get('show_weather'):
-            self._weather = fetch_weather(self.cfg.get('weather_unit', 'C'),
-                                          self.cfg.get('weather_city', ''))
+            try:
+                self._weather = fetch_weather(self.cfg.get('weather_unit', 'C'),
+                                              self.cfg.get('weather_city', ''))
+            except Exception:
+                # Network/API blip — keep the loop alive so we retry next cycle.
+                pass
             self._weather_dirty = False
             # refresh every ~20 min, but wake early if unit/city changed
             for _ in range(120):
@@ -5658,11 +5770,27 @@ class Widget:
 
     # ── update loop ────────────────────────────────────────────────────
     def _update(self):
+        try:
+            self._update_tick()
+        except Exception:
+            _log('update tick EXC:\n' + traceback.format_exc())
+        # ALWAYS reschedule, no matter what: a single bad sample (a flaky
+        # PDH counter, a transient psutil error) must not freeze the widget.
+        try:
+            self.root.after(self.cfg.get('interval', 1000), self._update)
+        except Exception:
+            pass
+
+    def _update_tick(self):
         self._follow_taskbar()
         # CPU% is always sampled so history stays continuous for sparklines
-        per = psutil.cpu_percent(percpu=True)
+        try:    per = psutil.cpu_percent(percpu=True)
+        except Exception: per = []
         self._percpu = per
-        cpu = (sum(per) / len(per)) if per else psutil.cpu_percent()
+        try:
+            cpu = (sum(per) / len(per)) if per else psutil.cpu_percent()
+        except Exception:
+            cpu = 0.0
         self._hist['cpu'].append(cpu)
         if self.lbl_cpu:
             ghz = self._cpufreq.read_ghz()
@@ -5819,7 +5947,8 @@ class Widget:
                 self.lbl_quake.config(text='')
                 if self._quake_active and time.time() >= self._quake_active_until:
                     self._quake_active = None
-        self.root.after(self.cfg['interval'], self._update)
+        # (reschedule happens in the _update() wrapper above, in a finally-like
+        # path so a failing tick can't freeze the loop)
 
     # ── drag ───────────────────────────────────────────────────────────
     def _drag_start(self, e):
