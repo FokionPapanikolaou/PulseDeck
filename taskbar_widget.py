@@ -2755,6 +2755,9 @@ class CustomizeWindow:
             self._round_corners(win, 12)
         except Exception:
             pass
+        # pause the main widget's 33×/sec TOPMOST re-assert so it stops
+        # fighting this window (and its dialogs) for the top of the z-order
+        self.w._suspend_keep_on_top = True
         # show + activate so it becomes the real keyboard-foreground window
         win.deiconify()
         try:
@@ -2941,6 +2944,12 @@ class CustomizeWindow:
         self._win.geometry(f'+{x}+{y}')
 
     def close(self):
+        # resume the main widget's TOPMOST re-assert
+        try: self.w._suspend_keep_on_top = False
+        except Exception: pass
+        try:
+            self.w._keep_on_top()       # snap it back on top immediately
+        except Exception: pass
         try: self._win.destroy()
         except Exception: pass
         self._win = None
@@ -5760,7 +5769,19 @@ class Widget:
 
     def _foreground_loop(self):
         """Keep the widget reliably above all other windows."""
-        if self._visible:
+        # While the Customize window (and its modal dialogs) are open we must
+        # NOT re-assert TOPMOST — doing so 33×/sec yanks the widget above the
+        # dialog, flickering the dialog's title bar and making typing lag.
+        if getattr(self, '_suspend_keep_on_top', False):
+            cw = getattr(self, '_customize', None)
+            alive = False
+            try:
+                alive = bool(cw and cw._win and tk.Toplevel.winfo_exists(cw._win))
+            except Exception:
+                alive = False
+            if not alive:                       # window gone → fail-safe resume
+                self._suspend_keep_on_top = False
+        if self._visible and not getattr(self, '_suspend_keep_on_top', False):
             self._keep_on_top()
         # When docked ON the taskbar we must out-race the taskbar's own repaints,
         # so re-assert TOPMOST very frequently; floating just above the bar needs
