@@ -4558,16 +4558,11 @@ class Widget:
             img = ImageGrab.grab(bbox=(x, y, x + w, y + h))
             img = img.resize((24, 8))
             px = [p[:3] for p in img.getdata()]
-            # Per-channel MEDIAN: robust against dark icon/text outliers behind
-            # the widget (which dragged the average too dark → black halo) and,
-            # unlike the most-common colour, it is STABLE across samples so the
-            # key doesn't jump between runs and flicker the numbers.
-            def _median(vals):
-                s = sorted(vals); n = len(s)
-                return s[n // 2] if n % 2 else (s[n // 2 - 1] + s[n // 2]) // 2
-            r = _median([p[0] for p in px])
-            g = _median([p[1] for p in px])
-            b = _median([p[2] for p in px])
+            # Most-common colour = the taskbar surface behind us; this is what
+            # made the numbers look clean. Ignores dark icon/text outliers that
+            # an average would smear into a dark halo.
+            from collections import Counter
+            (r, g, b), _ = Counter(px).most_common(1)[0]
             # nudge one channel so the key is unlikely to collide with real
             # pixel values inside the icons/text
             b = b + 1 if b < 255 else b - 1
@@ -5639,6 +5634,12 @@ class Widget:
             buf = ctypes.create_unicode_buffer(256)
             u.GetClassNameW(hwnd, buf, 256)
             if buf.value in ('Shell_TrayWnd', 'Progman', 'WorkerW', 'Windows.UI.Core.CoreWindow', ''):
+                self._fs_cache = False; return False
+            # A MAXIMIZED window (e.g. a maximized browser) is NOT fullscreen —
+            # the taskbar stays visible above it — yet its rect overhangs the
+            # screen by a few px and used to be mis-detected as fullscreen,
+            # making the widget vanish.  IsZoomed → maximized → never hide.
+            if u.IsZoomed(hwnd):
                 self._fs_cache = False; return False
             r = RECT()
             u.GetWindowRect(hwnd, ctypes.byref(r))
