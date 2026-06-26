@@ -2664,31 +2664,19 @@ class _SlowPoller(threading.Thread):
         self._stop = True
 
 def _entry_focus(widget):
-    """Give keyboard focus to an Entry inside an overrideredirect window.
+    """Give keyboard focus to an Entry in the Customize window.
 
-    overrideredirect (WS_POPUP) windows are never auto-activated by Windows
-    on click, so keyboard focus stays on the previous foreground window.
-    Fix: attach OUR thread's input queue TO the foreground thread's queue
-    (correct order: AttachThreadInput(our, fg, True)), then SetFocus.
+    The Customize window is a normal (non-overrideredirect) activatable
+    window whose native title bar is stripped via Win32 (see
+    CustomizeWindow.open), so it can be the real keyboard-foreground window
+    and a plain focus_set() reliably delivers keystrokes to the Entry.
     """
     try:
-        u32 = ctypes.windll.user32
-        k32 = ctypes.windll.kernel32
-        fg      = u32.GetForegroundWindow()
-        fg_tid  = u32.GetWindowThreadProcessId(fg, None)
-        our_tid = k32.GetCurrentThreadId()
-        entry_hwnd = widget.winfo_id()
-        attached = False
-        if fg_tid and fg_tid != our_tid:
-            attached = bool(u32.AttachThreadInput(our_tid, fg_tid, True))
-        u32.BringWindowToTop(widget.winfo_toplevel().winfo_id())
-        u32.SetFocus(entry_hwnd)
-        if attached:
-            u32.AttachThreadInput(our_tid, fg_tid, False)
+        widget.focus_set()
     except Exception:
         pass
     try:
-        widget.focus_set()
+        ctypes.windll.user32.SetFocus(widget.winfo_id())
     except Exception:
         pass
 
@@ -2717,16 +2705,18 @@ class CustomizeWindow:
             self._win.lift(); self._win.focus_force(); return
         win = tk.Toplevel(self.w.root)
         win.title('PulseDeck')
-        win.overrideredirect(True)
+        # IMPORTANT: this is a *normal* (non-overrideredirect) Toplevel.
+        # overrideredirect windows are WS_POPUP and Windows never makes them the
+        # real keyboard-foreground window, so Entry widgets inside them never
+        # receive keystrokes (confirmed via input diagnostics).  We keep the
+        # custom dark chrome by stripping the native title bar through the Win32
+        # frame window (GetParent of the Tk HWND) instead — the window stays a
+        # normal activatable window, so typing works everywhere.
+        win.withdraw()                      # hide while we strip the title bar
         win.geometry('760x600')
         win.configure(bg=self.T['bg'])
         try: win.iconbitmap(os.path.join(_base_dir(), 'app.ico'))
         except Exception: pass
-        # rounded-corner illusion via region (Windows-only)
-        try:
-            self._round_corners(win, 12)
-        except Exception:
-            pass
         self._win = win
         # center on screen
         win.update_idletasks()
@@ -2743,6 +2733,37 @@ class CustomizeWindow:
         grip.bind('<ButtonPress-1>', self._rz_press)
         grip.bind('<B1-Motion>', self._rz_drag)
         grip.bind('<ButtonRelease-1>', self._rz_release)
+        # Strip the native title bar from the real Win32 frame window (the
+        # PARENT of the Tk HWND) so we keep the custom chrome without a second
+        # bar, while the window stays a normal activatable top-level window.
+        try:
+            win.update_idletasks()
+            u32 = ctypes.windll.user32
+            GWL_STYLE     = -16
+            WS_CAPTION    = 0x00C00000
+            WS_THICKFRAME = 0x00040000
+            SWP_FLAGS     = 0x0027          # NOMOVE|NOSIZE|NOZORDER|FRAMECHANGED
+            frame = u32.GetParent(win.winfo_id()) or win.winfo_id()
+            style = u32.GetWindowLongW(frame, GWL_STYLE)
+            u32.SetWindowLongW(frame, GWL_STYLE,
+                               style & ~(WS_CAPTION | WS_THICKFRAME))
+            u32.SetWindowPos(frame, 0, 0, 0, 0, 0, SWP_FLAGS)
+        except Exception:
+            pass
+        # rounded-corner illusion via region (Windows-only)
+        try:
+            self._round_corners(win, 12)
+        except Exception:
+            pass
+        # show + activate so it becomes the real keyboard-foreground window
+        win.deiconify()
+        try:
+            win.lift()
+            win.focus_force()
+            ctypes.windll.user32.SetForegroundWindow(
+                ctypes.windll.user32.GetParent(win.winfo_id()) or win.winfo_id())
+        except Exception:
+            pass
 
     def _rz_press(self, e):
         self._rz = (e.x_root, e.y_root,
@@ -3426,30 +3447,36 @@ class CustomizeWindow:
         self._radio_group(body, L.get('weather_lbl', 'Weather') + ' °', 'weather_unit',
                           [('C', '°C'), ('F', '°F')],
                           on_change=lambda v: setattr(self.w, '_weather_dirty', True))
+        # City via a modal dialog.  A normal decorated dialog reliably gets
+        # keyboard focus; an inline Entry in this custom-chrome window does not
+        # (the topmost main widget keeps reclaiming the keyboard foreground).
         cr = tk.Frame(body, bg=T['bg']); cr.pack(fill='x', padx=24, pady=6)
         tk.Label(cr, text=L.get('weather_city', 'Weather city'), fg=T['muted'],
                  bg=T['bg'], font=('Segoe UI', 10), width=20, anchor='w').pack(side='left')
-        cvar = tk.StringVar(value=self.w.cfg.get('weather_city', ''))
-        cent = tk.Entry(cr, textvariable=cvar, bg=T['panel'], fg=T['text'],
-                        insertbackground=T['text'], relief='flat', font=('Segoe UI', 10),
-                        highlightthickness=1, highlightbackground=T['line'],
-                        highlightcolor=T['cyan'])
-        cent.pack(side='left', fill='x', expand=True, ipady=4, ipadx=6)
-        # overrideredirect window doesn't grab keyboard focus on its own;
-        # focus_force() directly on the entry is the only reliable path
-        cent.bind('<Button-1>', lambda e: _entry_focus(cent))
-        def _apply_city(_e=None):
+        hint_txt = L.get('weather_city_hint', '(empty = auto by IP)')
+        def _city_text():
+            c = self.w.cfg.get('weather_city', '')
+            return c if c else hint_txt
+        city_btn = tk.Label(cr, text='✎  ' + _city_text(), fg=T['cyan'], bg=T['panel'],
+                            font=('Segoe UI', 10), cursor='hand2', anchor='w',
+                            padx=10, pady=4)
+        city_btn.pack(side='left', fill='x', expand=True, ipady=1)
+        def _edit_city(_e=None):
             try:
-                self.w._set('weather_city', cvar.get().strip())
-                self.w._weather_dirty = True
-                self.w._ensure_weather_thread()
+                from tkinter import simpledialog
+                city = simpledialog.askstring(
+                    L.get('weather_lbl', 'Weather'),
+                    L.get('weather_city', 'Weather city') + ':',
+                    initialvalue=self.w.cfg.get('weather_city', ''),
+                    parent=self._win)
+                if city is not None:
+                    self.w._set('weather_city', city.strip())
+                    self.w._weather_dirty = True
+                    self.w._ensure_weather_thread()
+                    city_btn.config(text='✎  ' + _city_text())
             except Exception:
                 pass
-        cent.bind('<Return>', _apply_city)
-        cent.bind('<FocusOut>', _apply_city)
-        tk.Label(body, text='   ' + L.get('weather_city_hint', '(empty = auto by IP)'),
-                 fg=T['muted'], bg=T['bg'], font=('Segoe UI', 8),
-                 anchor='w').pack(anchor='w', padx=24)
+        city_btn.bind('<Button-1>', _edit_city)
 
     # ── Alerts tab ──
     def _tab_alerts(self):
@@ -4004,30 +4031,38 @@ class CustomizeWindow:
             b.pack(side='left', padx=1)
             b.bind('<Button-1>', lambda e, m=mode: _set_layout(m))
             _btns[mode] = b
-        # search entry fills the rest
+        # ── search bar (click → modal prompt) ─────────────────────────────
+        # Clicking opens a normal modal dialog, which reliably receives
+        # keyboard focus (an inline Entry in this custom-chrome window does
+        # not — the topmost main widget keeps stealing the keyboard).  The
+        # query then filters the list.  A ✕ clears it.
         svar = tk.StringVar()
-        ent = tk.Entry(sr, textvariable=svar, bg=T['panel'], fg=T['text'],
-                       insertbackground=T['text'], relief='flat', font=('Segoe UI', 10),
-                       highlightthickness=1, highlightbackground=T['line'],
-                       highlightcolor=T['cyan'])
-        ent.pack(side='left', fill='x', expand=True, ipady=5, ipadx=6)
-        # Placeholder is a passive overlay Label driven ONLY by the text
-        # content — never by focus events.  Rewriting svar inside <FocusIn>/
-        # <FocusOut> made this field flicker open/closed and drop keyboard
-        # focus.  This now behaves exactly like the working weather-city
-        # field: a single <Button-1> → _entry_focus and nothing else.
-        placeholder = L.get('tool_search', 'Search tools…')
-        ph_lbl = tk.Label(ent, text=placeholder, fg=T['muted'], bg=T['panel'],
-                          font=('Segoe UI', 10))
-        def _upd_ph(*_a):
-            if svar.get():
-                ph_lbl.place_forget()
-            else:
-                ph_lbl.place(x=6, rely=0.5, anchor='w')
-        _upd_ph()
-        svar.trace_add('write', _upd_ph)
-        ph_lbl.bind('<Button-1>', lambda e: _entry_focus(ent))
-        ent.bind('<Button-1>', lambda e: _entry_focus(ent))
+        clear_btn = tk.Label(sr, text='✕', fg=T['muted'], bg=T['bg'],
+                             font=('Segoe UI', 11), cursor='hand2')
+        clear_btn.pack(side='right', padx=(6, 8))
+        clear_btn.bind('<Button-1>', lambda e: svar.set(''))
+        search_bar = tk.Label(sr, anchor='w', bg=T['panel'], fg=T['muted'],
+                              font=('Segoe UI', 10), cursor='hand2', padx=10, pady=5)
+        search_bar.pack(side='left', fill='x', expand=True)
+        def _search_text():
+            q = svar.get().strip()
+            return ('🔍  ' + q) if q else ('🔍  ' + L.get('tool_search', 'Search tools…'))
+        def _upd_search_bar(*_a):
+            search_bar.config(text=_search_text(),
+                              fg=(T['text'] if svar.get().strip() else T['muted']))
+        def _open_search(_e=None):
+            try:
+                from tkinter import simpledialog
+                q = simpledialog.askstring(
+                    L.get('tools', 'Tools'),
+                    L.get('tool_search', 'Search tools…'),
+                    initialvalue=svar.get(), parent=self._win)
+                if q is not None:
+                    svar.set(q.strip())
+            except Exception:
+                pass
+        search_bar.bind('<Button-1>', _open_search)
+        _upd_search_bar()
         # scrollable body
         outer = tk.Frame(self._content, bg=T['bg'])
         outer.pack(fill='both', expand=True, padx=20, pady=4)
@@ -4160,7 +4195,9 @@ class CustomizeWindow:
             except Exception: pass
 
         _style_toggle()
-        svar.trace_add('write', _paint)
+        # The query is set in one shot by the dialog (or cleared by ✕), so a
+        # direct repaint is fine — no per-keystroke rebuild to debounce.
+        svar.trace_add('write', lambda *a: (_upd_search_bar(), _paint()))
         _paint()
 
     def _run_tool(self, action):
@@ -4614,10 +4651,13 @@ class Widget:
             h = max(20, self.root.winfo_height())
             img = ImageGrab.grab(bbox=(x, y, x + w, y + h))
             img = img.resize((24, 8))
-            px = list(img.getdata())
-            r = sum(p[0] for p in px) // len(px)
-            g = sum(p[1] for p in px) // len(px)
-            b = sum(p[2] for p in px) // len(px)
+            px = [p[:3] for p in img.getdata()]
+            # Use the MOST COMMON pixel (the taskbar background) instead of the
+            # average.  Averaging mixes in dark app-icon/text pixels behind the
+            # widget and produced a too-dark key → a black halo around the
+            # numbers.  The mode ignores those outliers.
+            from collections import Counter
+            (r, g, b), _ = Counter(px).most_common(1)[0]
             # nudge one channel so the key is unlikely to collide with real
             # pixel values inside the icons/text
             b = b + 1 if b < 255 else b - 1
