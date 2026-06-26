@@ -3361,8 +3361,9 @@ class CustomizeWindow:
                         highlightthickness=1, highlightbackground=T['line'],
                         highlightcolor=T['cyan'])
         cent.pack(side='left', fill='x', expand=True, ipady=4, ipadx=6)
-        # overrideredirect window doesn't grab keyboard focus on its own
-        cent.bind('<Button-1>', lambda e: (self._win.focus_force(), cent.focus_set()))
+        # overrideredirect window doesn't grab keyboard focus on its own;
+        # focus_force() directly on the entry is the only reliable path
+        cent.bind('<Button-1>', lambda e: cent.after(10, cent.focus_force))
         def _apply_city(_e=None):
             try:
                 self.w._set('weather_city', cvar.get().strip())
@@ -3948,12 +3949,7 @@ class CustomizeWindow:
         _set_ph()
         # the Customize window is overrideredirect, so it doesn't grab keyboard
         # focus on its own — force it on click so typing reaches the Entry
-        def _focus_entry(_e=None):
-            try:
-                self._win.focus_force(); ent.focus_set()
-            except Exception:
-                pass
-        ent.bind('<Button-1>', _focus_entry)
+        ent.bind('<Button-1>', lambda e: ent.after(10, ent.focus_force))
         ent.bind('<FocusIn>', _clr_ph)
         ent.bind('<FocusOut>', lambda e: _set_ph())
         # scrollable body
