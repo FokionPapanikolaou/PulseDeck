@@ -2664,14 +2664,27 @@ class _SlowPoller(threading.Thread):
         self._stop = True
 
 def _entry_focus(widget):
-    """Give keyboard focus to an Entry inside the Customize window.
+    """Give keyboard focus to an Entry inside an overrideredirect window.
 
-    The Customize window has WS_EX_NOACTIVATE stripped at creation time
-    (see CustomizeWindow.open), so a plain focus_set() now works.
-    The SetFocus call via Win32 ensures the OS-level focus also moves.
+    overrideredirect (WS_POPUP) windows are never auto-activated by Windows
+    on click, so keyboard focus stays on the previous foreground window.
+    Fix: attach OUR thread's input queue TO the foreground thread's queue
+    (correct order: AttachThreadInput(our, fg, True)), then SetFocus.
     """
     try:
-        ctypes.windll.user32.SetFocus(widget.winfo_id())
+        u32 = ctypes.windll.user32
+        k32 = ctypes.windll.kernel32
+        fg      = u32.GetForegroundWindow()
+        fg_tid  = u32.GetWindowThreadProcessId(fg, None)
+        our_tid = k32.GetCurrentThreadId()
+        entry_hwnd = widget.winfo_id()
+        attached = False
+        if fg_tid and fg_tid != our_tid:
+            attached = bool(u32.AttachThreadInput(our_tid, fg_tid, True))
+        u32.BringWindowToTop(widget.winfo_toplevel().winfo_id())
+        u32.SetFocus(entry_hwnd)
+        if attached:
+            u32.AttachThreadInput(our_tid, fg_tid, False)
     except Exception:
         pass
     try:
@@ -2712,17 +2725,6 @@ class CustomizeWindow:
         # rounded-corner illusion via region (Windows-only)
         try:
             self._round_corners(win, 12)
-        except Exception:
-            pass
-        # overrideredirect sets WS_EX_NOACTIVATE which blocks keyboard focus.
-        # Remove it so Entry widgets can receive keystrokes.
-        try:
-            GWL_EXSTYLE   = -20
-            WS_EX_NOACTIVATE = 0x08000000
-            u32  = ctypes.windll.user32
-            hwnd = win.winfo_id()
-            ex   = u32.GetWindowLongW(hwnd, GWL_EXSTYLE)
-            u32.SetWindowLongW(hwnd, GWL_EXSTYLE, ex & ~WS_EX_NOACTIVATE)
         except Exception:
             pass
         self._win = win
