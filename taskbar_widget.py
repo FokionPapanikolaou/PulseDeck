@@ -2708,6 +2708,10 @@ class CustomizeWindow:
         # frameless look.  There are no text-input fields in here, so the
         # overrideredirect keyboard-focus limitation doesn't matter.
         win.overrideredirect(True)
+        # topmost so the borderless window actually appears in front (an
+        # overrideredirect window does not activate itself, so without this it
+        # can open hidden behind whatever app currently has focus)
+        win.attributes('-topmost', True)
         win.geometry('760x600')
         win.configure(bg=self.T['bg'])
         try: win.iconbitmap(os.path.join(_base_dir(), 'app.ico'))
@@ -4426,17 +4430,6 @@ class Widget:
         if self.lang not in T:
             self.lang = 'en'
         self.root = tk.Tk()
-        # Identify the app to the shell (its own taskbar/tray identity, not
-        # python.exe) and give the root window our icon.
-        try:
-            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
-                'PapanikolaouFokion.PulseDeck')
-        except Exception:
-            pass
-        try:
-            self.root.iconbitmap(os.path.join(_base_dir(), 'app.ico'))
-        except Exception:
-            pass
         # Safety net: never let a stray callback error crash the widget
         def _rce(exc, val, tb):
             try:
@@ -4565,12 +4558,16 @@ class Widget:
             img = ImageGrab.grab(bbox=(x, y, x + w, y + h))
             img = img.resize((24, 8))
             px = [p[:3] for p in img.getdata()]
-            # Use the MOST COMMON pixel (the taskbar background) instead of the
-            # average.  Averaging mixes in dark app-icon/text pixels behind the
-            # widget and produced a too-dark key → a black halo around the
-            # numbers.  The mode ignores those outliers.
-            from collections import Counter
-            (r, g, b), _ = Counter(px).most_common(1)[0]
+            # Per-channel MEDIAN: robust against dark icon/text outliers behind
+            # the widget (which dragged the average too dark → black halo) and,
+            # unlike the most-common colour, it is STABLE across samples so the
+            # key doesn't jump between runs and flicker the numbers.
+            def _median(vals):
+                s = sorted(vals); n = len(s)
+                return s[n // 2] if n % 2 else (s[n // 2 - 1] + s[n // 2]) // 2
+            r = _median([p[0] for p in px])
+            g = _median([p[1] for p in px])
+            b = _median([p[2] for p in px])
             # nudge one channel so the key is unlikely to collide with real
             # pixel values inside the icons/text
             b = b + 1 if b < 255 else b - 1
