@@ -3149,16 +3149,6 @@ class CustomizeWindow:
         order = self._get_order()
         for cid in order:
             self._build_metric_row(wrap, cid)
-        # critical-last toggle
-        cl = tk.Frame(self._content, bg=T['bg']); cl.pack(fill='x', padx=24, pady=8)
-        var = tk.BooleanVar(value=bool(self.w.cfg.get('critical_last', True)))
-        cb = tk.Checkbutton(cl, text='  🚨 ' + L['always_last'], variable=var,
-                            fg=T['orange'], bg=T['bg'], selectcolor=T['bg2'],
-                            activebackground=T['bg'], activeforeground=T['orange'],
-                            font=('Segoe UI', 9), bd=0,
-                            command=lambda: self._on_check('critical_last', var.get(),
-                                                            lambda v: self.w._rebuild()))
-        cb.pack(side='left')
         # reset button bottom
         rb = tk.Button(self._content, text='⤺  ' + L['reset'],
                        command=self._reset_order,
