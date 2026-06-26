@@ -4011,29 +4011,23 @@ class CustomizeWindow:
                        highlightthickness=1, highlightbackground=T['line'],
                        highlightcolor=T['cyan'])
         ent.pack(side='left', fill='x', expand=True, ipady=5, ipadx=6)
+        # Placeholder is a passive overlay Label driven ONLY by the text
+        # content — never by focus events.  Rewriting svar inside <FocusIn>/
+        # <FocusOut> made this field flicker open/closed and drop keyboard
+        # focus.  This now behaves exactly like the working weather-city
+        # field: a single <Button-1> → _entry_focus and nothing else.
         placeholder = L.get('tool_search', 'Search tools…')
-        def _set_ph():
-            if not svar.get():
-                ent._ph = True
-                ent.config(fg=T['muted']); svar.set(placeholder)
-        def _clr_ph(_e=None):
-            if getattr(ent, '_ph', False):
-                ent._ph = False
-                ent.config(fg=T['text']); svar.set('')
-        ent._ph = False
-        _set_ph()
-        # the Customize window is overrideredirect, so it doesn't grab keyboard
-        # focus on its own — force it on click so typing reaches the Entry.
-        # NOTE: we clear the placeholder *here* (on click) rather than on a
-        # <FocusIn> binding.  A <FocusIn> handler that rewrites svar fires a
-        # heavy _paint() (destroy + rebuild of the whole list) *inside* the OS
-        # focus event, which corrupts keyboard focus in the overrideredirect
-        # window and was the reason typing never reached this field.
-        def _on_click(_e):
-            _clr_ph()
-            _entry_focus(ent)
-        ent.bind('<Button-1>', _on_click)
-        ent.bind('<FocusOut>', lambda e: _set_ph())
+        ph_lbl = tk.Label(ent, text=placeholder, fg=T['muted'], bg=T['panel'],
+                          font=('Segoe UI', 10))
+        def _upd_ph(*_a):
+            if svar.get():
+                ph_lbl.place_forget()
+            else:
+                ph_lbl.place(x=6, rely=0.5, anchor='w')
+        _upd_ph()
+        svar.trace_add('write', _upd_ph)
+        ph_lbl.bind('<Button-1>', lambda e: _entry_focus(ent))
+        ent.bind('<Button-1>', lambda e: _entry_focus(ent))
         # scrollable body
         outer = tk.Frame(self._content, bg=T['bg'])
         outer.pack(fill='both', expand=True, padx=20, pady=4)
@@ -4124,7 +4118,7 @@ class CustomizeWindow:
 
         _last_q = ['\x00']   # sentinel; closure-local so it resets per tab build
         def _paint(*_a):
-            q = '' if getattr(ent, '_ph', False) else svar.get().strip().lower()
+            q = svar.get().strip().lower()
             # Only rebuild when the effective query actually changed.  Clearing
             # the placeholder ('' → '') yields the same list, so skipping the
             # destroy+rebuild here keeps the search Entry's keyboard focus alive
@@ -4583,8 +4577,12 @@ class Widget:
         self._setup_tray()
         threading.Thread(target=self._proc_sampler, daemon=True).start()
         threading.Thread(target=self._update_check_worker, daemon=True).start()
-        # adapt the chroma key to the real taskbar colour (kills dark fringes)
+        # adapt the chroma key to the real taskbar colour (kills dark fringes).
+        # Sample twice: an early pass for the common case, and a later one to
+        # self-correct if the taskbar hadn't finished repainting yet (which on
+        # a fast relaunch left a dark box behind the numbers).
         self.root.after(400, self._adapt_key_color)
+        self.root.after(2000, self._adapt_key_color)
 
         # First launch: a Windows tray notification points to the settings icon.
         if self._first_run:
