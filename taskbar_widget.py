@@ -18,7 +18,7 @@ import random
 
 APP_NAME = 'PulseBar'        # internal identity: config dir, mutex, registry, Store package
 DISPLAY_NAME = 'PulseDeck'   # user-visible product name (rebrand)
-VERSION  = '2.8.3'
+VERSION  = '2.8.4'
 
 # ── Crash logging (enabled when NETCPURAM_DEBUG=1) ─────────────────────
 def _debug_log_path():
@@ -1322,13 +1322,14 @@ def _battery_discharge_w():
         return None
     return None
 
-def get_power_estimate(cpu_util, gpu_util, cpu_name='', gpu_name=''):
+def get_power_estimate(cpu_util, gpu_util, cpu_name='', gpu_name='', nvidia_w=None):
     """Return {'cpu': float, 'gpu': float, 'total': float, 'source': str}.
 
     cpu_util, gpu_util are percentages (0..100). source is one of:
       'nvml'      — GPU value came from nvidia-smi (exact); CPU estimated
       'battery'   — battery discharge rate (laptops); whole system
       'estimate'  — TDP × utilisation (~15% accuracy)
+    nvidia_w: cached watt reading from _SlowPoller (avoids blocking the main thread).
     """
     cpu_tdp = get_cpu_tdp_w(cpu_name)
     gpu_tdp = get_gpu_tdp_w(gpu_name)
@@ -1336,7 +1337,7 @@ def get_power_estimate(cpu_util, gpu_util, cpu_name='', gpu_name=''):
     cpu_idle = cpu_tdp * 0.12
     gpu_idle = gpu_tdp * 0.10
     cpu_w = cpu_idle + (cpu_tdp - cpu_idle) * max(0.0, min(100.0, float(cpu_util or 0))) / 100.0
-    nvml = _nvidia_smi_power()
+    nvml = nvidia_w  # pre-fetched by _SlowPoller; never blocks the main thread
     if nvml is not None:
         return {'cpu': cpu_w, 'gpu': nvml, 'total': cpu_w + nvml, 'source': 'nvml',
                 'cpu_tdp': cpu_tdp, 'gpu_tdp': gpu_tdp}
@@ -2617,6 +2618,50 @@ class CpuFreq:
             return (self.base_mhz * val.doubleValue / 100.0) / 1000.0
         except Exception:
             return None
+
+# ── Background slow-hardware poller ───────────────────────────────────
+class _SlowPoller(threading.Thread):
+    """Polls slow hardware reads (~1 s interval) off the main thread.
+
+    nvidia-smi, sensors_battery, disk_io perdisk and cpu_freq can each
+    block 10–500 ms.  Caching them here keeps _update_tick() non-blocking.
+    CPython's GIL makes single-attribute writes/reads of simple types atomic,
+    so no explicit lock is needed for these cached values.
+    """
+    def __init__(self):
+        super().__init__(daemon=True, name='SlowPoller')
+        self.cpu_freq_ghz = None   # float | None
+        self.battery      = None   # psutil battery namedtuple | None
+        self.disk_perdisk = {}     # {disk_name: sdiskio namedtuple}
+        self.nvidia_w     = None   # float | None  (GPU watts from nvidia-smi)
+        self._stop        = False
+
+    def run(self):
+        while not self._stop:
+            self._poll()
+            time.sleep(1.0)
+
+    def _poll(self):
+        try:
+            f = psutil.cpu_freq()
+            self.cpu_freq_ghz = (f.current / 1000.0) if (f and f.current) else None
+        except Exception:
+            pass
+        try:
+            self.battery = psutil.sensors_battery()
+        except Exception:
+            pass
+        try:
+            self.disk_perdisk = psutil.disk_io_counters(perdisk=True) or {}
+        except Exception:
+            pass
+        try:
+            self.nvidia_w = _nvidia_smi_power()
+        except Exception:
+            pass
+
+    def stop(self):
+        self._stop = True
 
 # ── Customize Window (v2.6) ────────────────────────────────────────────
 class CustomizeWindow:
@@ -4466,6 +4511,9 @@ class Widget:
         try:    self._gpu_name_cached = get_gpu_name()
         except Exception: self._gpu_name_cached = ''
         self._power = None             # last {'cpu','gpu','total','source','cpu_tdp','gpu_tdp'} or None
+        # slow-hardware poller (keeps _update_tick non-blocking)
+        self._slow = _SlowPoller()
+        self._slow.start()
         # customize window (v2.6)
         self._customize = None
         # rolling history for sparklines
@@ -5638,22 +5686,29 @@ class Widget:
         self.root.after(interval, self._foreground_loop)
 
     def _is_fullscreen_foreground(self):
-        """True if a fullscreen app (game/video) is in front → taskbar is hidden."""
+        """True if a fullscreen app (game/video) is in front → taskbar is hidden.
+        Result is cached for 250 ms so Win32 API calls don't hit every tick."""
+        now = time.monotonic()
+        if now - getattr(self, '_fs_ts', 0.0) < 0.25:
+            return getattr(self, '_fs_cache', False)
+        self._fs_ts = now
         try:
             u = ctypes.windll.user32
             hwnd = u.GetForegroundWindow()
             if not hwnd:
-                return False
+                self._fs_cache = False; return False
             buf = ctypes.create_unicode_buffer(256)
             u.GetClassNameW(hwnd, buf, 256)
-            # ignore the desktop / shell / taskbar themselves
             if buf.value in ('Shell_TrayWnd', 'Progman', 'WorkerW', 'Windows.UI.Core.CoreWindow', ''):
-                return False
+                self._fs_cache = False; return False
             r = RECT()
             u.GetWindowRect(hwnd, ctypes.byref(r))
             sw = u.GetSystemMetrics(0); sh = u.GetSystemMetrics(1)
-            return r.left <= 0 and r.top <= 0 and r.right >= sw and r.bottom >= sh
+            result = r.left <= 0 and r.top <= 0 and r.right >= sw and r.bottom >= sh
+            self._fs_cache = result
+            return result
         except Exception:
+            self._fs_cache = False
             return False
 
     def _follow_taskbar(self):
@@ -5995,12 +6050,7 @@ class Widget:
         if self.lbl_cpu:
             ghz = self._cpufreq.read_ghz()
             if ghz is None:
-                try:
-                    f = psutil.cpu_freq()
-                    if f and f.current:
-                        ghz = f.current / 1000
-                except Exception:
-                    pass
+                ghz = self._slow.cpu_freq_ghz  # pre-fetched by _SlowPoller
             if self.lbl_cpu_top is not None:
                 # stacked: GHz on top, % below
                 self.lbl_cpu_top.config(text=(f'{ghz:.1f} GHz' if ghz else ''))
@@ -6055,8 +6105,8 @@ class Widget:
         # per-disk I/O rates (for the disk tooltip)
         if self.cfg.get('tooltips') and (self.lbl_disk_r or self._disk_lbls):
             try:
-                pd = psutil.disk_io_counters(perdisk=True)
-                if self._perdisk_prev:
+                pd = self._slow.disk_perdisk  # pre-fetched by _SlowPoller
+                if pd and self._perdisk_prev:
                     secs = max(0.001, self.cfg['interval'] / 1000.0)
                     rates = {}
                     for k, v in pd.items():
@@ -6082,7 +6132,7 @@ class Widget:
                     except Exception:
                         pass
         if self.lbl_batt:
-            b = psutil.sensors_battery()
+            b = self._slow.battery  # pre-fetched by _SlowPoller
             if b is not None:
                 pct = int(b.percent)
                 col = '#f85149' if pct <= 15 else ('#ffa657' if pct <= 30 else self.theme['val'])
@@ -6116,14 +6166,11 @@ class Widget:
                 self.lbl_wx.config(text='—')
         # ── power label (CPU+GPU estimated watts) ──
         if getattr(self, 'lbl_power', None):
-            # throttle: power changes slowly — recompute at most every 2s
-            # (the estimate path is cheap, but the nvidia-smi probe isn't)
-            now_p = time.time()
-            if now_p - getattr(self, '_power_last_ts', 0) >= 2.0 or self._power is None:
-                gpu_util = self._gpu if self._gpu is not None else 0.0
-                self._power = get_power_estimate(cpu, gpu_util,
-                                                 self._cpu_name_cached, self._gpu_name_cached)
-                self._power_last_ts = now_p
+            # nvidia_w comes from _SlowPoller (no subprocess on main thread)
+            gpu_util = self._gpu if self._gpu is not None else 0.0
+            self._power = get_power_estimate(cpu, gpu_util,
+                                             self._cpu_name_cached, self._gpu_name_cached,
+                                             nvidia_w=self._slow.nvidia_w)
             p = self._power
             total = int(round(p.get('total') or 0))
             if self.lbl_power_top is not None:

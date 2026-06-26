@@ -4,6 +4,20 @@ All notable changes to **PulseDeck** are documented here.
 
 ---
 
+## [2.8.4] — 2026-06-26
+
+### Changed
+- **Zero-lag polling** — all slow hardware reads are now handled by a dedicated
+  background thread (`_SlowPoller`) so the main UI thread never blocks:
+  - `nvidia-smi` (GPU watts) — was blocking the main thread up to 500 ms every 2 s
+  - `psutil.sensors_battery()` — was called every tick; now pre-fetched every 1 s
+  - `psutil.disk_io_counters(perdisk=True)` — moved off the main thread
+  - `psutil.cpu_freq()` fallback — moved off the main thread
+- `_is_fullscreen_foreground()` result is now cached for 250 ms so the Win32 API
+  calls don't fire on every single tick.
+
+---
+
 ## [2.8.3] — 2026-06-26
 
 ### Fixed
