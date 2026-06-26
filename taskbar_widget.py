@@ -1084,9 +1084,7 @@ CELL_META = (
     ('net',     'Network',     '🌐', 'show_net'),
     ('disk',    'Disk I/O',    '💿', 'show_disk'),
     ('batt',    'Battery',     '🔋', 'show_batt'),
-    ('weather', 'Weather',     '☁',  'show_weather'),
     ('power',   'Power',       '⚡', 'show_power'),
-    ('quake',   'Earthquake',  '🚨', 'quakes_on'),
 )
 DEFAULT_CELL_ORDER = [c[0] for c in CELL_META]
 # Customize Window theme (matches the future PulseDeck dashboard)
@@ -1742,7 +1740,7 @@ DEFAULTS = {
     'show_ram':  True,
     'show_net':  True,
     'show_gpu':  True,    # GPU utilization %
-    'show_weather': True, # weather (Open-Meteo)
+    'show_weather': False, # weather removed
     'show_disk': False,   # disk read/write speed
     'show_batt': False,   # battery % (laptops)
     'cpu_freq':  False,   # (inline mode only) CPU clock speed next to CPU %
@@ -1765,7 +1763,7 @@ DEFAULTS = {
     'check_updates': True,   # check GitHub for a newer release on launch
     'last_update_check': 0,  # epoch seconds of the last check (throttle)
     # ── earthquakes (v2.6) ──
-    'quakes_on': True,       # earthquake alerts enabled
+    'quakes_on': False,      # earthquake alerts removed
     'quakes_emsc': True,     # EMSC (Europe-centric) source
     'quakes_usgs': True,     # USGS (global) source
     'quakes_min_mmi': 3.0,   # alert when felt MMI >= this (3 = subtle, 4 = noticeable, 5 = strong, 6 = severe)
@@ -2807,7 +2805,6 @@ class CustomizeWindow:
             ('general',    'general',    '⚙'),
             ('metrics',    'metrics',    '📊'),
             ('appearance', 'appearance', '🎨'),
-            ('alerts',     'alerts',     '🚨'),
             ('system',     'system',     '💻'),
             ('tools',      'tools',      '🧰'),
             ('about',      'about',      'ℹ'),
@@ -4428,6 +4425,13 @@ class Widget:
     def __init__(self):
         self._first_run = not os.path.exists(CONFIG_PATH)
         self.cfg = load_config()
+        # weather + earthquake features were removed — scrub them from any
+        # existing saved config so old installs don't keep showing them.
+        self.cfg['show_weather'] = False
+        self.cfg['quakes_on'] = False
+        if isinstance(self.cfg.get('cell_order'), list):
+            self.cfg['cell_order'] = [c for c in self.cfg['cell_order']
+                                      if c not in ('weather', 'quake')]
         self.lang = self.cfg.get('language') or detect_language()
         if self.lang not in T:
             self.lang = 'en'
@@ -4526,8 +4530,6 @@ class Widget:
         self._bind_events()
         self._position()
         self._ensure_gpu_thread()
-        self._ensure_weather_thread()
-        self._ensure_quakes_thread()
 
         self._update()
         self._animate()
@@ -4642,14 +4644,12 @@ class Widget:
 
     # action helpers (always run on Tk thread)
     def _act_metric(self, key):
-        keys = ('show_cpu','show_ram','show_net','show_disk','show_batt','show_gpu','show_weather','show_power')
+        keys = ('show_cpu','show_ram','show_net','show_disk','show_batt','show_gpu','show_power')
         if self.cfg.get(key) and not any(self.cfg.get(o) for o in keys if o != key):
             return
         self._set(key, not self.cfg.get(key)); self._rebuild()
         if key == 'show_gpu' and self.cfg.get('show_gpu'):
             self._ensure_gpu_thread()
-        if key == 'show_weather' and self.cfg.get('show_weather'):
-            self._ensure_weather_thread()
 
     def _act_weather_unit(self, unit):
         self._set('weather_unit', unit)
@@ -4838,16 +4838,7 @@ class Widget:
             metric('show_gpu', t('gpu')), metric('show_net', t('net')),
             metric('show_disk', t('disk')),
             *([metric('show_batt', t('batt'))] if self._has_batt else []),
-            metric('show_weather', t('weather')),
             metric('show_power', '⚡ ' + POWER_LABEL.get(self.lang, POWER_LABEL['en'])),
-        )
-        weather = Menu(
-            MI('°C', lambda i, it: self._ui(lambda: self._act_weather_unit('C')),
-               checked=lambda it: self.cfg.get('weather_unit','C') == 'C', radio=True),
-            MI('°F', lambda i, it: self._ui(lambda: self._act_weather_unit('F')),
-               checked=lambda it: self.cfg.get('weather_unit') == 'F', radio=True),
-            Menu.SEPARATOR,
-            MI(t('setcity'), lambda i, it: self._ui(self._act_set_city)),
         )
         layout = Menu(
             radio('orientation', 'horizontal', t('horizontal')),
@@ -4898,28 +4889,6 @@ class Widget:
                       checked=lambda it, d=drive: d in self.cfg.get('disks', []))
         disks_menu = Menu(*[disk_toggle(d) for d in list_drives()])
 
-        # ── earthquakes submenu ──
-        def mmi_radio(label, threshold):
-            return MI(label,
-                      lambda i, it: self._ui(lambda: self._act_quakes_mmi(threshold)),
-                      checked=lambda it, x=threshold: abs(self.cfg.get('quakes_min_mmi', 3.0) - x) < 0.01,
-                      radio=True)
-        levels = QUAKES_LEVELS.get(self.lang, QUAKES_LEVELS['en'])
-        quakes = Menu(
-            toggle('quakes_on', QUAKES_LABEL.get(self.lang, QUAKES_LABEL['en']) + ' on'),
-            Menu.SEPARATOR,
-            toggle('quakes_emsc', 'EMSC (Europe)'),
-            toggle('quakes_usgs', 'USGS (Global)'),
-            Menu.SEPARATOR,
-            *[mmi_radio(lab, th) for lab, th in levels],
-            Menu.SEPARATOR,
-            toggle('quakes_toasts', QUAKES_TOAST_LABEL.get(self.lang, QUAKES_TOAST_LABEL['en'])),
-            toggle('quakes_mute', QUAKES_MUTE_LABEL.get(self.lang, QUAKES_MUTE_LABEL['en'])),
-            Menu.SEPARATOR,
-            MI(QUAKES_RECENT_LABEL.get(self.lang, QUAKES_RECENT_LABEL['en']),
-               lambda i, it: self._ui(self._show_quake_history)),
-        )
-
         # ── Hybrid tray menu: Customize… + quick toggles + system items ──
         L = CUST_LABELS.get(self.lang, CUST_LABELS['en'])
         return Menu(
@@ -4935,7 +4904,6 @@ class Widget:
             MI(LOCK_LABEL.get(self.lang, LOCK_LABEL['en']),
                lambda i, it: self._ui(self._act_lock),
                checked=lambda it: bool(self.cfg.get('locked'))),
-            toggle('quakes_mute', '🔇  ' + QUAKES_MUTE_LABEL.get(self.lang, QUAKES_MUTE_LABEL['en'])),
             Menu.SEPARATOR,
             MI('\U0001F49C  ' + DONATE_LABEL.get(self.lang, DONATE_LABEL['en']),
                lambda i, it: self._ui(self._show_donate)),
@@ -5503,15 +5471,6 @@ class Widget:
             if not self._has_batt: return
             f, self.lbl_batt, _ = stat('battery.png', sw if stacked else 5, stacked)
             self._tip_cells.append((f, 'batt', None))
-        def b_weather():
-            f = new_cell()
-            self.lbl_wx_icon = tk.Label(f, image=self._wx_icons.get('wx_cloudy'),
-                                        bg=self.bg, bd=0)
-            self.lbl_wx_icon.pack(side='left', padx=(4, 1))
-            self.lbl_wx = tk.Label(f, text='', fg=valcol, bg=self.bg,
-                                   font=(vf if not stacked else nf), width=5, anchor='w', padx=2)
-            self.lbl_wx.pack(side='left'); self._rgb_targets.append(self.lbl_wx)
-            self._tip_cells.append((f, 'weather', None))
         def b_power():
             f = new_cell()
             tk.Label(f, text='⚡', fg='#ffd64a', bg=self.bg,
@@ -5531,23 +5490,12 @@ class Widget:
                                           font=vf, anchor='w', padx=2)
                 self.lbl_power.pack(side='left'); self._rgb_targets.append(self.lbl_power)
             self._tip_cells.append((f, 'power', None))
-        def b_quake():
-            f = new_cell()
-            self.lbl_quake = tk.Label(f, text='', fg='#f85149', bg=self.bg,
-                                      font=('Segoe UI', big, 'bold'), padx=4,
-                                      cursor='hand2')
-            self.lbl_quake.pack(side='left')
-            # click the alert icon to dismiss it (user-requested)
-            self.lbl_quake.bind('<Button-1>', lambda e: self._dismiss_quake_alert())
-            self._tip_cells.append((f, 'quake', None))
-
         builders = {'cpu': b_cpu, 'ram': b_ram, 'gpu': b_gpu, 'net': b_net,
-                    'disk': b_disk, 'batt': b_batt, 'weather': b_weather,
-                    'power': b_power, 'quake': b_quake}
+                    'disk': b_disk, 'batt': b_batt, 'power': b_power}
         visible_keys = {
             'cpu': 'show_cpu', 'ram': 'show_ram', 'gpu': 'show_gpu',
             'net': 'show_net', 'disk': 'show_disk', 'batt': 'show_batt',
-            'weather': 'show_weather', 'power': 'show_power', 'quake': 'quakes_on',
+            'power': 'show_power',
         }
         # Resolve order, then forcibly push critical cells to the end if asked
         order = list(self.cfg.get('cell_order') or DEFAULT_CELL_ORDER)
