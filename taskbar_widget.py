@@ -3996,6 +3996,7 @@ class CustomizeWindow:
             if self.w.cfg.get('tools_layout') == mode:
                 return
             self.w._set('tools_layout', mode)
+            _last_q[0] = '\x00'      # force a rebuild: same query, new layout
             _style_toggle(); _paint()
         for mode, icon in (('list', '≣'), ('grid', '▦')):
             b = tk.Label(toggle, text=icon, font=('Segoe UI', 13), padx=10, pady=2,
@@ -4022,9 +4023,16 @@ class CustomizeWindow:
         ent._ph = False
         _set_ph()
         # the Customize window is overrideredirect, so it doesn't grab keyboard
-        # focus on its own — force it on click so typing reaches the Entry
-        ent.bind('<Button-1>', lambda e: _entry_focus(ent))
-        ent.bind('<FocusIn>', _clr_ph)
+        # focus on its own — force it on click so typing reaches the Entry.
+        # NOTE: we clear the placeholder *here* (on click) rather than on a
+        # <FocusIn> binding.  A <FocusIn> handler that rewrites svar fires a
+        # heavy _paint() (destroy + rebuild of the whole list) *inside* the OS
+        # focus event, which corrupts keyboard focus in the overrideredirect
+        # window and was the reason typing never reached this field.
+        def _on_click(_e):
+            _clr_ph()
+            _entry_focus(ent)
+        ent.bind('<Button-1>', _on_click)
         ent.bind('<FocusOut>', lambda e: _set_ph())
         # scrollable body
         outer = tk.Frame(self._content, bg=T['bg'])
@@ -4114,8 +4122,16 @@ class CustomizeWindow:
                 wgt.bind('<Button-1>', _click)
             return tile
 
+        _last_q = ['\x00']   # sentinel; closure-local so it resets per tab build
         def _paint(*_a):
             q = '' if getattr(ent, '_ph', False) else svar.get().strip().lower()
+            # Only rebuild when the effective query actually changed.  Clearing
+            # the placeholder ('' → '') yields the same list, so skipping the
+            # destroy+rebuild here keeps the search Entry's keyboard focus alive
+            # (rebuilding mid-click was stealing focus and reloading the tab).
+            if q == _last_q[0]:
+                return
+            _last_q[0] = q
             for c in body.winfo_children():
                 c.destroy()
             _grid_groups.clear()
