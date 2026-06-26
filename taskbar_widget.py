@@ -2663,6 +2663,36 @@ class _SlowPoller(threading.Thread):
     def stop(self):
         self._stop = True
 
+def _entry_focus(widget):
+    """Force keyboard focus to an Entry inside an overrideredirect window.
+
+    overrideredirect windows never receive OS keyboard focus automatically.
+    SetFocus() alone fails if our thread isn't the foreground owner.
+    The fix: attach our input queue to the foreground thread's queue for
+    the duration of the SetFocus call (standard Win32 focus-steal pattern).
+    """
+    try:
+        u32  = ctypes.windll.user32
+        k32  = ctypes.windll.kernel32
+        fg   = u32.GetForegroundWindow()
+        fg_tid  = u32.GetWindowThreadProcessId(fg, None)
+        our_tid = k32.GetCurrentThreadId()
+        win_hwnd    = widget.winfo_toplevel().winfo_id()
+        entry_hwnd  = widget.winfo_id()
+        attached = False
+        if fg_tid and fg_tid != our_tid:
+            attached = u32.AttachThreadInput(fg_tid, our_tid, True)
+        u32.BringWindowToTop(win_hwnd)
+        u32.SetFocus(entry_hwnd)
+        if attached:
+            u32.AttachThreadInput(fg_tid, our_tid, False)
+    except Exception:
+        pass
+    try:
+        widget.focus_set()
+    except Exception:
+        pass
+
 # ── Customize Window (v2.6) ────────────────────────────────────────────
 class CustomizeWindow:
     """Custom-chrome settings window with tabbed sections. Live preview."""
@@ -3408,7 +3438,7 @@ class CustomizeWindow:
         cent.pack(side='left', fill='x', expand=True, ipady=4, ipadx=6)
         # overrideredirect window doesn't grab keyboard focus on its own;
         # focus_force() directly on the entry is the only reliable path
-        cent.bind('<Button-1>', lambda e: cent.after(10, cent.focus_force))
+        cent.bind('<Button-1>', lambda e: _entry_focus(cent))
         def _apply_city(_e=None):
             try:
                 self.w._set('weather_city', cvar.get().strip())
@@ -3994,7 +4024,7 @@ class CustomizeWindow:
         _set_ph()
         # the Customize window is overrideredirect, so it doesn't grab keyboard
         # focus on its own — force it on click so typing reaches the Entry
-        ent.bind('<Button-1>', lambda e: ent.after(10, ent.focus_force))
+        ent.bind('<Button-1>', lambda e: _entry_focus(ent))
         ent.bind('<FocusIn>', _clr_ph)
         ent.bind('<FocusOut>', lambda e: _set_ph())
         # scrollable body
