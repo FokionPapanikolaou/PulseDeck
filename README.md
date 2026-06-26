@@ -23,7 +23,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D6?logo=windows&logoColor=white" alt="Windows">
-  <img src="https://img.shields.io/badge/version-2.8.4-3fb950" alt="v2.8.4">
+  <img src="https://img.shields.io/badge/version-2.8.5-3fb950" alt="v2.8.5">
   <img src="https://img.shields.io/badge/price-Free-brightgreen" alt="Free">
   <img src="https://img.shields.io/badge/languages-8-blueviolet" alt="8 languages">
   <img src="https://img.shields.io/badge/themes-10-orange" alt="10 themes">
@@ -38,7 +38,6 @@
 <p align="center">
   <img src="store/screenshots_v27/1_system.png" width="32%" alt="System info with brand logos">
   <img src="store/screenshots_v27/2_metrics.png" width="32%" alt="Customize — drag to reorder metrics">
-  <img src="store/screenshots_v27/4_alerts.png" width="32%" alt="Earthquake alerts">
 </p>
 
 ---

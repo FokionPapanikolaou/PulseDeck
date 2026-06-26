@@ -8,7 +8,7 @@
 
   <Identity Name="PapanikolaouFokion.PulseBar"
             Publisher="CN=4DDDFD1C-63EA-4604-9FCA-35D0F04C71E3"
-            Version="2.8.4.0"
+            Version="2.8.5.0"
             ProcessorArchitecture="x64" />
 
   <Properties>
@@ -33,7 +33,7 @@
     <Application Id="PulseBar" Executable="PulseBar.exe" EntryPoint="Windows.FullTrustApplication">
       <uap:VisualElements
           DisplayName="PulseDeck"
-          Description="Your PC's pulse, right on the taskbar — live CPU, RAM, GPU, power, weather and earthquake alerts."
+          Description="Your PC's pulse, right on the taskbar — live CPU, RAM, GPU, network, disk, battery and power."
           BackgroundColor="#0d1117"
           Square150x150Logo="Assets\Square150x150Logo.png"
           Square44x44Logo="Assets\Square44x44Logo.png">

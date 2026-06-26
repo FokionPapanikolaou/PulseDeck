@@ -4,6 +4,29 @@ All notable changes to **PulseDeck** are documented here.
 
 ---
 
+## [2.8.5] — 2026-06-26
+
+### Removed
+- **Weather** and **earthquake alerts** have been removed entirely — the bar
+  cells, the Alerts tab, the tray entries and their background threads are all
+  gone. Existing configs are scrubbed so the features don't linger after update.
+- The Tools tab **search box** and the weather **city input** were removed (the
+  full tool list is always shown; weather is no longer present at all).
+- The now-redundant "Always last" toggle in the Metrics tab.
+
+### Fixed
+- **Widget vanished behind a maximized window** — a maximized app (e.g. a
+  maximized browser) was mistaken for a fullscreen game/video, so the
+  hide-in-fullscreen logic withdrew the whole widget. Maximized windows
+  (`IsZoomed`) are now excluded; the widget only hides for true fullscreen.
+- **Dark halo around the bar numbers** — the adaptive chroma key now uses the
+  most-common taskbar colour, keeping the readouts clean.
+- **Customize window opened hidden behind the focused app** — it's now marked
+  top-most so it always appears in front.
+- No stray `tk`/`python` window in the taskbar.
+
+---
+
 ## [2.8.4] — 2026-06-26
 
 ### Changed
