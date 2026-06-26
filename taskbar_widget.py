@@ -2705,17 +2705,16 @@ class CustomizeWindow:
             self._win.lift(); self._win.focus_force(); return
         win = tk.Toplevel(self.w.root)
         win.title('PulseDeck')
-        # IMPORTANT: this is a *normal* (non-overrideredirect) Toplevel.
-        # overrideredirect windows are WS_POPUP and Windows never makes them the
-        # real keyboard-foreground window, so Entry widgets inside them never
-        # receive keystrokes (confirmed via input diagnostics).  We keep the
-        # custom dark chrome by stripping the native title bar through the Win32
-        # frame window (GetParent of the Tk HWND) instead — the window stays a
-        # normal activatable window, so typing works everywhere.
-        win.withdraw()                      # hide while we strip the title bar
+        # Borderless custom-chrome window.  overrideredirect keeps it out of the
+        # taskbar/Alt-Tab (so no stray "python.exe" entry) and gives the clean
+        # frameless look.  There are no text-input fields in here, so the
+        # overrideredirect keyboard-focus limitation doesn't matter.
+        win.overrideredirect(True)
         win.geometry('760x600')
         win.configure(bg=self.T['bg'])
         try: win.iconbitmap(os.path.join(_base_dir(), 'app.ico'))
+        except Exception: pass
+        try: self._round_corners(win, 12)
         except Exception: pass
         self._win = win
         # center on screen
@@ -2733,40 +2732,11 @@ class CustomizeWindow:
         grip.bind('<ButtonPress-1>', self._rz_press)
         grip.bind('<B1-Motion>', self._rz_drag)
         grip.bind('<ButtonRelease-1>', self._rz_release)
-        # Strip the native title bar from the real Win32 frame window (the
-        # PARENT of the Tk HWND) so we keep the custom chrome without a second
-        # bar, while the window stays a normal activatable top-level window.
-        try:
-            win.update_idletasks()
-            u32 = ctypes.windll.user32
-            GWL_STYLE     = -16
-            WS_CAPTION    = 0x00C00000
-            WS_THICKFRAME = 0x00040000
-            SWP_FLAGS     = 0x0027          # NOMOVE|NOSIZE|NOZORDER|FRAMECHANGED
-            frame = u32.GetParent(win.winfo_id()) or win.winfo_id()
-            style = u32.GetWindowLongW(frame, GWL_STYLE)
-            u32.SetWindowLongW(frame, GWL_STYLE,
-                               style & ~(WS_CAPTION | WS_THICKFRAME))
-            u32.SetWindowPos(frame, 0, 0, 0, 0, 0, SWP_FLAGS)
-        except Exception:
-            pass
-        # rounded-corner illusion via region (Windows-only)
         try:
             self._round_corners(win, 12)
         except Exception:
             pass
-        # pause the main widget's 33×/sec TOPMOST re-assert so it stops
-        # fighting this window (and its dialogs) for the top of the z-order
-        self.w._suspend_keep_on_top = True
-        # show + activate so it becomes the real keyboard-foreground window
-        win.deiconify()
-        try:
-            win.lift()
-            win.focus_force()
-            ctypes.windll.user32.SetForegroundWindow(
-                ctypes.windll.user32.GetParent(win.winfo_id()) or win.winfo_id())
-        except Exception:
-            pass
+        win.lift(); win.focus_force()
 
     def _rz_press(self, e):
         self._rz = (e.x_root, e.y_root,
@@ -2944,12 +2914,6 @@ class CustomizeWindow:
         self._win.geometry(f'+{x}+{y}')
 
     def close(self):
-        # resume the main widget's TOPMOST re-assert
-        try: self.w._suspend_keep_on_top = False
-        except Exception: pass
-        try:
-            self.w._keep_on_top()       # snap it back on top immediately
-        except Exception: pass
         try: self._win.destroy()
         except Exception: pass
         self._win = None
@@ -3451,41 +3415,14 @@ class CustomizeWindow:
                           [('bytes', 'MB/s'), ('bits', 'Mbps')])
 
     def _weather_settings(self, body):
-        """Weather unit + city row (moved out of the old tray menu)."""
+        """Weather unit (city input removed — weather auto-locates by IP)."""
         T = self.T; L = self.L
         self._radio_group(body, L.get('weather_lbl', 'Weather') + ' °', 'weather_unit',
                           [('C', '°C'), ('F', '°F')],
                           on_change=lambda v: setattr(self.w, '_weather_dirty', True))
-        # City via a modal dialog.  A normal decorated dialog reliably gets
-        # keyboard focus; an inline Entry in this custom-chrome window does not
-        # (the topmost main widget keeps reclaiming the keyboard foreground).
-        cr = tk.Frame(body, bg=T['bg']); cr.pack(fill='x', padx=24, pady=6)
-        tk.Label(cr, text=L.get('weather_city', 'Weather city'), fg=T['muted'],
-                 bg=T['bg'], font=('Segoe UI', 10), width=20, anchor='w').pack(side='left')
-        hint_txt = L.get('weather_city_hint', '(empty = auto by IP)')
-        def _city_text():
-            c = self.w.cfg.get('weather_city', '')
-            return c if c else hint_txt
-        city_btn = tk.Label(cr, text='✎  ' + _city_text(), fg=T['cyan'], bg=T['panel'],
-                            font=('Segoe UI', 10), cursor='hand2', anchor='w',
-                            padx=10, pady=4)
-        city_btn.pack(side='left', fill='x', expand=True, ipady=1)
-        def _edit_city(_e=None):
-            try:
-                from tkinter import simpledialog
-                city = simpledialog.askstring(
-                    L.get('weather_lbl', 'Weather'),
-                    L.get('weather_city', 'Weather city') + ':',
-                    initialvalue=self.w.cfg.get('weather_city', ''),
-                    parent=self._win)
-                if city is not None:
-                    self.w._set('weather_city', city.strip())
-                    self.w._weather_dirty = True
-                    self.w._ensure_weather_thread()
-                    city_btn.config(text='✎  ' + _city_text())
-            except Exception:
-                pass
-        city_btn.bind('<Button-1>', _edit_city)
+        tk.Label(body, text='   ' + L.get('weather_city_hint', '(auto by IP)'),
+                 fg=T['muted'], bg=T['bg'], font=('Segoe UI', 8),
+                 anchor='w').pack(anchor='w', padx=24)
 
     # ── Alerts tab ──
     def _tab_alerts(self):
@@ -4040,38 +3977,10 @@ class CustomizeWindow:
             b.pack(side='left', padx=1)
             b.bind('<Button-1>', lambda e, m=mode: _set_layout(m))
             _btns[mode] = b
-        # ── search bar (click → modal prompt) ─────────────────────────────
-        # Clicking opens a normal modal dialog, which reliably receives
-        # keyboard focus (an inline Entry in this custom-chrome window does
-        # not — the topmost main widget keeps stealing the keyboard).  The
-        # query then filters the list.  A ✕ clears it.
-        svar = tk.StringVar()
-        clear_btn = tk.Label(sr, text='✕', fg=T['muted'], bg=T['bg'],
-                             font=('Segoe UI', 11), cursor='hand2')
-        clear_btn.pack(side='right', padx=(6, 8))
-        clear_btn.bind('<Button-1>', lambda e: svar.set(''))
-        search_bar = tk.Label(sr, anchor='w', bg=T['panel'], fg=T['muted'],
-                              font=('Segoe UI', 10), cursor='hand2', padx=10, pady=5)
-        search_bar.pack(side='left', fill='x', expand=True)
-        def _search_text():
-            q = svar.get().strip()
-            return ('🔍  ' + q) if q else ('🔍  ' + L.get('tool_search', 'Search tools…'))
-        def _upd_search_bar(*_a):
-            search_bar.config(text=_search_text(),
-                              fg=(T['text'] if svar.get().strip() else T['muted']))
-        def _open_search(_e=None):
-            try:
-                from tkinter import simpledialog
-                q = simpledialog.askstring(
-                    L.get('tools', 'Tools'),
-                    L.get('tool_search', 'Search tools…'),
-                    initialvalue=svar.get(), parent=self._win)
-                if q is not None:
-                    svar.set(q.strip())
-            except Exception:
-                pass
-        search_bar.bind('<Button-1>', _open_search)
-        _upd_search_bar()
+        # section title on the left of the toggle row (search removed)
+        tk.Label(sr, text=L.get('tools', 'Tools'), fg=T['muted'], bg=T['bg'],
+                 font=('Segoe UI', 10), anchor='w').pack(side='left')
+        svar = tk.StringVar()          # always empty → the list shows everything
         # scrollable body
         outer = tk.Frame(self._content, bg=T['bg'])
         outer.pack(fill='both', expand=True, padx=20, pady=4)
@@ -4204,9 +4113,6 @@ class CustomizeWindow:
             except Exception: pass
 
         _style_toggle()
-        # The query is set in one shot by the dialog (or cleared by ✕), so a
-        # direct repaint is fine — no per-keystroke rebuild to debounce.
-        svar.trace_add('write', lambda *a: (_upd_search_bar(), _paint()))
         _paint()
 
     def _run_tool(self, action):
@@ -4531,6 +4437,17 @@ class Widget:
         if self.lang not in T:
             self.lang = 'en'
         self.root = tk.Tk()
+        # Identify the app to the shell (its own taskbar/tray identity, not
+        # python.exe) and give the root window our icon.
+        try:
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
+                'PapanikolaouFokion.PulseDeck')
+        except Exception:
+            pass
+        try:
+            self.root.iconbitmap(os.path.join(_base_dir(), 'app.ico'))
+        except Exception:
+            pass
         # Safety net: never let a stray callback error crash the widget
         def _rce(exc, val, tb):
             try:
@@ -5769,19 +5686,7 @@ class Widget:
 
     def _foreground_loop(self):
         """Keep the widget reliably above all other windows."""
-        # While the Customize window (and its modal dialogs) are open we must
-        # NOT re-assert TOPMOST — doing so 33×/sec yanks the widget above the
-        # dialog, flickering the dialog's title bar and making typing lag.
-        if getattr(self, '_suspend_keep_on_top', False):
-            cw = getattr(self, '_customize', None)
-            alive = False
-            try:
-                alive = bool(cw and cw._win and tk.Toplevel.winfo_exists(cw._win))
-            except Exception:
-                alive = False
-            if not alive:                       # window gone → fail-safe resume
-                self._suspend_keep_on_top = False
-        if self._visible and not getattr(self, '_suspend_keep_on_top', False):
+        if self._visible:
             self._keep_on_top()
         # When docked ON the taskbar we must out-race the taskbar's own repaints,
         # so re-assert TOPMOST very frequently; floating just above the bar needs
