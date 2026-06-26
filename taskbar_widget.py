@@ -2714,8 +2714,6 @@ class CustomizeWindow:
         win.configure(bg=self.T['bg'])
         try: win.iconbitmap(os.path.join(_base_dir(), 'app.ico'))
         except Exception: pass
-        try: self._round_corners(win, 12)
-        except Exception: pass
         self._win = win
         # center on screen
         win.update_idletasks()
@@ -3420,9 +3418,6 @@ class CustomizeWindow:
         self._radio_group(body, L.get('weather_lbl', 'Weather') + ' °', 'weather_unit',
                           [('C', '°C'), ('F', '°F')],
                           on_change=lambda v: setattr(self.w, '_weather_dirty', True))
-        tk.Label(body, text='   ' + L.get('weather_city_hint', '(auto by IP)'),
-                 fg=T['muted'], bg=T['bg'], font=('Segoe UI', 8),
-                 anchor='w').pack(anchor='w', padx=24)
 
     # ── Alerts tab ──
     def _tab_alerts(self):
