@@ -4,6 +4,16 @@ All notable changes to **PulseDeck** are documented here.
 
 ---
 
+## [2.8.3] — 2026-06-26
+
+### Fixed
+- **Weather city field and Tools search box could not be typed in** — the
+  `focus_force()` call on the parent window was stealing keyboard focus back
+  from the Entry widget immediately after the click. Focus is now forced
+  directly on the Entry itself, deferred 10 ms so the click event settles first.
+
+---
+
 ## [2.8.2] — 2026-06-25
 
 ### Added
