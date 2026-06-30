@@ -18,7 +18,7 @@ import random
 
 APP_NAME = 'PulseBar'        # internal identity: config dir, mutex, registry, Store package
 DISPLAY_NAME = 'PulseDeck'   # user-visible product name (rebrand)
-VERSION  = '2.8.5'
+VERSION  = '2.8.6'
 
 # ── Crash logging (enabled when NETCPURAM_DEBUG=1) ─────────────────────
 def _debug_log_path():
@@ -5420,10 +5420,17 @@ class Widget:
             def net_row(arrow, color):
                 row = tk.Frame(nfr, bg=self.bg); row.pack(side='top', anchor='w')
                 tk.Label(row, text=arrow, fg=color, bg=self.bg, font=nf, padx=0).pack(side='left')
-                # natural width — the wide 'width=7' left a visible chunk of
-                # the (dark) taskbar showing through, looking like a black box
-                v = tk.Label(row, text=' 0 K', fg=valcol, bg=self.bg,
-                             font=nf, anchor='w', padx=2)
+                # LOCKED width: in bits mode _fmt can yield 7 chars ("12.5 Mb",
+                # "10.5 Gb") while other ticks are 6 → the cell kept resizing and
+                # the layered window flashed a black strip on each grow (the
+                # -transparentcolor key is only re-asserted in _position(), not
+                # per tick). Consolas is monospaced, so a fixed width=7 box with
+                # the value padded to exactly 7 chars (see :>7 in _update_once)
+                # never changes size — and because text fills the box exactly,
+                # there is no leftover transparent cell showing the dark taskbar
+                # (the bug the old 'width=7 + :>6' combo caused).
+                v = tk.Label(row, text='    0 K', fg=valcol, bg=self.bg,
+                             font=nf, anchor='w', padx=2, width=7)
                 v.pack(side='left'); self._rgb_targets.append(v); return v
             self.lbl_up = net_row('▲', self.COLORS['up'])
             self.lbl_dn = net_row('▼', self.COLORS['dn'])
@@ -5460,8 +5467,10 @@ class Widget:
             if stacked:
                 col = tk.Frame(f, bg=self.bg); col.pack(side='left', padx=2)
                 # natural width — no extra transparent space showing the bar
+                # fixed width: "{watts} W" swings 3↔5 chars each tick → lock it
+                # (like the net cell) so the bar never resizes / flashes black
                 self.lbl_power_top = tk.Label(col, text='', fg=valcol, bg=self.bg,
-                                              font=nf, anchor='w', padx=0)
+                                              font=nf, anchor='w', padx=0, width=5)
                 self.lbl_power_top.pack(side='top', anchor='w'); self._rgb_targets.append(self.lbl_power_top)
                 self.lbl_power = tk.Label(col, text='', fg=valcol, bg=self.bg,
                                           font=nf, anchor='w', padx=0)
@@ -5469,7 +5478,7 @@ class Widget:
             else:
                 self.lbl_power_top = None
                 self.lbl_power = tk.Label(f, text='', fg=valcol, bg=self.bg,
-                                          font=vf, anchor='w', padx=2)
+                                          font=vf, anchor='w', padx=2, width=5)
                 self.lbl_power.pack(side='left'); self._rgb_targets.append(self.lbl_power)
             self._tip_cells.append((f, 'power', None))
         builders = {'cpu': b_cpu, 'ram': b_ram, 'gpu': b_gpu, 'net': b_net,
@@ -5969,6 +5978,21 @@ class Widget:
             self._update_tick()
         except Exception:
             _log('update tick EXC:\n' + traceback.format_exc())
+        # When a cell's text width changes (power watts, battery's ⚡ on plug-in,
+        # GPU —/%, …) the layered window resizes. Windows does NOT
+        # re-key the newly exposed strip, so a black band flashes unless we
+        # re-assert -transparentcolor after the size settles. This is the same
+        # remedy _position() applies after a rebuild, but applied per tick only
+        # when the width actually changed (cheap no-op otherwise).
+        if self.cfg.get('transparent_bg'):
+            try:
+                self.root.update_idletasks()
+                w = self.root.winfo_reqwidth()
+                if w != getattr(self, '_last_bar_w', None):
+                    self._last_bar_w = w
+                    self.root.attributes('-transparentcolor', self.bg)
+            except Exception:
+                pass
         # ALWAYS reschedule, no matter what: a single bad sample (a flaky
         # PDH counter, a transient psutil error) must not freeze the widget.
         try:
@@ -6029,8 +6053,10 @@ class Widget:
             self._prev_net = net
             self._net_session['up'] += max(0, up)
             self._net_session['dn'] += max(0, dn)
-            self.lbl_up.config(text=f'{self._fmt(up):>6}')
-            self.lbl_dn.config(text=f'{self._fmt(dn):>6}')
+            # pad to 7 (the max _fmt width, e.g. "12.5 Mb"/"10.5 Gb") so the
+            # monospaced, fixed-width=7 net cells never resize → no black strip
+            self.lbl_up.config(text=f'{self._fmt(up):>7}')
+            self.lbl_dn.config(text=f'{self._fmt(dn):>7}')
         if self.lbl_disk_r:
             try:
                 d = psutil.disk_io_counters()
@@ -6115,12 +6141,13 @@ class Widget:
             total = int(round(p.get('total') or 0))
             if self.lbl_power_top is not None:
                 # stacked: total on top, GPU watts (if available) below
-                self.lbl_power_top.config(text=f'{total} W')
+                # ':>3' keeps "  9 W"/" 45 W"/"120 W" the same width (no resize)
+                self.lbl_power_top.config(text=f'{total:>3} W')
                 gpu_w = p.get('gpu')
                 detail = f'{int(round(gpu_w))} g' if gpu_w is not None else p.get('source','')
                 self.lbl_power.config(text=detail)
             else:
-                self.lbl_power.config(text=f'{total} W')
+                self.lbl_power.config(text=f'{total:>3} W')
         # ── earthquake dot: blink while active, clear when expired ──
         if getattr(self, 'lbl_quake', None):
             active = (self._quake_active is not None

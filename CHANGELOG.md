@@ -4,6 +4,18 @@ All notable changes to **PulseDeck** are documented here.
 
 ---
 
+## [2.8.6] — 2026-06-30
+
+### Fixed
+- **Black strip flashing on the bar when values grew** — cells that changed
+  width each tick (Network rate, Power watts) made the layered window resize,
+  and Windows left the newly exposed strip un-keyed, so a black band flashed.
+  The Network and Power cells now have a locked width (padded to their max), and
+  the transparent colour key is re-asserted whenever the bar width changes — so
+  battery (⚡ on plug-in), GPU and any other dynamic cell stay clean too.
+
+---
+
 ## [2.8.5] — 2026-06-26
 
 ### Removed
