@@ -25,7 +25,7 @@ d.text((52, 122), "Your PC's pulse — live on the Windows 11 taskbar",
 
 # PulseDeck shield emblem top-right
 try:
-    ic = Image.open(os.path.join(D, 'assets', 'pulsebar_emblem.png')).convert('RGBA').resize((150,150), Image.LANCZOS)
+    ic = Image.open(os.path.join(D, 'assets', 'pulsedeck_emblem.png')).convert('RGBA').resize((150,150), Image.LANCZOS)
     img.alpha_composite(ic, (W-185, 28))
 except FileNotFoundError:
     pass

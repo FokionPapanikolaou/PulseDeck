@@ -6,7 +6,7 @@
     xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
     IgnorableNamespaces="uap rescap desktop">
 
-  <Identity Name="PapanikolaouFokion.PulseBar"
+  <Identity Name="PapanikolaouFokion.PulseDeck"
             Publisher="CN=4DDDFD1C-63EA-4604-9FCA-35D0F04C71E3"
             Version="2.9.0.0"
             ProcessorArchitecture="x64" />
@@ -30,7 +30,7 @@
   </Capabilities>
 
   <Applications>
-    <Application Id="PulseBar" Executable="PulseBar.exe" EntryPoint="Windows.FullTrustApplication">
+    <Application Id="PulseDeck" Executable="PulseDeck.exe" EntryPoint="Windows.FullTrustApplication">
       <uap:VisualElements
           DisplayName="PulseDeck"
           Description="Your PC's pulse, right on the taskbar — live CPU, RAM, GPU, network, disk, battery and power."
@@ -45,9 +45,9 @@
       </uap:VisualElements>
       <Extensions>
         <desktop:Extension Category="windows.startupTask"
-                           Executable="PulseBar.exe"
+                           Executable="PulseDeck.exe"
                            EntryPoint="Windows.FullTrustApplication">
-          <desktop:StartupTask TaskId="PulseBarStartup" Enabled="true" DisplayName="PulseDeck" />
+          <desktop:StartupTask TaskId="PulseDeckStartup" Enabled="true" DisplayName="PulseDeck" />
         </desktop:Extension>
       </Extensions>
     </Application>

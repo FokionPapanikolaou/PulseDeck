@@ -1,5 +1,5 @@
 THIRD-PARTY NOTICES
-PulseBar
+PulseDeck
 
 This product includes the following third-party open-source software.
 All are permissive licenses that allow commercial distribution.

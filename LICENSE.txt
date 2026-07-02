@@ -1,5 +1,5 @@
 END USER LICENSE AGREEMENT (EULA)
-PulseBar
+PulseDeck
 Copyright (c) 2026 Fokion Papanikolaou. All rights reserved.
 
 IMPORTANT — READ CAREFULLY:

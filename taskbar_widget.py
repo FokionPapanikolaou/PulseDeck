@@ -16,7 +16,7 @@ import faulthandler
 import socket
 import random
 
-APP_NAME = 'PulseBar'        # internal identity: config dir, mutex, registry, Store package
+APP_NAME = 'PulseDeck'       # internal identity: config dir, mutex, registry, Store package
 DISPLAY_NAME = 'PulseDeck'   # user-visible product name (rebrand)
 VERSION  = '2.9.0'
 
@@ -1313,7 +1313,7 @@ def already_running():
     ERROR_ALREADY_EXISTS = 183
     kernel32 = ctypes.windll.kernel32
     # Global\ prefix so it's unique across the whole session
-    kernel32.CreateMutexW(None, False, 'Global\\PulseBar_SingleInstance')
+    kernel32.CreateMutexW(None, False, 'Global\\PulseDeck_SingleInstance')
     return kernel32.GetLastError() == ERROR_ALREADY_EXISTS
 
 # ── Windows work area ──────────────────────────────────────────────────
@@ -2039,6 +2039,20 @@ def _resolve_config_dir():
 CONFIG_DIR  = _resolve_config_dir()
 CONFIG_PATH = os.path.join(CONFIG_DIR, 'config.json')
 
+# One-time settings migration from the pre-rename location (%APPDATA%\PulseBar).
+# PulseDeck was formerly "PulseBar"; carry existing users' settings over so the
+# rename doesn't wipe their configuration on first launch of the new build.
+try:
+    if not os.path.exists(CONFIG_PATH):
+        _old_cfg = os.path.join(os.environ.get('APPDATA', ''), 'PulseBar', 'config.json')
+        if _old_cfg and os.path.exists(_old_cfg) \
+                and os.path.abspath(_old_cfg) != os.path.abspath(CONFIG_PATH):
+            os.makedirs(CONFIG_DIR, exist_ok=True)
+            import shutil as _shutil
+            _shutil.copyfile(_old_cfg, CONFIG_PATH)
+except Exception:
+    pass
+
 DEFAULTS = {
     'opacity':   0.6,     # 0.4 – 1.0  (lower = more see-through)
     'align':     'left',  # left | center | right
@@ -2142,8 +2156,8 @@ def save_config(cfg):
 
 # ── Startup (registry Run key) ─────────────────────────────────────────
 REG_KEY  = r'Software\Microsoft\Windows\CurrentVersion\Run'
-REG_NAME = 'PulseBar'
-STARTUP_TASK_ID = 'PulseBarStartup'   # must match AppxManifest.xml
+REG_NAME = 'PulseDeck'
+STARTUP_TASK_ID = 'PulseDeckStartup'   # must match AppxManifest.xml
 
 def _is_msix():
     """True if we are running inside the MSIX (Store) container.
@@ -2219,6 +2233,21 @@ def sync_startup():
     rewrite it. No-op inside the MSIX container (StartupTask manages itself)."""
     if _is_msix():
         return
+    # Drop the legacy 'PulseBar' Run entry from pre-rename builds. If it was
+    # enabled, remember that so autostart is re-created under the new name.
+    _legacy_on = False
+    try:
+        k = winreg.OpenKey(winreg.HKEY_CURRENT_USER, REG_KEY, 0, winreg.KEY_ALL_ACCESS)
+        try:
+            winreg.QueryValueEx(k, 'PulseBar')
+            _legacy_on = True
+            winreg.DeleteValue(k, 'PulseBar')
+        except FileNotFoundError:
+            pass
+        finally:
+            winreg.CloseKey(k)
+    except Exception:
+        pass
     try:
         k = winreg.OpenKey(winreg.HKEY_CURRENT_USER, REG_KEY, 0, winreg.KEY_READ)
         try:
@@ -2226,7 +2255,10 @@ def sync_startup():
         finally:
             winreg.CloseKey(k)
     except FileNotFoundError:
-        return   # auto-start is off — nothing to heal
+        if _legacy_on:
+            try: set_startup(True)   # carry the old autostart over to the new name
+            except Exception: pass
+        return   # otherwise auto-start is off — nothing to heal
     if current != _startup_cmd():
         try:
             set_startup(True)
@@ -2651,7 +2683,7 @@ def format_diagnostics(rows):
 
 # ── Weather (Open-Meteo, free, no API key) ─────────────────────────────
 def _http_json(url, timeout=6):
-    req = urllib.request.Request(url, headers={'User-Agent': 'PulseBar'})
+    req = urllib.request.Request(url, headers={'User-Agent': 'PulseDeck'})
     with urllib.request.urlopen(req, timeout=timeout) as r:
         return json.loads(r.read().decode('utf-8', 'ignore'))
 

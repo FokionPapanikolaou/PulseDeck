@@ -1,10 +1,8 @@
 <p align="center">
-  <img src="assets/pulsebar_emblem.png" width="140" alt="PulseDeck">
+  <img src="assets/pulsedeck_emblem.png" width="140" alt="PulseDeck">
 </p>
 
 <h1 align="center">PulseDeck</h1>
-
-<p align="center"><sub><i>formerly PulseBar</i></sub></p>
 
 <p align="center">
   <b>Your PC's pulse — right on the taskbar.</b><br>
@@ -182,7 +180,7 @@ The widget shows **MB/s** (megabytes) by default; ISPs advertise **Mbps** (megab
 That's the load warning — red means the resource is heavily used.
 
 **Where are my settings stored?**
-Portable: `config.json` next to the .exe. Installed: `%APPDATA%\PulseBar\`.
+Portable: `config.json` next to the .exe. Installed: `%APPDATA%\PulseDeck\`.
 
 **How do I remove it?**
 Right-click → Close to quit. Use the installer's uninstaller, or just delete the

@@ -1,15 +1,15 @@
-; Inno Setup script — PulseDeck (internal identity stays "PulseBar")
+; Inno Setup script — PulseDeck
 #define AppName "PulseDeck"
 #define AppVer "2.9.0"
 #define AppPublisher "Fokion Papanikolaou"
-#define AppExe "PulseBar.exe"
+#define AppExe "PulseDeck.exe"
 
 [Setup]
 AppId={{7A9F3C21-5D8E-4B6A-9C12-3E5F7A9B1D04}
 AppName={#AppName}
 AppVersion={#AppVer}
 AppPublisher={#AppPublisher}
-DefaultDirName={autopf}\PulseBar
+DefaultDirName={autopf}\PulseDeck
 DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
 OutputDir=dist
@@ -42,7 +42,7 @@ Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExe}"; Tasks: desktopico
 
 [Registry]
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; \
-  ValueType: string; ValueName: "PulseBar"; ValueData: """{app}\{#AppExe}"""; \
+  ValueType: string; ValueName: "PulseDeck"; ValueData: """{app}\{#AppExe}"""; \
   Flags: uninsdeletevalue; Tasks: startup
 
 [Run]
