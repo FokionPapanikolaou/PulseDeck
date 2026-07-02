@@ -2143,7 +2143,7 @@ def save_config(cfg):
 # ── Startup (registry Run key) ─────────────────────────────────────────
 REG_KEY  = r'Software\Microsoft\Windows\CurrentVersion\Run'
 REG_NAME = 'PulseDeck'
-STARTUP_TASK_ID = 'PulseDeckStartup'   # must match AppxManifest.xml
+STARTUP_TASK_ID = 'PulseBarStartup'   # must match AppxManifest.xml (Store package identity)
 
 def _is_msix():
     """True if we are running inside the MSIX (Store) container.

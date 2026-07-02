@@ -6,7 +6,12 @@
     xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
     IgnorableNamespaces="uap rescap desktop">
 
-  <Identity Name="PapanikolaouFokion.PulseDeck"
+  <!-- Identity Name / Application Id / StartupTask id MUST stay "PulseBar":
+       this is the Store-reserved package identity in Partner Center (the
+       publisher-hash family name is derived from it). Renaming it makes the
+       Store treat this as a different app and breaks updates. The user-visible
+       name is DisplayName / DefaultTile below (PulseDeck). -->
+  <Identity Name="PapanikolaouFokion.PulseBar"
             Publisher="CN=4DDDFD1C-63EA-4604-9FCA-35D0F04C71E3"
             Version="2.9.0.0"
             ProcessorArchitecture="x64" />
@@ -30,7 +35,7 @@
   </Capabilities>
 
   <Applications>
-    <Application Id="PulseDeck" Executable="PulseDeck.exe" EntryPoint="Windows.FullTrustApplication">
+    <Application Id="PulseBar" Executable="PulseDeck.exe" EntryPoint="Windows.FullTrustApplication">
       <uap:VisualElements
           DisplayName="PulseDeck"
           Description="Your PC's pulse, right on the taskbar — live CPU, RAM, GPU, network, disk, battery and power."
@@ -47,7 +52,7 @@
         <desktop:Extension Category="windows.startupTask"
                            Executable="PulseDeck.exe"
                            EntryPoint="Windows.FullTrustApplication">
-          <desktop:StartupTask TaskId="PulseDeckStartup" Enabled="true" DisplayName="PulseDeck" />
+          <desktop:StartupTask TaskId="PulseBarStartup" Enabled="true" DisplayName="PulseDeck" />
         </desktop:Extension>
       </Extensions>
     </Application>
