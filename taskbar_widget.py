@@ -18,7 +18,7 @@ import random
 
 APP_NAME = 'PulseDeck'       # internal identity: config dir, mutex, registry, Store package
 DISPLAY_NAME = 'PulseDeck'   # user-visible product name (rebrand)
-VERSION  = '2.9.0'
+VERSION  = '2.9.1'
 
 # ── Crash logging (enabled when NETCPURAM_DEBUG=1) ─────────────────────
 def _debug_log_path():
@@ -477,7 +477,7 @@ CUST_EXTRA = {
        'sys_mobo':'Motherboard','sys_monitor':'Monitor','sys_audio':'Audio',
        'sys_optical':'Optical drive','sys_storage':'Storage','sys_network':'Network',
        'sys_machine':'System','sys_battery':'Battery','sys_drives':'Drives',
-       'sys_security':'Security',
+       'sys_security':'Security','sys_summary':'Summary','sys_advanced':'Advanced',
        'sys_windows':'Windows','sys_ram':'RAM','copy_all':'Copy all','copied':'Copied!',
        'paypal':'PayPal','revolut':'Revolut','quake_dist':'Alert radius (km)',
        'quake_dur':'Alert duration (min)'},
@@ -487,7 +487,7 @@ CUST_EXTRA = {
        'sys_mobo':'Μητρική','sys_monitor':'Οθόνη','sys_audio':'Ήχος',
        'sys_optical':'Οπτικός δίσκος','sys_storage':'Αποθήκευση','sys_network':'Δίκτυο',
        'sys_machine':'Σύστημα','sys_battery':'Μπαταρία','sys_drives':'Δίσκοι',
-       'sys_security':'Ασφάλεια',
+       'sys_security':'Ασφάλεια','sys_summary':'Σύνοψη','sys_advanced':'Προχωρημένα',
        'sys_windows':'Windows','sys_ram':'RAM','copy_all':'Αντιγραφή όλων','copied':'Αντιγράφηκε!',
        'paypal':'PayPal','revolut':'Revolut','quake_dist':'Ακτίνα ειδοποίησης (km)',
        'quake_dur':'Διάρκεια ειδοποίησης (λεπτά)'},
@@ -1129,7 +1129,7 @@ for _lng, _d in NEW_TOOLS_I18N.items():
 NEW_V29_I18N = {
  'es': {
    'sys_machine':"Sistema", 'sys_battery':"Batería", 'sys_drives':"Discos",
-   'sys_security':"Seguridad",
+   'sys_security':"Seguridad", 'sys_summary':"Resumen", 'sys_advanced':"Avanzado",
    'hide_fs':"Ocultar cuando una app pasa a pantalla completa",
    'desc__t_classicmenu':"Alternar el menú contextual estilo Windows 10",
    'cf_ctx_on':"¿Cambiar al menú contextual clásico (Windows 10)? Se reiniciará el Explorador.",
@@ -1147,7 +1147,7 @@ NEW_V29_I18N = {
  },
  'de': {
    'sys_machine':"System", 'sys_battery':"Akku", 'sys_drives':"Laufwerke",
-   'sys_security':"Sicherheit",
+   'sys_security':"Sicherheit", 'sys_summary':"Übersicht", 'sys_advanced':"Erweitert",
    'hide_fs':"Ausblenden, wenn eine App in den Vollbildmodus wechselt",
    'desc__t_classicmenu':"Klassisches Kontextmenü (Windows 10) umschalten",
    'cf_ctx_on':"Zum klassischen (Windows 10) Kontextmenü wechseln? Der Explorer wird neu gestartet.",
@@ -1165,7 +1165,7 @@ NEW_V29_I18N = {
  },
  'fr': {
    'sys_machine':"Système", 'sys_battery':"Batterie", 'sys_drives':"Disques",
-   'sys_security':"Sécurité",
+   'sys_security':"Sécurité", 'sys_summary':"Résumé", 'sys_advanced':"Avancé",
    'hide_fs':"Masquer quand une appli passe en plein écran",
    'desc__t_classicmenu':"Basculer le menu contextuel style Windows 10",
    'cf_ctx_on':"Passer au menu contextuel classique (Windows 10) ? L'Explorateur redémarrera.",
@@ -1183,7 +1183,7 @@ NEW_V29_I18N = {
  },
  'it': {
    'sys_machine':"Sistema", 'sys_battery':"Batteria", 'sys_drives':"Dischi",
-   'sys_security':"Sicurezza",
+   'sys_security':"Sicurezza", 'sys_summary':"Riepilogo", 'sys_advanced':"Avanzate",
    'hide_fs':"Nascondi quando un'app va a schermo intero",
    'desc__t_classicmenu':"Attiva/disattiva il menu contestuale stile Windows 10",
    'cf_ctx_on':"Passare al menu contestuale classico (Windows 10)? Explorer verrà riavviato.",
@@ -1201,7 +1201,7 @@ NEW_V29_I18N = {
  },
  'pt': {
    'sys_machine':"Sistema", 'sys_battery':"Bateria", 'sys_drives':"Discos",
-   'sys_security':"Segurança",
+   'sys_security':"Segurança", 'sys_summary':"Resumo", 'sys_advanced':"Avançado",
    'hide_fs':"Ocultar quando uma app entra em ecrã inteiro",
    'desc__t_classicmenu':"Alternar o menu de contexto estilo Windows 10",
    'cf_ctx_on':"Mudar para o menu de contexto clássico (Windows 10)? O Explorador reiniciará.",
@@ -1219,7 +1219,7 @@ NEW_V29_I18N = {
  },
  'ru': {
    'sys_machine':"Система", 'sys_battery':"Батарея", 'sys_drives':"Диски",
-   'sys_security':"Безопасность",
+   'sys_security':"Безопасность", 'sys_summary':"Сводка", 'sys_advanced':"Подробно",
    'hide_fs':"Скрывать, когда приложение в полноэкранном режиме",
    'desc__t_classicmenu':"Переключить контекстное меню в стиле Windows 10",
    'cf_ctx_on':"Переключить на классическое меню (Windows 10)? Проводник перезапустится.",
@@ -1238,6 +1238,15 @@ NEW_V29_I18N = {
 }
 for _lng, _d in NEW_V29_I18N.items():
     CUST_LABELS.setdefault(_lng, {}).update(_d)
+
+# Expose the Superuser item descriptions as Tools-tab hover hints
+# (the Tools tab looks up 'desc__<toolkey>').
+for _lng in list(CUST_LABELS):
+    for _k in ('su_god', 'su_dev', 'su_msconfig', 'su_regedit',
+               'su_gpedit', 'su_services', 'su_startup', 'su_sys32'):
+        _dv = CUST_LABELS[_lng].get(_k + '_d')
+        if _dv:
+            CUST_LABELS[_lng]['desc__' + _k] = _dv
 
 # Cell metadata for the Metrics tab (id -> friendly name, icon glyph, config key)
 CELL_META = (
@@ -1657,15 +1666,18 @@ def _wmi_batch():
     reaches Python. Returns {key: [rows…]} with [] for anything that failed.
     """
     keys = ('cpu', 'mem', 'gpu', 'os', 'cs', 'mobo', 'bios',
-            'audio', 'optical', 'battery', 'monitors', 'drives', 'tpm')
+            'audio', 'optical', 'battery', 'monitors', 'drives', 'tpm',
+            'memarray', 'activation')
     empty = {k: [] for k in keys}
     ps = (
         "$ErrorActionPreference='SilentlyContinue';$o=[ordered]@{};"
-        "$o['cpu']=@(Get-CimInstance Win32_Processor|Select-Object Name,NumberOfCores,NumberOfLogicalProcessors,MaxClockSpeed,L2CacheSize,L3CacheSize,SocketDesignation,Manufacturer);"
+        "$o['cpu']=@(Get-CimInstance Win32_Processor|Select-Object Name,NumberOfCores,NumberOfLogicalProcessors,MaxClockSpeed,L2CacheSize,L3CacheSize,SocketDesignation,Manufacturer,VirtualizationFirmwareEnabled);"
         "$o['mem']=@(Get-CimInstance Win32_PhysicalMemory|Select-Object Capacity,Speed,Manufacturer,PartNumber,DeviceLocator);"
-        "$o['gpu']=@(Get-CimInstance Win32_VideoController|Select-Object Name,AdapterRAM,DriverVersion,CurrentHorizontalResolution,CurrentVerticalResolution,CurrentRefreshRate);"
+        "$o['memarray']=@(Get-CimInstance Win32_PhysicalMemoryArray|Select-Object MemoryDevices,MaxCapacity,MaxCapacityEx);"
+        "$o['gpu']=@(Get-CimInstance Win32_VideoController|Select-Object Name,AdapterRAM,DriverVersion,CurrentHorizontalResolution,CurrentVerticalResolution,CurrentRefreshRate,@{n='DriverDate';e={if($_.DriverDate){$_.DriverDate.ToString('yyyy-MM-dd')}else{''}}});"
         "$o['os']=@(Get-CimInstance Win32_OperatingSystem|Select-Object Caption,Version,BuildNumber,OSArchitecture,@{n='InstallDate';e={if($_.InstallDate){$_.InstallDate.ToString('yyyy-MM-dd')}else{''}}});"
-        "$o['cs']=@(Get-CimInstance Win32_ComputerSystem|Select-Object Manufacturer,Model,SystemFamily,SystemType,PCSystemType,Name,UserName);"
+        "$o['activation']=@(Get-CimInstance SoftwareLicensingProduct -Filter \"ApplicationID='55c92734-d682-4d71-983e-d6ec3f16059f' AND PartialProductKey IS NOT NULL\"|Select-Object LicenseStatus,Description);"
+        "$o['cs']=@(Get-CimInstance Win32_ComputerSystem|Select-Object Manufacturer,Model,SystemFamily,SystemType,PCSystemType,Name,UserName,Domain,PartOfDomain,Workgroup);"
         "$o['mobo']=@(Get-CimInstance Win32_BaseBoard|Select-Object Manufacturer,Product,Version,SerialNumber);"
         "$o['bios']=@(Get-CimInstance Win32_BIOS|Select-Object Manufacturer,SMBIOSBIOSVersion,@{n='ReleaseDate';e={if($_.ReleaseDate){$_.ReleaseDate.ToString('yyyy-MM-dd')}else{''}}});"
         "$o['audio']=@(Get-CimInstance Win32_SoundDevice|Select-Object Name,Manufacturer,Status);"
@@ -1746,6 +1758,10 @@ def collect_system_info():
                 'name': str(c.get('Name', '') or '').strip(),
                 'user': user,
             }
+            if c.get('PartOfDomain'):
+                out['machine']['domain'] = str(c.get('Domain', '') or '').strip()
+            else:
+                out['machine']['workgroup'] = str(c.get('Workgroup', '') or '').strip()
     except Exception: pass
     # ── Physical drives (SSD/HDD model + size) ──
     try:
@@ -1774,6 +1790,7 @@ def collect_system_info():
                 'l2_kb': c.get('L2CacheSize'),
                 'l3_kb': c.get('L3CacheSize'),
                 'socket': c.get('SocketDesignation',''),
+                'virt': c.get('VirtualizationFirmwareEnabled'),
             }
         else:
             # WMI unavailable — fall back to the registry + psutil so the CPU
@@ -1805,6 +1822,14 @@ def collect_system_info():
             'part': str(m.get('PartNumber','') or '').strip(),
             'slot': m.get('DeviceLocator',''),
         } for m in mods]
+        # slot count + max supported capacity (Win32_PhysicalMemoryArray)
+        ma = W['memarray']
+        if ma:
+            slots = ma[0].get('MemoryDevices')
+            if slots: out['ram']['slots'] = int(slots)
+            maxcap = ma[0].get('MaxCapacityEx') or ma[0].get('MaxCapacity')
+            # MaxCapacity is in KB, MaxCapacityEx in KB too (per WMI docs)
+            if maxcap: out['ram']['max_bytes'] = int(maxcap) * 1024
     except Exception: pass
     try:
         gpus = W['gpu']
@@ -1815,6 +1840,7 @@ def collect_system_info():
                 'name': name,
                 'vram': int(g.get('AdapterRAM') or 0),
                 'driver': g.get('DriverVersion'),
+                'driver_date': str(g.get('DriverDate','') or '').strip(),
                 'res': (g.get('CurrentHorizontalResolution'),
                         g.get('CurrentVerticalResolution')),
                 'hz': g.get('CurrentRefreshRate'),
@@ -1836,6 +1862,10 @@ def collect_system_info():
                 'installed': str(o.get('InstallDate','') or '').strip(),
                 'uptime': _uptime_str(),
             }
+            # activation status (SoftwareLicensingProduct.LicenseStatus: 1=activated)
+            act = W['activation']
+            if act:
+                out['os']['activated'] = (act[0].get('LicenseStatus') == 1)
         else:
             # WMI unavailable — fall back to the platform module.
             import platform as _pf
@@ -1910,6 +1940,14 @@ def collect_system_info():
             sec['secure_boot'] = bool(val)
         except OSError:
             sec['secure_boot'] = None   # unknown (e.g. legacy BIOS boot)
+        # Firmware mode: the SecureBoot control key only exists on UEFI systems.
+        try:
+            k = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
+                               r'SYSTEM\CurrentControlSet\Control\SecureBoot\State')
+            winreg.CloseKey(k)
+            sec['firmware'] = 'UEFI'
+        except OSError:
+            sec['firmware'] = 'Legacy (BIOS)'
         # TPM (may be empty without elevation — then we just omit it)
         tpm = W['tpm']
         if tpm:
@@ -2072,6 +2110,7 @@ DEFAULTS = {
     'tooltips':  True,       # hover a metric -> details popup
     'bar_labels': 'icon',    # bar metric marker: 'icon' (glyph) or 'text' (CPU/RAM/…)
     'tools_layout': 'list',  # Tools tab view: 'list' or 'grid' (responsive tiles)
+    'sys_view': 'summary',   # System tab view: 'summary' (Speccy-like) or 'advanced'
     'check_updates': True,   # check GitHub for a newer release on launch
     'last_update_check': 0,  # epoch seconds of the last check (throttle)
     # ── earthquakes (v2.6) ──
@@ -2258,6 +2297,9 @@ def launch_tool(action):
             os.startfile(os.path.expandvars(target))
         elif kind == 'exe':
             subprocess.Popen([_sys32(target[0])] + list(target[1:]))
+        elif kind == 'win':   # executable in the Windows dir, e.g. regedit.exe
+            win = os.environ.get('WINDIR', r'C:\Windows')
+            subprocess.Popen([os.path.join(win, target[0])] + list(target[1:]))
         elif kind == 'applet':
             subprocess.Popen([_sys32('control.exe'), target])
         elif kind == 'msc':
@@ -2402,36 +2444,6 @@ def action_classic_context(enable):
     except Exception:
         return False
 
-def _open_windir(exe, *args):
-    """Launch an executable that lives in the Windows dir (not System32),
-    e.g. regedit.exe. Falls back to ShellExecute by name."""
-    try:
-        subprocess.Popen([os.path.join(os.environ.get('WINDIR', r'C:\Windows'),
-                                       exe), *args])
-        return True
-    except Exception:
-        try: os.startfile(exe); return True
-        except Exception: return False
-
-def action_god_mode():
-    """Open the 'All Tasks' (God Mode) shell folder — every Control Panel task
-    in one searchable list. This is a read-only shell namespace view; nothing
-    is written to disk and no admin rights are needed."""
-    try:
-        os.startfile('shell:::{ED7BA470-8E54-465E-825C-99712043E01C}')
-        return True
-    except Exception:
-        return False
-
-def action_dev_mode():
-    """Open Settings → System → For developers (Developer Mode, sideloading,
-    terminal, etc.). We just open the page — the user flips the switch."""
-    try:
-        os.startfile('ms-settings:developers')
-        return True
-    except Exception:
-        return False
-
 def action_hibernate():
     """Put the PC into hibernation. Falls back gracefully if hibernation is
     disabled in power settings."""
@@ -2487,6 +2499,16 @@ TOOLS_CATALOG = [
         ('t_sound',       '🔊', ('exe', ['mmsys.cpl'])),
         ('t_micpriv',     '🎤', ('settings', 'ms-settings:privacy-microphone')),
         ('t_campriv',     '📷', ('settings', 'ms-settings:privacy-webcam')),
+    ]),
+    ('superuser', '🛠', [
+        ('su_god',      '👑', ('shell', 'shell:::{ED7BA470-8E54-465E-825C-99712043E01C}')),
+        ('su_dev',      '🔧', ('settings', 'ms-settings:developers')),
+        ('su_msconfig', '🧾', ('exe', ['msconfig.exe'])),
+        ('su_regedit',  '📝', ('win', ['regedit.exe'])),
+        ('su_gpedit',   '🧩', ('msc', 'gpedit.msc')),
+        ('su_services', '🛎', ('msc', 'services.msc')),
+        ('su_startup',  '🚀', ('shell', 'shell:startup')),
+        ('su_sys32',    '📁', ('shell', r'%WINDIR%\System32')),
     ]),
 ]
 
@@ -3210,7 +3232,6 @@ class CustomizeWindow:
             ('appearance', 'appearance', '🎨'),
             ('system',     'system',     '💻'),
             ('tools',      'tools',      '🧰'),
-            ('super',      'superuser',  '🛠'),
             ('about',      'about',      'ℹ'),
         ):
             b = tk.Label(tabs, text=f'  {icon}  {self.L[key]}', fg=T['muted'],
@@ -3896,15 +3917,39 @@ class CustomizeWindow:
 
     # ── About tab ──
     # ── System Info tab ──
+    def _set_sys_view(self, mode):
+        """Switch the System tab between the Summary and Advanced views. The
+        hardware scan is cached (self._sysinfo), so switching is instant."""
+        if self.w.cfg.get('sys_view') == mode:
+            return
+        self.w._set('sys_view', mode)
+        self.show_tab('system')
+
     def _tab_system(self):
         T = self.T; L = self.L
-        # Header
+        # Header + Summary/Advanced view toggle
         f = tk.Frame(self._content, bg=T['bg'])
         f.pack(side='top', fill='x', padx=24, pady=(14, 6))
         tk.Label(f, text='💻  ' + L['system'], fg=T['text'], bg=T['bg'],
                  font=('Segoe UI', 12, 'bold')).pack(side='left')
+        cur_view = self.w.cfg.get('sys_view', 'summary')
+        vt = tk.Frame(f, bg=T['bg']); vt.pack(side='right')
+        for mode, lbl in (('summary',  L.get('sys_summary', 'Summary')),
+                          ('advanced', L.get('sys_advanced', 'Advanced'))):
+            sel = (mode == cur_view)
+            b = tk.Label(vt, text=lbl, cursor='hand2', padx=12, pady=3,
+                         font=('Segoe UI', 9, 'bold' if sel else 'normal'),
+                         bg=(T['cyan'] if sel else T['panel']),
+                         fg=('#0d1117' if sel else T['muted']))
+            b.pack(side='left', padx=1)
+            b.bind('<Button-1>', lambda e, m=mode: self._set_sys_view(m))
         tk.Frame(self._content, bg=T['line'], height=1).pack(
             side='top', fill='x', padx=24)
+        # Reuse the cached scan when we already have it (e.g. toggling the view)
+        cached = getattr(self, '_sysinfo', None)
+        if cached is not None:
+            self._render_system(cached, None)
+            return
         loading_txt = '⏳  ' + self.L['loading_sys']
         loading = tk.Label(self._content, text=loading_txt,
                            fg=T['cyan'], bg=T['bg'],
@@ -3924,6 +3969,7 @@ class CustomizeWindow:
         # Collect in a thread so the UI stays responsive (WMI calls take ~1s)
         def _bg():
             info = collect_system_info()
+            self._sysinfo = info          # cache for instant view switching
             try: self._win.after(0, lambda: self._render_system(info, loading))
             except Exception: pass
         threading.Thread(target=_bg, daemon=True).start()
@@ -4165,6 +4211,50 @@ class CustomizeWindow:
 
         _refresh_bn()
 
+        def _footer():
+            # ── Copy-all button ──
+            _copy_lbl = '📋  ' + self.L['copy_all']
+            def _copy_all():
+                try:
+                    txt = self._format_sysinfo_text(info)
+                    self._win.clipboard_clear()
+                    self._win.clipboard_append(txt)
+                    cp_btn.config(text='✓  ' + self.L['copied'])
+                    self._win.after(1500, lambda: cp_btn.config(text=_copy_lbl))
+                except Exception: pass
+            cp_btn = tk.Label(body, text=_copy_lbl, fg=T['cyan'], bg=T['bg'],
+                              font=('Segoe UI', 10), padx=12, pady=6, cursor='hand2')
+            cp_btn.pack(anchor='w', padx=4, pady=8)
+            cp_btn.bind('<Button-1>', lambda e: _copy_all())
+            # ── Diagnostics: hardware self-test ──
+            _diag_lbl = '🩺  ' + self.L.get('run_diag', 'Run diagnostics')
+            def _run_diag():
+                try:
+                    rows = run_diagnostics()
+                    txt = format_diagnostics(rows)
+                    self._win.clipboard_clear(); self._win.clipboard_append(txt)
+                    fails = sum(1 for _, s, _ in rows if s != 'OK')
+                    msg = self.L.get('diag_done', '{ok}/{n} OK · copied to clipboard').format(
+                        ok=len(rows) - fails, n=len(rows))
+                    diag_btn.config(text='✓  ' + msg)
+                    self._win.after(3500, lambda: diag_btn.config(text=_diag_lbl))
+                except Exception:
+                    diag_btn.config(text='⚠  ' + self.L.get('diag_fail', 'Diagnostics failed'))
+            diag_btn = tk.Label(body, text=_diag_lbl, fg=T['cyan'], bg=T['bg'],
+                                font=('Segoe UI', 10), padx=12, pady=6, cursor='hand2')
+            diag_btn.pack(anchor='w', padx=4, pady=(0, 8))
+            diag_btn.bind('<Button-1>', lambda e: _run_diag())
+            tk.Label(body, text='   ' + self.L.get('diag_hint',
+                     'Paste this in a bug report so we can help.'),
+                     fg=T['muted'], bg=T['bg'], font=('Segoe UI', 8),
+                     anchor='w').pack(anchor='w', padx=4, pady=(0, 10))
+
+        # ── View branch: Summary (Speccy-like) vs Advanced (full detail) ──
+        if self.w.cfg.get('sys_view', 'summary') == 'summary':
+            self._render_sys_summary(body, info, section, kv, sys_vals)
+            _footer()
+            return
+
         # ── Machine (make / model) ──
         mach = info.get('machine', {})
         if mach.get('model') or mach.get('manufacturer'):
@@ -4181,6 +4271,8 @@ class CustomizeWindow:
             if form: kv(s, 'Type', form)
             if mach.get('name'): kv(s, 'Device name', mach['name'])
             if mach.get('user'): kv(s, 'Signed in', mach['user'])
+            if mach.get('domain'):      kv(s, 'Domain', mach['domain'])
+            elif mach.get('workgroup'): kv(s, 'Workgroup', mach['workgroup'])
             tk.Frame(s, bg=T['panel'], height=8).pack()
 
         # ── CPU ──
@@ -4200,6 +4292,9 @@ class CustomizeWindow:
             kv(s, 'L3 cache', f"{cpu['l3_kb']/1024:.0f} MB")
         if cpu.get('socket'):
             kv(s, 'Socket', cpu['socket'])
+        if cpu.get('virt') is not None:
+            kv(s, 'Virtualization', 'Enabled' if cpu['virt'] else 'Disabled',
+               T['green'] if cpu['virt'] else T['muted'])
         tk.Frame(s, bg=T['panel'], height=8).pack()
 
         # ── RAM ──
@@ -4213,6 +4308,11 @@ class CustomizeWindow:
         if ram.get('swap_total'):
             kv(s, 'Page file',
                f"{_human_bytes(ram['swap_used'])} / {_human_bytes(ram['swap_total'])}")
+        if ram.get('slots'):
+            used = len([m for m in ram.get('modules', []) if m.get('capacity')])
+            sl = f"{used} / {ram['slots']} used"
+            if ram.get('max_bytes'): sl += f"  ·  max {_human_bytes(ram['max_bytes'])}"
+            kv(s, 'Slots', sl)
         for i, m in enumerate(ram.get('modules', [])[:8]):
             cap = _human_bytes(m['capacity']) if m['capacity'] else '?'
             spd = f"{m['speed']} MHz" if m.get('speed') else ''
@@ -4248,6 +4348,8 @@ class CustomizeWindow:
                     kv(s, 'VRAM', _human_bytes(g['vram']))
                 if g.get('driver'):
                     kv(s, 'Driver', g['driver'])
+                if g.get('driver_date'):
+                    kv(s, 'Driver date', g['driver_date'])
                 if g.get('res') and g['res'][0]:
                     res = f"{g['res'][0]} × {g['res'][1]}"
                     if g.get('hz'): res += f"  @ {g['hz']} Hz"
@@ -4311,6 +4413,9 @@ class CustomizeWindow:
             kv(s, 'Version', v)
         if os_.get('arch'): kv(s, 'Architecture', os_['arch'])
         if os_.get('installed'): kv(s, 'Installed', os_['installed'])
+        if os_.get('activated') is not None:
+            kv(s, 'Activation', 'Activated' if os_['activated'] else 'Not activated',
+               T['green'] if os_['activated'] else T['orange'])
         # (uptime now lives in the live "Performance" section above)
         tk.Frame(s, bg=T['panel'], height=8).pack()
 
@@ -4322,6 +4427,7 @@ class CustomizeWindow:
             if sb is not None:
                 kv(s, 'Secure Boot', 'On' if sb else 'Off',
                    T['green'] if sb else T['orange'])
+            if sec.get('firmware'): kv(s, 'Firmware', sec['firmware'])
             if sec.get('tpm_present'):
                 v = 'TPM ' + (sec.get('tpm_version') or '?')
                 if not sec.get('tpm_enabled'): v += '  (disabled)'
@@ -4367,42 +4473,60 @@ class CustomizeWindow:
                 kv(s, n['name'][:30], '  ·  '.join(bits))
             tk.Frame(s, bg=T['panel'], height=8).pack()
 
-        # ── Copy-all button ──
-        _copy_lbl = '📋  ' + self.L['copy_all']
-        def _copy_all():
-            try:
-                txt = self._format_sysinfo_text(info)
-                self._win.clipboard_clear()
-                self._win.clipboard_append(txt)
-                cp_btn.config(text='✓  ' + self.L['copied'])
-                self._win.after(1500, lambda: cp_btn.config(text=_copy_lbl))
-            except Exception: pass
-        cp_btn = tk.Label(body, text=_copy_lbl, fg=T['cyan'], bg=T['bg'],
-                          font=('Segoe UI', 10), padx=12, pady=6, cursor='hand2')
-        cp_btn.pack(anchor='w', padx=4, pady=8)
-        cp_btn.bind('<Button-1>', lambda e: _copy_all())
-        # ── Diagnostics: hardware self-test ──
-        _diag_lbl = '🩺  ' + self.L.get('run_diag', 'Run diagnostics')
-        def _run_diag():
-            try:
-                rows = run_diagnostics()
-                txt = format_diagnostics(rows)
-                self._win.clipboard_clear(); self._win.clipboard_append(txt)
-                fails = sum(1 for _, s, _ in rows if s != 'OK')
-                msg = self.L.get('diag_done', '{ok}/{n} OK · copied to clipboard').format(
-                    ok=len(rows) - fails, n=len(rows))
-                diag_btn.config(text='✓  ' + msg)
-                self._win.after(3500, lambda: diag_btn.config(text=_diag_lbl))
-            except Exception:
-                diag_btn.config(text='⚠  ' + self.L.get('diag_fail', 'Diagnostics failed'))
-        diag_btn = tk.Label(body, text=_diag_lbl, fg=T['cyan'], bg=T['bg'],
-                            font=('Segoe UI', 10), padx=12, pady=6, cursor='hand2')
-        diag_btn.pack(anchor='w', padx=4, pady=(0, 8))
-        diag_btn.bind('<Button-1>', lambda e: _run_diag())
-        tk.Label(body, text='   ' + self.L.get('diag_hint',
-                 'Paste this in a bug report so we can help.'),
-                 fg=T['muted'], bg=T['bg'], font=('Segoe UI', 8),
-                 anchor='w').pack(anchor='w', padx=4, pady=(0, 10))
+        _footer()
+
+    def _render_sys_summary(self, body, info, section, kv, sys_vals):
+        """Compact "at a glance" view (Speccy-style) — the key specs only."""
+        T = self.T; L = self.L
+        mach = info.get('machine', {}); cpu = info.get('cpu', {})
+        ram = info.get('ram', {}); gpus = info.get('gpu', [])
+        os_ = info.get('os', {}); sec = info.get('security', {})
+        badge = (mach.get('manufacturer', '') + ' ' + mach.get('model', '')).strip()
+        s = section(L.get('sys_summary', 'Summary'), '⭐', T['cyan'], badge_src=badge)
+        if mach.get('model'):
+            mfr = (mach.get('manufacturer', '') + ' ') if mach.get('manufacturer') else ''
+            kv(s, L.get('sys_machine', 'System'), mfr + mach['model'])
+        if cpu.get('name'):
+            extra = ''
+            if cpu.get('cores'):
+                extra += f"  ·  {cpu['cores']}C / {cpu.get('threads', cpu['cores'])}T"
+            if cpu.get('base_mhz'):
+                extra += f"  ·  {cpu['base_mhz']/1000:.2f} GHz"
+            kv(s, 'CPU', cpu['name'] + extra)
+        if ram.get('total'):
+            rv = _human_bytes(ram['total'])
+            if ram.get('slots'):
+                used = len([m for m in ram.get('modules', []) if m.get('capacity')])
+                rv += f"  ·  {used}/{ram['slots']} slots"
+            kv(s, 'RAM', rv)
+        if gpus:
+            kv(s, 'GPU', ', '.join(g.get('name', '') for g in gpus if g.get('name')))
+        tot = sum(d.get('size', 0) for d in info.get('drives', [])) \
+            or sum(d.get('total', 0) for d in info.get('disks', []))
+        if tot:
+            kv(s, L.get('sys_storage', 'Storage'), _human_bytes(tot))
+        if gpus and gpus[0].get('res') and gpus[0]['res'][0]:
+            g0 = gpus[0]
+            disp = f"{g0['res'][0]} × {g0['res'][1]}"
+            if g0.get('hz'): disp += f"  @ {g0['hz']} Hz"
+            kv(s, L.get('sys_monitor', 'Display'), disp)
+        if os_.get('name'):
+            ov = os_['name']
+            if os_.get('build'): ov += f"  (build {os_['build']})"
+            if os_.get('activated') is not None:
+                ov += '  ·  ' + ('activated' if os_['activated'] else 'not activated')
+            kv(s, 'Windows', ov,
+               (T['green'] if os_.get('activated') else None))
+        bits = []
+        if sec.get('secure_boot') is not None:
+            bits.append('Secure Boot ' + ('On' if sec['secure_boot'] else 'Off'))
+        if sec.get('firmware'): bits.append(sec['firmware'])
+        if sec.get('tpm_present'): bits.append('TPM ' + (sec.get('tpm_version') or ''))
+        if bits:
+            kv(s, L.get('sys_security', 'Security'), '  ·  '.join(bits))
+        up = os_.get('uptime') or _uptime_str()
+        if up: kv(s, L.get('sys_uptime', 'Uptime'), up)
+        tk.Frame(s, bg=T['panel'], height=8).pack()
 
     def _format_sysinfo_text(self, info):
         """Plain-text version of the system info for clipboard / support."""
@@ -4915,99 +5039,6 @@ class CustomizeWindow:
             find_btn.config(text='⏳  ' + L.get('dns_testing', 'Testing…'))
             threading.Thread(target=_worker, daemon=True).start()
         find_btn.bind('<Button-1>', _start)
-
-    # ── Superuser tab: power-user shortcuts into hidden Windows panels ──
-    def _tab_super(self):
-        T = self.T; L = self.L
-        f = tk.Frame(self._content, bg=T['bg'])
-        f.pack(side='top', fill='x', padx=24, pady=(14, 2))
-        tk.Label(f, text='🛠  ' + L.get('superuser', 'Superuser'),
-                 fg=T['text'], bg=T['bg'],
-                 font=('Segoe UI', 12, 'bold')).pack(side='left')
-        tk.Label(self._content, text='   ' + L.get('su_sub',
-                 'Shortcuts into advanced, normally-hidden Windows panels.'),
-                 fg=T['muted'], bg=T['bg'], font=('Segoe UI', 9),
-                 anchor='w').pack(side='top', anchor='w', padx=24, fill='x')
-        tk.Frame(self._content, bg=T['line'], height=1).pack(
-            side='top', fill='x', padx=24, pady=(6, 8))
-
-        def _card(icon, title, subtitle, action, color, parent):
-            row = tk.Frame(parent, bg=T['panel'], cursor='hand2')
-            row.pack(fill='x', padx=20, pady=5)
-            inner = tk.Frame(row, bg=T['panel']); inner.pack(fill='x', padx=12, pady=11)
-            tk.Label(inner, text=icon, bg=T['panel'], fg=color,
-                     font=('Segoe UI', 17), width=2).pack(side='left', padx=(0, 10))
-            txt = tk.Frame(inner, bg=T['panel'])
-            txt.pack(side='left', fill='x', expand=True)
-            tk.Label(txt, text=title, bg=T['panel'], fg=T['text'],
-                     font=('Segoe UI', 11, 'bold'), anchor='w').pack(anchor='w')
-            tk.Label(txt, text=subtitle, bg=T['panel'], fg=T['muted'],
-                     font=('Segoe UI', 9), anchor='w', justify='left').pack(anchor='w')
-            arrow = tk.Label(inner, text='›', bg=T['panel'], fg=T['muted'],
-                             font=('Segoe UI', 14))
-            arrow.pack(side='right')
-            # recolour the whole card on hover
-            widgets = [row, inner, txt, arrow] + list(txt.winfo_children()) \
-                + [c for c in inner.winfo_children() if c not in (txt, arrow)]
-            def _set(bg):
-                for wgt in widgets:
-                    try: wgt.config(bg=bg)
-                    except Exception: pass
-            def _click(_e):
-                try: action()
-                except Exception: pass
-                self.w._toast(L.get('tt_open', 'Opening…'))
-            for wgt in widgets:
-                wgt.bind('<Enter>', lambda e: _set(T['bg2']))
-                wgt.bind('<Leave>', lambda e: _set(T['panel']))
-                wgt.bind('<Button-1>', _click)
-
-        # scrollable body so the full list fits on smaller windows
-        outer = tk.Frame(self._content, bg=T['bg'])
-        outer.pack(fill='both', expand=True, padx=4, pady=(0, 4))
-        canvas = tk.Canvas(outer, bg=T['bg'], highlightthickness=0, bd=0)
-        sb = tk.Scrollbar(outer, orient='vertical', command=canvas.yview,
-                          bg=T['panel'], troughcolor=T['bg2'],
-                          activebackground=T['cyan'], bd=0, highlightthickness=0,
-                          width=10)
-        canvas.configure(yscrollcommand=sb.set)
-        sb.pack(side='right', fill='y'); canvas.pack(side='left', fill='both', expand=True)
-        holder = tk.Frame(canvas, bg=T['bg'])
-        hwin = canvas.create_window((0, 0), window=holder, anchor='nw')
-        canvas.bind('<Configure>', lambda e: canvas.itemconfig(hwin, width=e.width))
-        holder.bind('<Configure>',
-                    lambda e: canvas.configure(scrollregion=canvas.bbox('all')))
-        canvas.bind_all('<MouseWheel>',
-                        lambda e: canvas.yview_scroll(int(-e.delta / 120), 'units'))
-
-        items = [
-            ('👑', L.get('su_god', 'God Mode'),
-             L.get('su_god_d', 'Every Control Panel task in one searchable list'),
-             action_god_mode, T['orange']),
-            ('🔧', L.get('su_dev', 'Developer Mode'),
-             L.get('su_dev_d', 'Open Settings → For developers (sideloading, terminal…)'),
-             action_dev_mode, T['cyan']),
-            ('🧾', L.get('su_msconfig', 'System Configuration'),
-             L.get('su_msconfig_d', 'msconfig — boot options, services, startup'),
-             lambda: launch_tool(('exe', ['msconfig.exe'])), T['green']),
-            ('📝', L.get('su_regedit', 'Registry Editor'),
-             L.get('su_regedit_d', 'regedit — edit the Windows registry (careful!)'),
-             lambda: _open_windir('regedit.exe'), T['orange']),
-            ('🧩', L.get('su_gpedit', 'Group Policy Editor'),
-             L.get('su_gpedit_d', 'gpedit.msc — local policies (Pro editions)'),
-             lambda: launch_tool(('msc', 'gpedit.msc')), T['cyan']),
-            ('🛎', L.get('su_services', 'Services'),
-             L.get('su_services_d', 'services.msc — start/stop Windows services'),
-             lambda: launch_tool(('msc', 'services.msc')), T['green']),
-            ('🚀', L.get('su_startup', 'Startup folder'),
-             L.get('su_startup_d', 'shell:startup — apps that launch at sign-in'),
-             lambda: launch_tool(('shell', 'shell:startup')), T['cyan']),
-            ('📁', L.get('su_sys32', 'System32 folder'),
-             L.get('su_sys32_d', 'Open the Windows System32 directory'),
-             lambda: launch_tool(('shell', r'%WINDIR%\System32')), T['muted']),
-        ]
-        for icon, title, sub, act, color in items:
-            _card(icon, title, sub, act, color, holder)
 
     def _tab_about(self):
         T = self.T; L = self.L

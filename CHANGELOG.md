@@ -4,6 +4,26 @@ All notable changes to **PulseDeck** are documented here.
 
 ---
 
+## [2.9.1] — 2026-07-02
+
+### Added
+- **System tab now has two views** — a **Summary** ("at a glance", Speccy-style)
+  card with the key specs, and an **Advanced** view with the full per-component
+  detail. A toggle at the top switches between them instantly (the scan is
+  cached, so no re-query).
+- **More system detail:** RAM **slots used + max supported capacity**, CPU
+  **virtualization** state, GPU **driver date**, Windows **activation** status,
+  **firmware mode** (UEFI/Legacy) and **domain/workgroup**.
+
+### Changed
+- **Superuser** is now a **category inside the Tools tab** (God Mode, Developer
+  Mode, msconfig, Registry Editor, Group Policy, Services, Startup folder,
+  System32) instead of a separate tab.
+- New strings translated into all supported languages (EN, EL, ES, DE, FR, IT,
+  PT, RU).
+
+---
+
 ## [2.9.0] — 2026-07-02
 
 ### Added
