@@ -224,7 +224,7 @@ All notable changes to **PulseDeck** are documented here.
 ## [2.3.0] — 2026-06-09
 
 ### Added
-- **PulseBar branding** — new shield emblem across app icon, tray icon, and promo materials
+- **New branding** — new shield emblem across app icon, tray icon, and promo materials
 - **On the taskbar** mode — widget sits inside the taskbar band next to app icons
 - **Above the taskbar** mode — alternative strip just above the bar
 - Self-healing auto-start — Run key is silently rewritten if the .exe is moved
