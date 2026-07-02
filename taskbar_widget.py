@@ -18,7 +18,7 @@ import random
 
 APP_NAME = 'PulseDeck'       # internal identity: config dir, mutex, registry, Store package
 DISPLAY_NAME = 'PulseDeck'   # user-visible product name (rebrand)
-VERSION  = '2.9.1'
+VERSION  = '2.9.2'
 
 # ── Crash logging (enabled when NETCPURAM_DEBUG=1) ─────────────────────
 def _debug_log_path():
@@ -1667,12 +1667,12 @@ def _wmi_batch():
     """
     keys = ('cpu', 'mem', 'gpu', 'os', 'cs', 'mobo', 'bios',
             'audio', 'optical', 'battery', 'monitors', 'drives', 'tpm',
-            'memarray', 'activation')
+            'memarray', 'activation', 'tpmpnp')
     empty = {k: [] for k in keys}
     ps = (
         "$ErrorActionPreference='SilentlyContinue';$o=[ordered]@{};"
         "$o['cpu']=@(Get-CimInstance Win32_Processor|Select-Object Name,NumberOfCores,NumberOfLogicalProcessors,MaxClockSpeed,L2CacheSize,L3CacheSize,SocketDesignation,Manufacturer,VirtualizationFirmwareEnabled);"
-        "$o['mem']=@(Get-CimInstance Win32_PhysicalMemory|Select-Object Capacity,Speed,Manufacturer,PartNumber,DeviceLocator);"
+        "$o['mem']=@(Get-CimInstance Win32_PhysicalMemory|Select-Object Capacity,Speed,Manufacturer,PartNumber,DeviceLocator,SMBIOSMemoryType,ConfiguredClockSpeed);"
         "$o['memarray']=@(Get-CimInstance Win32_PhysicalMemoryArray|Select-Object MemoryDevices,MaxCapacity,MaxCapacityEx);"
         "$o['gpu']=@(Get-CimInstance Win32_VideoController|Select-Object Name,AdapterRAM,DriverVersion,CurrentHorizontalResolution,CurrentVerticalResolution,CurrentRefreshRate,@{n='DriverDate';e={if($_.DriverDate){$_.DriverDate.ToString('yyyy-MM-dd')}else{''}}});"
         "$o['os']=@(Get-CimInstance Win32_OperatingSystem|Select-Object Caption,Version,BuildNumber,OSArchitecture,@{n='InstallDate';e={if($_.InstallDate){$_.InstallDate.ToString('yyyy-MM-dd')}else{''}}});"
@@ -1683,8 +1683,9 @@ def _wmi_batch():
         "$o['audio']=@(Get-CimInstance Win32_SoundDevice|Select-Object Name,Manufacturer,Status);"
         "$o['optical']=@(Get-CimInstance Win32_CDROMDrive|Select-Object Name,Manufacturer,MediaType,Drive);"
         "$o['battery']=@(Get-CimInstance Win32_Battery|Select-Object Name,Chemistry,DesignVoltage);"
-        "$o['drives']=@(Get-CimInstance Win32_DiskDrive|Select-Object Model,Size,InterfaceType,MediaType,Partitions);"
+        "$o['drives']=@(Get-CimInstance Win32_DiskDrive|Select-Object Model,Size,InterfaceType,MediaType,Partitions,Status);"
         "$o['tpm']=@(Get-CimInstance -Namespace root/cimv2/Security/MicrosoftTpm -ClassName Win32_Tpm|Select-Object IsEnabled_InitialValue,IsActivated_InitialValue,SpecVersion,ManufacturerIdTxt);"
+        "$o['tpmpnp']=@(Get-CimInstance Win32_PnPEntity -Filter \"Name LIKE 'Trusted Platform Module%'\"|Select-Object Name);"
         "$o['monitors']=@(Get-CimInstance -Namespace root/wmi -ClassName WmiMonitorID|Select-Object ManufacturerName,UserFriendlyName,ProductCodeID,YearOfManufacture);"
         "$o|ConvertTo-Json -Depth 4 -Compress"
     )
@@ -1713,6 +1714,36 @@ def _wmi_batch():
     except Exception:
         return empty
 
+def _reg_bios_info():
+    """Motherboard / BIOS / system identity straight from the registry — fast,
+    admin-free and always available. Used as a fallback because the WMI batch
+    can intermittently return these classes empty under load."""
+    out = {}
+    try:
+        k = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
+                           r'HARDWARE\DESCRIPTION\System\BIOS')
+        def _g(name):
+            try:
+                v, _ = winreg.QueryValueEx(k, name)
+                return str(v).strip()
+            except OSError:
+                return ''
+        out = {
+            'bb_mfr': _g('BaseBoardManufacturer'),
+            'bb_product': _g('BaseBoardProduct'),
+            'bb_version': _g('BaseBoardVersion'),
+            'bios_vendor': _g('BIOSVendor'),
+            'bios_version': _g('BIOSVersion'),
+            'bios_date': _g('BIOSReleaseDate'),
+            'sys_mfr': _g('SystemManufacturer'),
+            'sys_product': _g('SystemProductName'),
+            'sys_family': _g('SystemFamily'),
+        }
+        winreg.CloseKey(k)
+    except OSError:
+        pass
+    return out
+
 def _human_bytes(n):
     n = float(n or 0)
     for u in ('B','KB','MB','GB','TB','PB'):
@@ -1738,6 +1769,17 @@ def collect_system_info():
     # One PowerShell process fetches every CIM class at once (see _wmi_batch);
     # doing them one-by-one cost ~70 s on slower laptops.
     W = _wmi_batch()
+    # WMI can return some classes empty under load. mem/mobo/cs should always
+    # exist on a real PC — if any came back empty, run once more and merge the
+    # two results (fill blanks) so sections like RAM speed don't vanish.
+    if not (W.get('mem') and W.get('mobo') and W.get('cs')):
+        W2 = _wmi_batch()
+        for _k in list(W):
+            if not W.get(_k) and W2.get(_k):
+                W[_k] = W2[_k]
+    # Registry copy of motherboard / BIOS / system identity — always available,
+    # so these sections survive even if WMI returns them empty under load.
+    REG = _reg_bios_info()
     # ── Machine (make / model — e.g. "HP Laptop 15-bw0xx") ──
     try:
         cs = W['cs']
@@ -1762,6 +1804,13 @@ def collect_system_info():
                 out['machine']['domain'] = str(c.get('Domain', '') or '').strip()
             else:
                 out['machine']['workgroup'] = str(c.get('Workgroup', '') or '').strip()
+        # registry fallback when WMI ComputerSystem came back empty
+        if not out['machine'].get('model') and REG.get('sys_product'):
+            out['machine'].update({
+                'manufacturer': out['machine'].get('manufacturer') or REG.get('sys_mfr', ''),
+                'model': REG['sys_product'],
+                'family': out['machine'].get('family') or REG.get('sys_family', ''),
+            })
     except Exception: pass
     # ── Physical drives (SSD/HDD model + size) ──
     try:
@@ -1775,6 +1824,7 @@ def collect_system_info():
             kind = 'SSD' if ('ssd' in ml or 'nvme' in ml) else ''
             out['drives'].append({
                 'model': model, 'size': size, 'bus': bus, 'kind': kind,
+                'status': str(d.get('Status', '') or '').strip(),
             })
     except Exception: pass
     try:
@@ -1817,11 +1867,17 @@ def collect_system_info():
         mods = W['mem']
         out['ram']['modules'] = [{
             'capacity': int(m.get('Capacity', 0) or 0),
-            'speed': m.get('Speed'),
+            # ConfiguredClockSpeed is the actual running speed; Speed is rated
+            'speed': m.get('ConfiguredClockSpeed') or m.get('Speed'),
             'mfr': str(m.get('Manufacturer','') or '').strip(),
             'part': str(m.get('PartNumber','') or '').strip(),
             'slot': m.get('DeviceLocator',''),
         } for m in mods]
+        # memory generation (DDR3/DDR4/DDR5) from SMBIOSMemoryType
+        _DDR = {20: 'DDR', 21: 'DDR2', 24: 'DDR3', 26: 'DDR4', 34: 'DDR5',
+                22: 'DDR2 FB-DIMM', 25: 'DDR3'}
+        if mods:
+            out['ram']['type'] = _DDR.get(mods[0].get('SMBIOSMemoryType'), '')
         # slot count + max supported capacity (Win32_PhysicalMemoryArray)
         ma = W['memarray']
         if ma:
@@ -1955,6 +2011,14 @@ def collect_system_info():
             sec['tpm_present'] = True
             sec['tpm_enabled'] = bool(t.get('IsEnabled_InitialValue'))
             sec['tpm_version'] = str(t.get('SpecVersion', '') or '').split(',')[0].strip()
+        # non-admin fallback: the TPM also appears as a PnP device
+        if not sec.get('tpm_present'):
+            pnp = W.get('tpmpnp') or []
+            if pnp:
+                nm = str(pnp[0].get('Name', '') or '')
+                sec['tpm_present'] = True
+                ver = nm.replace('Trusted Platform Module', '').strip()
+                if ver: sec['tpm_version'] = ver   # e.g. "2.0"
         out['security'] = sec
     except Exception: pass
     # ── Motherboard ──
@@ -1968,6 +2032,15 @@ def collect_system_info():
                 'version': str(m.get('Version','') or '').strip(),
                 'serial': str(m.get('SerialNumber','') or '').strip(),
             }
+        # registry fallback when WMI BaseBoard came back empty
+        if not (out['mobo'].get('product') or out['mobo'].get('manufacturer')) \
+                and (REG.get('bb_product') or REG.get('bb_mfr')):
+            out['mobo'] = {
+                'manufacturer': REG.get('bb_mfr', ''),
+                'product': REG.get('bb_product', ''),
+                'version': REG.get('bb_version', ''),
+                'serial': '',
+            }
         bios = W['bios']
         if bios:
             b = bios[0]
@@ -1976,6 +2049,13 @@ def collect_system_info():
                 'manufacturer': str(b.get('Manufacturer','') or '').strip(),
                 'version': str(b.get('SMBIOSBIOSVersion','') or '').strip(),
                 'date': str(b.get('ReleaseDate','') or '').strip(),
+            }
+        # registry fallback for BIOS
+        if not out['bios'].get('version') and REG.get('bios_version'):
+            out['bios'] = {
+                'manufacturer': REG.get('bios_vendor', ''),
+                'version': REG.get('bios_version', ''),
+                'date': REG.get('bios_date', ''),
             }
     except Exception: pass
     # ── Audio devices ──
@@ -4301,7 +4381,8 @@ class CustomizeWindow:
         ram = info.get('ram', {})
         s = section('RAM', '🧠', T['green'])
         if ram.get('total'):
-            kv(s, 'Total', _human_bytes(ram['total']))
+            kv(s, 'Total', _human_bytes(ram['total'])
+               + (f"  ·  {ram['type']}" if ram.get('type') else ''))
             kv(s, 'In use', f"{_human_bytes(ram['used'])}  ({ram['percent']:.0f}%)",
                T['orange'])
             kv(s, 'Free', _human_bytes(ram['free']), T['green'])
@@ -4321,21 +4402,6 @@ class CustomizeWindow:
             details = ' · '.join(x for x in (cap, spd, mfr) if x)
             kv(s, slot or f'Module {i+1}', details)
         tk.Frame(s, bg=T['panel'], height=8).pack()
-
-        # ── Battery ──
-        batt = info.get('battery', {})
-        if batt.get('percent') is not None:
-            s = section(L.get('sys_battery', 'Battery'), '🔋', T['green'])
-            pct = batt['percent']
-            pct_col = T['green'] if pct > 40 else (T['orange'] if pct > 15 else T['red'])
-            state = ('Charging' if batt.get('plugged') else 'On battery')
-            chg = f"{pct}%  ·  {state}"
-            if batt.get('left') and not batt.get('plugged'):
-                chg += f"  ·  {batt['left']} left"
-            kv(s, 'Charge', chg, pct_col)
-            if batt.get('name'):      kv(s, 'Model', batt['name'])
-            if batt.get('chemistry'): kv(s, 'Chemistry', batt['chemistry'])
-            tk.Frame(s, bg=T['panel'], height=8).pack()
 
         # ── GPU ──
         gpus = info.get('gpu', [])
@@ -4448,6 +4514,10 @@ class CustomizeWindow:
                 kv(s, d.get('kind') or 'Drive', d['model'])
                 if bits:
                     kv(s, '', '  ·  '.join(bits))
+                if d.get('status'):
+                    ok = d['status'].lower() == 'ok'
+                    kv(s, '', ('✓ ' if ok else '⚠ ') + ('Healthy' if ok else d['status']),
+                       T['green'] if ok else T['orange'])
             tk.Frame(s, bg=T['panel'], height=8).pack()
 
         # ── Disks ──
@@ -4473,6 +4543,24 @@ class CustomizeWindow:
                 kv(s, n['name'][:30], '  ·  '.join(bits))
             tk.Frame(s, bg=T['panel'], height=8).pack()
 
+        # ── Battery (kept near the bottom) ──
+        batt = info.get('battery', {})
+        if batt.get('percent') is not None:
+            s = section(L.get('sys_battery', 'Battery'), '🔋', T['green'])
+            pct = batt['percent']
+            pct_col = T['green'] if pct > 40 else (T['orange'] if pct > 15 else T['red'])
+            if batt.get('plugged'):
+                state = 'Fully charged' if pct >= 99 else 'Charging'
+            else:
+                state = 'On battery (discharging)'
+            if batt.get('left') and not batt.get('plugged'):
+                state += f"  ·  {batt['left']} left"
+            kv(s, 'Charge', f"{pct}%", pct_col)
+            kv(s, 'Status', state)
+            if batt.get('name'):      kv(s, 'Model', batt['name'])
+            if batt.get('chemistry'): kv(s, 'Chemistry', batt['chemistry'])
+            tk.Frame(s, bg=T['panel'], height=8).pack()
+
         _footer()
 
     def _render_sys_summary(self, body, info, section, kv, sys_vals):
@@ -4495,12 +4583,20 @@ class CustomizeWindow:
             kv(s, 'CPU', cpu['name'] + extra)
         if ram.get('total'):
             rv = _human_bytes(ram['total'])
+            mods = [m for m in ram.get('modules', []) if m.get('capacity')]
+            if mods:
+                rv += f"  ·  {len(mods)} DIMM"
+                if ram.get('type'):      rv += f"  ·  {ram['type']}"
+                if mods[0].get('speed'): rv += f"  ·  {mods[0]['speed']} MHz"
             if ram.get('slots'):
-                used = len([m for m in ram.get('modules', []) if m.get('capacity')])
-                rv += f"  ·  {used}/{ram['slots']} slots"
+                rv += f"  ({len(mods)}/{ram['slots']} slots)"
             kv(s, 'RAM', rv)
         if gpus:
             kv(s, 'GPU', ', '.join(g.get('name', '') for g in gpus if g.get('name')))
+        mb = info.get('mobo', {})
+        if mb.get('product') or mb.get('manufacturer'):
+            kv(s, L.get('sys_mobo', 'Motherboard'),
+               (mb.get('manufacturer', '') + ' ' + mb.get('product', '')).strip())
         tot = sum(d.get('size', 0) for d in info.get('drives', [])) \
             or sum(d.get('total', 0) for d in info.get('disks', []))
         if tot:
@@ -4524,6 +4620,15 @@ class CustomizeWindow:
         if sec.get('tpm_present'): bits.append('TPM ' + (sec.get('tpm_version') or ''))
         if bits:
             kv(s, L.get('sys_security', 'Security'), '  ·  '.join(bits))
+        batt = info.get('battery', {})
+        if batt.get('percent') is not None:
+            st = 'Charging' if batt.get('plugged') else 'On battery'
+            bv = f"{batt['percent']}%  ·  {st}"
+            if batt.get('left') and not batt.get('plugged'):
+                bv += f"  ·  {batt['left']} left"
+            pct = batt['percent']
+            kv(s, L.get('sys_battery', 'Battery'), bv,
+               T['green'] if pct > 40 else (T['orange'] if pct > 15 else T['red']))
         up = os_.get('uptime') or _uptime_str()
         if up: kv(s, L.get('sys_uptime', 'Uptime'), up)
         tk.Frame(s, bg=T['panel'], height=8).pack()

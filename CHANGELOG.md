@@ -4,6 +4,25 @@ All notable changes to **PulseDeck** are documented here.
 
 ---
 
+## [2.9.2] — 2026-07-02
+
+### Added
+- **RAM detail:** memory type (DDR3/DDR4/DDR5) and the actual running speed
+  (ConfiguredClockSpeed) now shown in both views.
+- **Disk health** status (SMART "OK" → ✓ Healthy) per physical drive.
+- **Battery status** line (Fully charged / Charging / On battery + time left),
+  and the Battery section moved to the bottom of the Advanced view.
+- **TPM** now detected without admin via the PnP device (shows on machines that
+  have a TPM even when the privileged WMI class is unavailable).
+
+### Fixed
+- **Motherboard / RAM speed / model occasionally vanished** — WMI can return
+  some classes empty under load. Motherboard, BIOS and system model now fall
+  back to the registry (always available), and the WMI scan retries once and
+  merges results so RAM speed and other sections no longer randomly disappear.
+
+---
+
 ## [2.9.1] — 2026-07-02
 
 ### Added
