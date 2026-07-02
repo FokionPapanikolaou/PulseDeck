@@ -4,6 +4,48 @@ All notable changes to **PulseDeck** are documented here.
 
 ---
 
+## [2.9.0] — 2026-07-02
+
+### Added
+- **Superuser tab** — one place for power-user shortcuts: **God Mode** (the
+  hidden "All Tasks" shell view), **Developer Mode**, **System Configuration
+  (msconfig)**, **Registry Editor**, **Group Policy**, **Services**, the
+  **Startup folder** and the **System32 folder**.
+- **Tools → Classic right-click menu** — one click toggles the Windows 10 style
+  context menu on Windows 11 (per-user registry tweak, no admin) and restarts
+  Explorer so it applies immediately.
+- **System tab — much more detail:** machine make/model, device name & signed-in
+  user, **battery** (charge, state, chemistry), **physical drives** (model, size,
+  SSD/HDD, bus), **Windows install date**, and a **Security** section
+  (Secure Boot + TPM).
+- **General → "Hide when an app goes fullscreen"** is now a visible toggle
+  (previously tray-menu only).
+
+### Fixed
+- **System tab was empty / partial on some machines** — the per-class WMI calls
+  each spawned their own PowerShell (~5-7 s cold on slower laptops, ~70 s total)
+  and timed out at 6 s. All classes are now fetched in a **single** PowerShell
+  process (~10-12 s) with a generous timeout, and CPU/OS fall back to the
+  registry/`platform` if WMI is unavailable, so those sections always populate.
+- **BIOS date showed garbage** (`/Date(15…`) — the CIM date is now formatted to
+  `yyyy-MM-dd` in PowerShell before it reaches Python.
+- **Long System values were clipped** — field values now wrap instead of being
+  cut off, and re-wrap when the window is resized.
+- **Bar stayed on top of fullscreen video** — fullscreen detection no longer
+  bails out on `IsZoomed` (Chrome reports fullscreen video as "zoomed"). It now
+  distinguishes true fullscreen (fills the monitor exactly) from a maximized
+  window (overhangs by the resize border), and works on any monitor / DPI.
+
+### Changed
+- **Settings window** no longer stays always-on-top — it surfaces on open then
+  releases topmost, so other windows can come in front of it. Added a
+  **minimize** button (it drops to the taskbar and restores with the frameless
+  look intact).
+- All new UI strings are translated into every supported language
+  (EN, EL, ES, DE, FR, IT, PT, RU).
+
+---
+
 ## [2.8.6] — 2026-06-30
 
 ### Fixed

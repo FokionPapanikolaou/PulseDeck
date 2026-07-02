@@ -8,7 +8,7 @@
 
   <Identity Name="PapanikolaouFokion.PulseBar"
             Publisher="CN=4DDDFD1C-63EA-4604-9FCA-35D0F04C71E3"
-            Version="2.8.6.0"
+            Version="2.9.0.0"
             ProcessorArchitecture="x64" />
 
   <Properties>

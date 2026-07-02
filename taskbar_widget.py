@@ -18,7 +18,7 @@ import random
 
 APP_NAME = 'PulseBar'        # internal identity: config dir, mutex, registry, Store package
 DISPLAY_NAME = 'PulseDeck'   # user-visible product name (rebrand)
-VERSION  = '2.8.6'
+VERSION  = '2.9.0'
 
 # ── Crash logging (enabled when NETCPURAM_DEBUG=1) ─────────────────────
 def _debug_log_path():
@@ -300,6 +300,16 @@ POWER_LABEL = {
 CUST_LABELS = {
  'en':{'title':'PulseDeck — Customize','general':'General','metrics':'Metrics',
        'appearance':'Appearance','alerts':'Alerts','system':'System','about':'About',
+       'superuser':'Superuser',
+       'su_sub':'Shortcuts into advanced, normally-hidden Windows panels.',
+       'su_god':'God Mode','su_god_d':'Every Control Panel task in one searchable list',
+       'su_dev':'Developer Mode','su_dev_d':'Open Settings → For developers (sideloading, terminal…)',
+       'su_msconfig':'System Configuration','su_msconfig_d':'msconfig — boot options, services, startup',
+       'su_regedit':'Registry Editor','su_regedit_d':'regedit — edit the Windows registry (careful!)',
+       'su_gpedit':'Group Policy Editor','su_gpedit_d':'gpedit.msc — local policies (Pro editions)',
+       'su_services':'Services','su_services_d':'services.msc — start/stop Windows services',
+       'su_startup':'Startup folder','su_startup_d':'shell:startup — apps that launch at sign-in',
+       'su_sys32':'System32 folder','su_sys32_d':'Open the Windows System32 directory',
        'reset':'Reset to defaults','apply':'Apply','close':'Close',
        'live_hint':'Click Apply to save',
        'show_hide':'Show & order','drag_hint':'Drag ☰ to reorder',
@@ -311,13 +321,23 @@ CUST_LABELS = {
        'theme':'Theme','size':'Size','background':'Background',
        'orientation':'Orientation','stacked':'Two rows (stacked)',
        'sparklines':'Mini graphs','on_taskbar':'Sit on taskbar',
-       'tooltips':'Hover details',
+       'tooltips':'Hover details','hide_fs':'Hide when an app goes fullscreen',
        'quakes_on':'Earthquake alerts','sources':'Sources','felt_level':'Felt level',
        'manual_loc':'Manual location','recent_evt':'Recent events',
        'donate':'Donate','github':'View on GitHub','store':'Microsoft Store',
        'website':'Website','version':'Version'},
  'el':{'title':'PulseDeck — Προσαρμογή','general':'Γενικά','metrics':'Ενδείξεις',
        'appearance':'Εμφάνιση','alerts':'Ειδοποιήσεις','system':'Σύστημα','about':'Σχετικά',
+       'superuser':'Superuser',
+       'su_sub':'Συντομεύσεις σε προχωρημένους, κρυμμένους πίνακες των Windows.',
+       'su_god':'God Mode','su_god_d':'Όλες οι εργασίες του Πίνακα Ελέγχου σε μία λίστα',
+       'su_dev':'Λειτουργία προγραμματιστή','su_dev_d':'Άνοιγμα Ρυθμίσεις → Για προγραμματιστές',
+       'su_msconfig':'Ρύθμιση συστήματος','su_msconfig_d':'msconfig — εκκίνηση, υπηρεσίες, startup',
+       'su_regedit':'Επεξεργαστής μητρώου','su_regedit_d':'regedit — επεξεργασία μητρώου (προσοχή!)',
+       'su_gpedit':'Πολιτικές ομάδας','su_gpedit_d':'gpedit.msc — τοπικές πολιτικές (εκδόσεις Pro)',
+       'su_services':'Υπηρεσίες','su_services_d':'services.msc — έναρξη/διακοπή υπηρεσιών',
+       'su_startup':'Φάκελος εκκίνησης','su_startup_d':'shell:startup — εφαρμογές που ξεκινούν στην είσοδο',
+       'su_sys32':'Φάκελος System32','su_sys32_d':'Άνοιγμα του φακέλου System32 των Windows',
        'reset':'Επαναφορά προεπιλογών','apply':'Εφαρμογή','close':'Κλείσιμο',
        'live_hint':'Πάτα Εφαρμογή για αποθήκευση',
        'show_hide':'Εμφάνιση & σειρά','drag_hint':'Σύρε το ☰ για αλλαγή σειράς',
@@ -329,13 +349,14 @@ CUST_LABELS = {
        'theme':'Θέμα','size':'Μέγεθος','background':'Φόντο',
        'orientation':'Διάταξη','stacked':'Δύο σειρές',
        'sparklines':'Mini γραφήματα','on_taskbar':'Πάνω στη μπάρα',
-       'tooltips':'Λεπτομέρειες (hover)',
+       'tooltips':'Λεπτομέρειες (hover)','hide_fs':'Κρύψιμο όταν κάτι είναι σε πλήρη οθόνη',
        'quakes_on':'Ειδοποιήσεις σεισμών','sources':'Πηγές','felt_level':'Επίπεδο αίσθησης',
        'manual_loc':'Χειροκίνητη τοποθεσία','recent_evt':'Πρόσφατα συμβάντα',
        'donate':'Δωρεά','github':'Στο GitHub','store':'Microsoft Store',
        'website':'Ιστότοπος','version':'Έκδοση'},
  'es':{'title':'PulseDeck — Personalizar','general':'General','metrics':'Métricas',
        'appearance':'Apariencia','alerts':'Alertas','system':'Sistema','about':'Acerca de',
+       'superuser':'Superuser',
        'reset':'Restablecer','apply':'Aplicar','close':'Cerrar',
        'live_hint':'Los cambios se aplican en vivo',
        'show_hide':'Mostrar y ordenar','drag_hint':'Arrastrar para reordenar',
@@ -354,6 +375,7 @@ CUST_LABELS = {
        'website':'Sitio web','version':'Versión'},
  'de':{'title':'PulseDeck — Anpassen','general':'Allgemein','metrics':'Werte',
        'appearance':'Aussehen','alerts':'Warnungen','system':'System','about':'Info',
+       'superuser':'Superuser',
        'reset':'Standard wiederherstellen','apply':'Übernehmen','close':'Schließen',
        'live_hint':'Änderungen werden live übernommen',
        'show_hide':'Anzeigen & ordnen','drag_hint':'Ziehen zum Neuordnen',
@@ -372,6 +394,7 @@ CUST_LABELS = {
        'website':'Website','version':'Version'},
  'fr':{'title':'PulseDeck — Personnaliser','general':'Général','metrics':'Mesures',
        'appearance':'Apparence','alerts':'Alertes','system':'Système','about':'À propos',
+       'superuser':'Superuser',
        'reset':'Réinitialiser','apply':'Appliquer','close':'Fermer',
        'live_hint':'Modifications appliquées en direct',
        'show_hide':'Afficher & ordonner','drag_hint':'Glisser pour réorganiser',
@@ -390,6 +413,7 @@ CUST_LABELS = {
        'website':'Site web','version':'Version'},
  'it':{'title':'PulseDeck — Personalizza','general':'Generale','metrics':'Misure',
        'appearance':'Aspetto','alerts':'Avvisi','system':'Sistema','about':'Info',
+       'superuser':'Superuser',
        'reset':'Ripristina','apply':'Applica','close':'Chiudi',
        'live_hint':'Le modifiche si applicano in tempo reale',
        'show_hide':'Mostra e ordina','drag_hint':'Trascina per riordinare',
@@ -408,6 +432,7 @@ CUST_LABELS = {
        'website':'Sito web','version':'Versione'},
  'pt':{'title':'PulseDeck — Personalizar','general':'Geral','metrics':'Métricas',
        'appearance':'Aparência','alerts':'Alertas','system':'Sistema','about':'Sobre',
+       'superuser':'Superuser',
        'reset':'Repor padrões','apply':'Aplicar','close':'Fechar',
        'live_hint':'Alterações aplicadas em tempo real',
        'show_hide':'Mostrar e ordenar','drag_hint':'Arrastar para reordenar',
@@ -426,6 +451,7 @@ CUST_LABELS = {
        'website':'Site','version':'Versão'},
  'ru':{'title':'PulseDeck — Настройка','general':'Общие','metrics':'Метрики',
        'appearance':'Внешний вид','alerts':'Уведомления','system':'Система','about':'О программе',
+       'superuser':'Superuser',
        'reset':'Сбросить','apply':'Применить','close':'Закрыть',
        'live_hint':'Изменения применяются мгновенно',
        'show_hide':'Показать и упорядочить','drag_hint':'Перетащите для переупорядочивания',
@@ -450,6 +476,8 @@ CUST_EXTRA = {
        'felt_near':'Recent felt events near you','no_felt':'No felt events recently.',
        'sys_mobo':'Motherboard','sys_monitor':'Monitor','sys_audio':'Audio',
        'sys_optical':'Optical drive','sys_storage':'Storage','sys_network':'Network',
+       'sys_machine':'System','sys_battery':'Battery','sys_drives':'Drives',
+       'sys_security':'Security',
        'sys_windows':'Windows','sys_ram':'RAM','copy_all':'Copy all','copied':'Copied!',
        'paypal':'PayPal','revolut':'Revolut','quake_dist':'Alert radius (km)',
        'quake_dur':'Alert duration (min)'},
@@ -458,6 +486,8 @@ CUST_EXTRA = {
        'felt_near':'Πρόσφατα αισθητά συμβάντα κοντά σου','no_felt':'Κανένα αισθητό συμβάν πρόσφατα.',
        'sys_mobo':'Μητρική','sys_monitor':'Οθόνη','sys_audio':'Ήχος',
        'sys_optical':'Οπτικός δίσκος','sys_storage':'Αποθήκευση','sys_network':'Δίκτυο',
+       'sys_machine':'Σύστημα','sys_battery':'Μπαταρία','sys_drives':'Δίσκοι',
+       'sys_security':'Ασφάλεια',
        'sys_windows':'Windows','sys_ram':'RAM','copy_all':'Αντιγραφή όλων','copied':'Αντιγράφηκε!',
        'paypal':'PayPal','revolut':'Revolut','quake_dist':'Ακτίνα ειδοποίησης (km)',
        'quake_dur':'Διάρκεια ειδοποίησης (λεπτά)'},
@@ -959,6 +989,12 @@ NEW_TOOLS_I18N = {
        't_hibernate':'Hibernate now','t_lock':'Lock screen',
        't_sound':'Sound devices','t_micpriv':'Microphone privacy',
        't_campriv':'Camera privacy','t_proxy':'Proxy settings','t_vpn':'VPN',
+       't_classicmenu':'Classic right-click menu',
+       'desc__t_classicmenu':'Toggle the Windows 10 style context menu',
+       'cf_ctx_on':'Switch to the classic (Windows 10) right-click menu? Explorer will restart.',
+       'cf_ctx_off':'Restore the Windows 11 right-click menu? Explorer will restart.',
+       'tt_ctx_on':'Classic right-click menu enabled ✓',
+       'tt_ctx_off':'Windows 11 right-click menu restored ✓',
        'desc__t_gpureset':'Recover from a frozen GPU (Win+Ctrl+Shift+B)',
        'desc__t_explorer':'Refresh the taskbar & desktop',
        'desc__t_hibernate':'Save your session and power off',
@@ -974,6 +1010,12 @@ NEW_TOOLS_I18N = {
        't_hibernate':'Αδρανοποίηση','t_lock':'Κλείδωμα οθόνης',
        't_sound':'Συσκευές ήχου','t_micpriv':'Απόρρητο μικροφώνου',
        't_campriv':'Απόρρητο κάμερας','t_proxy':'Ρυθμίσεις proxy','t_vpn':'VPN',
+       't_classicmenu':'Κλασικό δεξί κλικ (Win10)',
+       'desc__t_classicmenu':'Εναλλαγή στο μενού δεξιού κλικ τύπου Windows 10',
+       'cf_ctx_on':'Αλλαγή στο κλασικό (Windows 10) μενού δεξιού κλικ; Θα γίνει επανεκκίνηση του Explorer.',
+       'cf_ctx_off':'Επαναφορά του μενού δεξιού κλικ των Windows 11; Θα γίνει επανεκκίνηση του Explorer.',
+       'tt_ctx_on':'Ενεργοποιήθηκε το κλασικό μενού ✓',
+       'tt_ctx_off':'Επαναφέρθηκε το μενού των Windows 11 ✓',
        'desc__t_gpureset':'Επαναφορά κολλημένης GPU (Win+Ctrl+Shift+B)',
        'desc__t_explorer':'Ανανέωση μπάρας & επιφάνειας εργασίας',
        'desc__t_hibernate':'Αποθήκευση συνεδρίας και απενεργοποίηση',
@@ -989,6 +1031,7 @@ NEW_TOOLS_I18N = {
        't_hibernate':'Hibernar ahora','t_lock':'Bloquear pantalla',
        't_sound':'Dispositivos de sonido','t_micpriv':'Privacidad del micrófono',
        't_campriv':'Privacidad de la cámara','t_proxy':'Proxy','t_vpn':'VPN',
+       't_classicmenu':'Menú clásico (clic derecho)',
        'desc__t_gpureset':'Recupera una GPU congelada (Win+Ctrl+Shift+B)',
        'desc__t_explorer':'Refrescar barra y escritorio',
        'desc__t_hibernate':'Guarda la sesión y apaga','desc__t_lock':'Bloquear (Win+L)',
@@ -1003,6 +1046,7 @@ NEW_TOOLS_I18N = {
        't_hibernate':'Ruhezustand','t_lock':'Bildschirm sperren',
        't_sound':'Audiogeräte','t_micpriv':'Mikrofon-Privatsphäre',
        't_campriv':'Kamera-Privatsphäre','t_proxy':'Proxy','t_vpn':'VPN',
+       't_classicmenu':'Klassisches Rechtsklickmenü',
        'desc__t_gpureset':'Hängende GPU zurücksetzen (Win+Strg+Umsch+B)',
        'desc__t_explorer':'Taskleiste & Desktop aktualisieren',
        'desc__t_hibernate':'Sitzung speichern und ausschalten',
@@ -1018,6 +1062,7 @@ NEW_TOOLS_I18N = {
        't_hibernate':'Veille prolongée','t_lock':'Verrouiller',
        't_sound':'Périphériques audio','t_micpriv':'Confidentialité micro',
        't_campriv':'Confidentialité caméra','t_proxy':'Proxy','t_vpn':'VPN',
+       't_classicmenu':'Menu clic droit classique',
        'desc__t_gpureset':'Récupérer une GPU figée (Win+Ctrl+Maj+B)',
        'desc__t_explorer':'Actualiser barre et bureau',
        'desc__t_hibernate':'Enregistre la session et éteint',
@@ -1033,6 +1078,7 @@ NEW_TOOLS_I18N = {
        't_hibernate':'Sospensione','t_lock':'Blocca schermo',
        't_sound':'Dispositivi audio','t_micpriv':'Privacy microfono',
        't_campriv':'Privacy fotocamera','t_proxy':'Proxy','t_vpn':'VPN',
+       't_classicmenu':'Menu classico (tasto destro)',
        'desc__t_gpureset':'Recupera GPU bloccata (Win+Ctrl+Maiusc+B)',
        'desc__t_explorer':'Aggiorna barra e desktop',
        'desc__t_hibernate':'Salva sessione e spegne',
@@ -1047,6 +1093,7 @@ NEW_TOOLS_I18N = {
        't_hibernate':'Hibernar agora','t_lock':'Bloquear ecrã',
        't_sound':'Dispositivos de som','t_micpriv':'Privacidade do microfone',
        't_campriv':'Privacidade da câmara','t_proxy':'Proxy','t_vpn':'VPN',
+       't_classicmenu':'Menu clássico (clique direito)',
        'desc__t_gpureset':'Recupera GPU bloqueada (Win+Ctrl+Shift+B)',
        'desc__t_explorer':'Atualizar barra e ambiente',
        'desc__t_hibernate':'Guarda a sessão e desliga',
@@ -1061,6 +1108,7 @@ NEW_TOOLS_I18N = {
        't_hibernate':'Гибернация','t_lock':'Блокировка экрана',
        't_sound':'Звуковые устройства','t_micpriv':'Конфиденциальность микрофона',
        't_campriv':'Конфиденциальность камеры','t_proxy':'Прокси','t_vpn':'VPN',
+       't_classicmenu':'Классическое меню ПКМ',
        'desc__t_gpureset':'Восстановить зависшую GPU (Win+Ctrl+Shift+B)',
        'desc__t_explorer':'Обновить панель и рабочий стол',
        'desc__t_hibernate':'Сохранить сеанс и выключить',
@@ -1074,6 +1122,121 @@ NEW_TOOLS_I18N = {
        'cf_hib':'Включить гибернацию? Ваша работа сохраняется.'},
 }
 for _lng, _d in NEW_TOOLS_I18N.items():
+    CUST_LABELS.setdefault(_lng, {}).update(_d)
+
+# ── v2.9 feature strings for the remaining languages (en/el already defined
+#    inline above). Values use double quotes so apostrophes need no escaping. ──
+NEW_V29_I18N = {
+ 'es': {
+   'sys_machine':"Sistema", 'sys_battery':"Batería", 'sys_drives':"Discos",
+   'sys_security':"Seguridad",
+   'hide_fs':"Ocultar cuando una app pasa a pantalla completa",
+   'desc__t_classicmenu':"Alternar el menú contextual estilo Windows 10",
+   'cf_ctx_on':"¿Cambiar al menú contextual clásico (Windows 10)? Se reiniciará el Explorador.",
+   'cf_ctx_off':"¿Restaurar el menú contextual de Windows 11? Se reiniciará el Explorador.",
+   'tt_ctx_on':"Menú clásico activado ✓", 'tt_ctx_off':"Menú de Windows 11 restaurado ✓",
+   'su_sub':"Accesos directos a paneles avanzados y normalmente ocultos de Windows.",
+   'su_god':"God Mode", 'su_god_d':"Todas las tareas del Panel de control en una lista",
+   'su_dev':"Modo de desarrollador", 'su_dev_d':"Abrir Configuración → Para desarrolladores",
+   'su_msconfig':"Configuración del sistema", 'su_msconfig_d':"msconfig — arranque, servicios, inicio",
+   'su_regedit':"Editor del Registro", 'su_regedit_d':"regedit — editar el Registro de Windows (¡cuidado!)",
+   'su_gpedit':"Editor de directivas de grupo", 'su_gpedit_d':"gpedit.msc — directivas locales (ediciones Pro)",
+   'su_services':"Servicios", 'su_services_d':"services.msc — iniciar/detener servicios de Windows",
+   'su_startup':"Carpeta de inicio", 'su_startup_d':"shell:startup — apps que se abren al iniciar sesión",
+   'su_sys32':"Carpeta System32", 'su_sys32_d':"Abrir el directorio System32 de Windows",
+ },
+ 'de': {
+   'sys_machine':"System", 'sys_battery':"Akku", 'sys_drives':"Laufwerke",
+   'sys_security':"Sicherheit",
+   'hide_fs':"Ausblenden, wenn eine App in den Vollbildmodus wechselt",
+   'desc__t_classicmenu':"Klassisches Kontextmenü (Windows 10) umschalten",
+   'cf_ctx_on':"Zum klassischen (Windows 10) Kontextmenü wechseln? Der Explorer wird neu gestartet.",
+   'cf_ctx_off':"Das Windows-11-Kontextmenü wiederherstellen? Der Explorer wird neu gestartet.",
+   'tt_ctx_on':"Klassisches Menü aktiviert ✓", 'tt_ctx_off':"Windows-11-Menü wiederhergestellt ✓",
+   'su_sub':"Verknüpfungen zu erweiterten, normalerweise versteckten Windows-Bereichen.",
+   'su_god':"God Mode", 'su_god_d':"Alle Systemsteuerungs-Aufgaben in einer Liste",
+   'su_dev':"Entwicklermodus", 'su_dev_d':"Einstellungen → Für Entwickler öffnen",
+   'su_msconfig':"Systemkonfiguration", 'su_msconfig_d':"msconfig — Start, Dienste, Autostart",
+   'su_regedit':"Registrierungs-Editor", 'su_regedit_d':"regedit — Windows-Registry bearbeiten (Vorsicht!)",
+   'su_gpedit':"Gruppenrichtlinien-Editor", 'su_gpedit_d':"gpedit.msc — lokale Richtlinien (Pro-Editionen)",
+   'su_services':"Dienste", 'su_services_d':"services.msc — Windows-Dienste starten/stoppen",
+   'su_startup':"Autostart-Ordner", 'su_startup_d':"shell:startup — Apps, die bei der Anmeldung starten",
+   'su_sys32':"System32-Ordner", 'su_sys32_d':"Windows-System32-Verzeichnis öffnen",
+ },
+ 'fr': {
+   'sys_machine':"Système", 'sys_battery':"Batterie", 'sys_drives':"Disques",
+   'sys_security':"Sécurité",
+   'hide_fs':"Masquer quand une appli passe en plein écran",
+   'desc__t_classicmenu':"Basculer le menu contextuel style Windows 10",
+   'cf_ctx_on':"Passer au menu contextuel classique (Windows 10) ? L'Explorateur redémarrera.",
+   'cf_ctx_off':"Restaurer le menu contextuel de Windows 11 ? L'Explorateur redémarrera.",
+   'tt_ctx_on':"Menu classique activé ✓", 'tt_ctx_off':"Menu Windows 11 restauré ✓",
+   'su_sub':"Raccourcis vers des panneaux Windows avancés, normalement cachés.",
+   'su_god':"God Mode", 'su_god_d':"Toutes les tâches du Panneau de configuration en une liste",
+   'su_dev':"Mode développeur", 'su_dev_d':"Ouvrir Paramètres → Pour les développeurs",
+   'su_msconfig':"Configuration du système", 'su_msconfig_d':"msconfig — démarrage, services, applications",
+   'su_regedit':"Éditeur du Registre", 'su_regedit_d':"regedit — modifier le Registre Windows (prudence !)",
+   'su_gpedit':"Éditeur de stratégie de groupe", 'su_gpedit_d':"gpedit.msc — stratégies locales (éditions Pro)",
+   'su_services':"Services", 'su_services_d':"services.msc — démarrer/arrêter les services Windows",
+   'su_startup':"Dossier de démarrage", 'su_startup_d':"shell:startup — applis lancées à la connexion",
+   'su_sys32':"Dossier System32", 'su_sys32_d':"Ouvrir le répertoire System32 de Windows",
+ },
+ 'it': {
+   'sys_machine':"Sistema", 'sys_battery':"Batteria", 'sys_drives':"Dischi",
+   'sys_security':"Sicurezza",
+   'hide_fs':"Nascondi quando un'app va a schermo intero",
+   'desc__t_classicmenu':"Attiva/disattiva il menu contestuale stile Windows 10",
+   'cf_ctx_on':"Passare al menu contestuale classico (Windows 10)? Explorer verrà riavviato.",
+   'cf_ctx_off':"Ripristinare il menu contestuale di Windows 11? Explorer verrà riavviato.",
+   'tt_ctx_on':"Menu classico attivato ✓", 'tt_ctx_off':"Menu di Windows 11 ripristinato ✓",
+   'su_sub':"Scorciatoie verso pannelli avanzati e solitamente nascosti di Windows.",
+   'su_god':"God Mode", 'su_god_d':"Tutte le attività del Pannello di controllo in un elenco",
+   'su_dev':"Modalità sviluppatore", 'su_dev_d':"Apri Impostazioni → Per gli sviluppatori",
+   'su_msconfig':"Configurazione di sistema", 'su_msconfig_d':"msconfig — avvio, servizi, esecuzione automatica",
+   'su_regedit':"Editor del Registro", 'su_regedit_d':"regedit — modifica il Registro di Windows (attenzione!)",
+   'su_gpedit':"Editor Criteri di gruppo", 'su_gpedit_d':"gpedit.msc — criteri locali (edizioni Pro)",
+   'su_services':"Servizi", 'su_services_d':"services.msc — avvia/ferma i servizi di Windows",
+   'su_startup':"Cartella Esecuzione automatica", 'su_startup_d':"shell:startup — app avviate all'accesso",
+   'su_sys32':"Cartella System32", 'su_sys32_d':"Apri la directory System32 di Windows",
+ },
+ 'pt': {
+   'sys_machine':"Sistema", 'sys_battery':"Bateria", 'sys_drives':"Discos",
+   'sys_security':"Segurança",
+   'hide_fs':"Ocultar quando uma app entra em ecrã inteiro",
+   'desc__t_classicmenu':"Alternar o menu de contexto estilo Windows 10",
+   'cf_ctx_on':"Mudar para o menu de contexto clássico (Windows 10)? O Explorador reiniciará.",
+   'cf_ctx_off':"Restaurar o menu de contexto do Windows 11? O Explorador reiniciará.",
+   'tt_ctx_on':"Menu clássico ativado ✓", 'tt_ctx_off':"Menu do Windows 11 restaurado ✓",
+   'su_sub':"Atalhos para painéis avançados e normalmente ocultos do Windows.",
+   'su_god':"God Mode", 'su_god_d':"Todas as tarefas do Painel de Controlo numa lista",
+   'su_dev':"Modo de programador", 'su_dev_d':"Abrir Definições → Para programadores",
+   'su_msconfig':"Configuração do sistema", 'su_msconfig_d':"msconfig — arranque, serviços, iniciar",
+   'su_regedit':"Editor de Registo", 'su_regedit_d':"regedit — editar o Registo do Windows (cuidado!)",
+   'su_gpedit':"Editor de Políticas de Grupo", 'su_gpedit_d':"gpedit.msc — políticas locais (edições Pro)",
+   'su_services':"Serviços", 'su_services_d':"services.msc — iniciar/parar serviços do Windows",
+   'su_startup':"Pasta de arranque", 'su_startup_d':"shell:startup — apps que abrem ao iniciar sessão",
+   'su_sys32':"Pasta System32", 'su_sys32_d':"Abrir o diretório System32 do Windows",
+ },
+ 'ru': {
+   'sys_machine':"Система", 'sys_battery':"Батарея", 'sys_drives':"Диски",
+   'sys_security':"Безопасность",
+   'hide_fs':"Скрывать, когда приложение в полноэкранном режиме",
+   'desc__t_classicmenu':"Переключить контекстное меню в стиле Windows 10",
+   'cf_ctx_on':"Переключить на классическое меню (Windows 10)? Проводник перезапустится.",
+   'cf_ctx_off':"Восстановить меню Windows 11? Проводник перезапустится.",
+   'tt_ctx_on':"Классическое меню включено ✓", 'tt_ctx_off':"Меню Windows 11 восстановлено ✓",
+   'su_sub':"Ярлыки к расширенным, обычно скрытым панелям Windows.",
+   'su_god':"God Mode", 'su_god_d':"Все задачи Панели управления в одном списке",
+   'su_dev':"Режим разработчика", 'su_dev_d':"Открыть Параметры → Для разработчиков",
+   'su_msconfig':"Конфигурация системы", 'su_msconfig_d':"msconfig — загрузка, службы, автозагрузка",
+   'su_regedit':"Редактор реестра", 'su_regedit_d':"regedit — редактирование реестра Windows (осторожно!)",
+   'su_gpedit':"Редактор групповой политики", 'su_gpedit_d':"gpedit.msc — локальные политики (выпуски Pro)",
+   'su_services':"Службы", 'su_services_d':"services.msc — запуск/остановка служб Windows",
+   'su_startup':"Папка автозагрузки", 'su_startup_d':"shell:startup — приложения при входе",
+   'su_sys32':"Папка System32", 'su_sys32_d':"Открыть каталог System32 Windows",
+ },
+}
+for _lng, _d in NEW_V29_I18N.items():
     CUST_LABELS.setdefault(_lng, {}).update(_d)
 
 # Cell metadata for the Metrics tab (id -> friendly name, icon glyph, config key)
@@ -1157,6 +1320,10 @@ def already_running():
 class RECT(ctypes.Structure):
     _fields_ = [("left", ctypes.c_long), ("top", ctypes.c_long),
                 ("right", ctypes.c_long), ("bottom", ctypes.c_long)]
+
+class MONITORINFO(ctypes.Structure):
+    _fields_ = [("cbSize", ctypes.c_ulong), ("rcMonitor", RECT),
+                ("rcWork", RECT), ("dwFlags", ctypes.c_ulong)]
 
 def get_taskbar_info():
     rect = RECT()
@@ -1468,12 +1635,71 @@ def _wmi_query(cls, *cols):
                f"Get-CimInstance -ClassName {cls} | Select-Object {attrs} | ConvertTo-Json -Compress -Depth 2"]
         si = subprocess.STARTUPINFO()
         si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-        r = subprocess.run(cmd, capture_output=True, text=True, timeout=6, startupinfo=si)
+        # 20 s (not 6 s): on some machines the WMI/CIM subsystem is "cold" and
+        # the *first* Get-CimInstance can take 10-12 s to warm up. A short
+        # timeout killed that first query, so the whole System tab came back
+        # empty. Once warmed, subsequent queries return in well under a second.
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=20, startupinfo=si)
         if not r.stdout: return []
         data = json.loads(r.stdout)
         return data if isinstance(data, list) else [data]
     except Exception:
         return []
+
+def _wmi_batch():
+    """Fetch every system-info CIM class in ONE PowerShell process.
+
+    Spawning a separate PowerShell per class is punishingly slow on some
+    laptops — each launch costs ~5-7 s, so the ~10 classes the System tab
+    needs added up to ~70 s. Running them all in a single invocation pays
+    that startup cost exactly once (~10 s total). ReleaseDate is formatted
+    to a plain yyyy-MM-dd string here so the CIM /Date(…)/ wrapper never
+    reaches Python. Returns {key: [rows…]} with [] for anything that failed.
+    """
+    keys = ('cpu', 'mem', 'gpu', 'os', 'cs', 'mobo', 'bios',
+            'audio', 'optical', 'battery', 'monitors', 'drives', 'tpm')
+    empty = {k: [] for k in keys}
+    ps = (
+        "$ErrorActionPreference='SilentlyContinue';$o=[ordered]@{};"
+        "$o['cpu']=@(Get-CimInstance Win32_Processor|Select-Object Name,NumberOfCores,NumberOfLogicalProcessors,MaxClockSpeed,L2CacheSize,L3CacheSize,SocketDesignation,Manufacturer);"
+        "$o['mem']=@(Get-CimInstance Win32_PhysicalMemory|Select-Object Capacity,Speed,Manufacturer,PartNumber,DeviceLocator);"
+        "$o['gpu']=@(Get-CimInstance Win32_VideoController|Select-Object Name,AdapterRAM,DriverVersion,CurrentHorizontalResolution,CurrentVerticalResolution,CurrentRefreshRate);"
+        "$o['os']=@(Get-CimInstance Win32_OperatingSystem|Select-Object Caption,Version,BuildNumber,OSArchitecture,@{n='InstallDate';e={if($_.InstallDate){$_.InstallDate.ToString('yyyy-MM-dd')}else{''}}});"
+        "$o['cs']=@(Get-CimInstance Win32_ComputerSystem|Select-Object Manufacturer,Model,SystemFamily,SystemType,PCSystemType,Name,UserName);"
+        "$o['mobo']=@(Get-CimInstance Win32_BaseBoard|Select-Object Manufacturer,Product,Version,SerialNumber);"
+        "$o['bios']=@(Get-CimInstance Win32_BIOS|Select-Object Manufacturer,SMBIOSBIOSVersion,@{n='ReleaseDate';e={if($_.ReleaseDate){$_.ReleaseDate.ToString('yyyy-MM-dd')}else{''}}});"
+        "$o['audio']=@(Get-CimInstance Win32_SoundDevice|Select-Object Name,Manufacturer,Status);"
+        "$o['optical']=@(Get-CimInstance Win32_CDROMDrive|Select-Object Name,Manufacturer,MediaType,Drive);"
+        "$o['battery']=@(Get-CimInstance Win32_Battery|Select-Object Name,Chemistry,DesignVoltage);"
+        "$o['drives']=@(Get-CimInstance Win32_DiskDrive|Select-Object Model,Size,InterfaceType,MediaType,Partitions);"
+        "$o['tpm']=@(Get-CimInstance -Namespace root/cimv2/Security/MicrosoftTpm -ClassName Win32_Tpm|Select-Object IsEnabled_InitialValue,IsActivated_InitialValue,SpecVersion,ManufacturerIdTxt);"
+        "$o['monitors']=@(Get-CimInstance -Namespace root/wmi -ClassName WmiMonitorID|Select-Object ManufacturerName,UserFriendlyName,ProductCodeID,YearOfManufacture);"
+        "$o|ConvertTo-Json -Depth 4 -Compress"
+    )
+    try:
+        cmd = ['powershell', '-NoProfile', '-NonInteractive', '-Command', ps]
+        si = subprocess.STARTUPINFO()
+        si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        # 60 s: the very first (cold) call after boot can be slow, especially
+        # while the widget's other background probes are running. A timeout
+        # here would drop every WMI-based section at once, so we err generous —
+        # this runs off the UI thread behind a spinner, so a long worst case is
+        # invisible in the common (warm, ~10 s) path.
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=60, startupinfo=si)
+        if not r.stdout:
+            return empty
+        data = json.loads(r.stdout)
+        out = {}
+        for k in keys:
+            v = data.get(k)
+            if v is None:
+                v = []
+            elif not isinstance(v, list):
+                v = [v]
+            out[k] = v
+        return out
+    except Exception:
+        return empty
 
 def _human_bytes(n):
     n = float(n or 0)
@@ -1495,12 +1721,48 @@ def _uptime_str():
 def collect_system_info():
     """Snapshot of CPU/RAM/GPU/OS/Disk/Network info. Best-effort."""
     out = {'cpu': {}, 'ram': {}, 'gpu': [], 'os': {}, 'disks': [], 'net': [],
-           'mobo': {}, 'bios': {}, 'audio': [], 'monitors': [], 'optical': []}
+           'mobo': {}, 'bios': {}, 'audio': [], 'monitors': [], 'optical': [],
+           'machine': {}, 'battery': {}, 'drives': [], 'security': {}}
+    # One PowerShell process fetches every CIM class at once (see _wmi_batch);
+    # doing them one-by-one cost ~70 s on slower laptops.
+    W = _wmi_batch()
+    # ── Machine (make / model — e.g. "HP Laptop 15-bw0xx") ──
     try:
-        cpu = _wmi_query('Win32_Processor',
-                         'Name', 'NumberOfCores', 'NumberOfLogicalProcessors',
-                         'MaxClockSpeed', 'L2CacheSize', 'L3CacheSize',
-                         'SocketDesignation', 'Manufacturer')
+        cs = W['cs']
+        if cs:
+            c = cs[0]
+            PC_TYPE = {1: 'Desktop', 2: 'Laptop', 3: 'Workstation',
+                       4: 'Enterprise Server', 5: 'SOHO Server',
+                       6: 'Appliance PC', 7: 'Performance Server', 8: 'Tablet'}
+            # UserName comes as DOMAIN\user — show just the user part
+            user = str(c.get('UserName', '') or '').strip()
+            if '\\' in user: user = user.split('\\')[-1]
+            out['machine'] = {
+                'manufacturer': str(c.get('Manufacturer', '') or '').strip(),
+                'model': str(c.get('Model', '') or '').strip(),
+                'family': str(c.get('SystemFamily', '') or '').strip(),
+                'type': str(c.get('SystemType', '') or '').strip(),
+                'form': PC_TYPE.get(c.get('PCSystemType'), ''),
+                'name': str(c.get('Name', '') or '').strip(),
+                'user': user,
+            }
+    except Exception: pass
+    # ── Physical drives (SSD/HDD model + size) ──
+    try:
+        for d in W['drives']:
+            model = str(d.get('Model', '') or '').strip()
+            if not model: continue
+            size = int(d.get('Size') or 0)
+            bus = str(d.get('InterfaceType', '') or '').strip()
+            # infer SSD vs HDD from the model string (Win32 MediaType is vague)
+            ml = model.lower()
+            kind = 'SSD' if ('ssd' in ml or 'nvme' in ml) else ''
+            out['drives'].append({
+                'model': model, 'size': size, 'bus': bus, 'kind': kind,
+            })
+    except Exception: pass
+    try:
+        cpu = W['cpu']
         if cpu:
             c = cpu[0]
             out['cpu'] = {
@@ -1513,7 +1775,20 @@ def collect_system_info():
                 'l3_kb': c.get('L3CacheSize'),
                 'socket': c.get('SocketDesignation',''),
             }
-        try: out['cpu']['current_mhz'] = int(psutil.cpu_freq().current) if psutil.cpu_freq() else None
+        else:
+            # WMI unavailable — fall back to the registry + psutil so the CPU
+            # section still shows name / core count / clock.
+            out['cpu'] = {
+                'name': get_cpu_name(),
+                'cores': psutil.cpu_count(logical=False),
+                'threads': psutil.cpu_count(logical=True),
+            }
+        try:
+            f = psutil.cpu_freq()
+            if f:
+                out['cpu']['current_mhz'] = int(f.current) or None
+                if not out['cpu'].get('base_mhz'):
+                    out['cpu']['base_mhz'] = int(f.max) or None
         except Exception: pass
     except Exception: pass
     try:
@@ -1522,8 +1797,7 @@ def collect_system_info():
         out['ram'] = {'total': vm.total, 'used': vm.used, 'free': vm.available,
                       'percent': vm.percent,
                       'swap_total': sm.total, 'swap_used': sm.used}
-        mods = _wmi_query('Win32_PhysicalMemory',
-                          'Capacity','Speed','Manufacturer','PartNumber','DeviceLocator')
+        mods = W['mem']
         out['ram']['modules'] = [{
             'capacity': int(m.get('Capacity', 0) or 0),
             'speed': m.get('Speed'),
@@ -1533,10 +1807,7 @@ def collect_system_info():
         } for m in mods]
     except Exception: pass
     try:
-        gpus = _wmi_query('Win32_VideoController',
-                          'Name', 'AdapterRAM', 'DriverVersion',
-                          'CurrentHorizontalResolution', 'CurrentVerticalResolution',
-                          'CurrentRefreshRate')
+        gpus = W['gpu']
         for g in gpus:
             name = str(g.get('Name','') or '').strip()
             if not name: continue
@@ -1554,9 +1825,7 @@ def collect_system_info():
             if gn: out['gpu'].append({'name': gn, 'vram': int((gv or 0) * 1073741824)})
     except Exception: pass
     try:
-        osinfo = _wmi_query('Win32_OperatingSystem',
-                            'Caption', 'Version', 'BuildNumber',
-                            'OSArchitecture', 'InstallDate', 'LastBootUpTime')
+        osinfo = W['os']
         if osinfo:
             o = osinfo[0]
             out['os'] = {
@@ -1564,6 +1833,18 @@ def collect_system_info():
                 'version': o.get('Version'),
                 'build': o.get('BuildNumber'),
                 'arch': o.get('OSArchitecture'),
+                'installed': str(o.get('InstallDate','') or '').strip(),
+                'uptime': _uptime_str(),
+            }
+        else:
+            # WMI unavailable — fall back to the platform module.
+            import platform as _pf
+            ver = _pf.version()   # e.g. '10.0.26200'
+            out['os'] = {
+                'name': f"{_pf.system()} {_pf.release()}".strip(),
+                'version': ver,
+                'build': ver.split('.')[-1] if ver else '',
+                'arch': _pf.machine(),
                 'uptime': _uptime_str(),
             }
     except Exception: pass
@@ -1593,10 +1874,54 @@ def collect_system_info():
                 'speed_mbps': st.speed,
             })
     except Exception: pass
+    # ── Battery (laptops) ──
+    try:
+        b = psutil.sensors_battery()
+        if b is not None:
+            secs = b.secsleft
+            if secs in (psutil.POWER_TIME_UNLIMITED, psutil.POWER_TIME_UNKNOWN) or secs is None or secs < 0:
+                left = ''
+            else:
+                h, m = divmod(int(secs) // 60, 60)
+                left = f'{h}h {m}m'
+            out['battery'] = {
+                'percent': round(b.percent),
+                'plugged': bool(b.power_plugged),
+                'left': left,
+            }
+        # enrich with static WMI details (name / chemistry) when available
+        bw = W['battery']
+        if bw and out['battery'] is not None:
+            CHEM = {1: 'Other', 2: 'Unknown', 3: 'Lead Acid', 4: 'NiCd',
+                    5: 'NiMH', 6: 'Li-ion', 7: 'Zinc-air', 8: 'Li-polymer'}
+            out.setdefault('battery', {})
+            out['battery']['name'] = str(bw[0].get('Name', '') or '').strip()
+            out['battery']['chemistry'] = CHEM.get(bw[0].get('Chemistry'), '')
+    except Exception: pass
+    # ── Security (Secure Boot + TPM) ──
+    try:
+        sec = {}
+        # Secure Boot state — readable from the registry without admin.
+        try:
+            k = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
+                               r'SYSTEM\CurrentControlSet\Control\SecureBoot\State')
+            val, _ = winreg.QueryValueEx(k, 'UEFISecureBootEnabled')
+            winreg.CloseKey(k)
+            sec['secure_boot'] = bool(val)
+        except OSError:
+            sec['secure_boot'] = None   # unknown (e.g. legacy BIOS boot)
+        # TPM (may be empty without elevation — then we just omit it)
+        tpm = W['tpm']
+        if tpm:
+            t = tpm[0]
+            sec['tpm_present'] = True
+            sec['tpm_enabled'] = bool(t.get('IsEnabled_InitialValue'))
+            sec['tpm_version'] = str(t.get('SpecVersion', '') or '').split(',')[0].strip()
+        out['security'] = sec
+    except Exception: pass
     # ── Motherboard ──
     try:
-        mb = _wmi_query('Win32_BaseBoard',
-                        'Manufacturer', 'Product', 'Version', 'SerialNumber')
+        mb = W['mobo']
         if mb:
             m = mb[0]
             out['mobo'] = {
@@ -1605,23 +1930,19 @@ def collect_system_info():
                 'version': str(m.get('Version','') or '').strip(),
                 'serial': str(m.get('SerialNumber','') or '').strip(),
             }
-        bios = _wmi_query('Win32_BIOS',
-                          'Manufacturer', 'Name', 'SMBIOSBIOSVersion', 'ReleaseDate')
+        bios = W['bios']
         if bios:
             b = bios[0]
-            rd = str(b.get('ReleaseDate','') or '')[:8]
-            if len(rd) == 8 and rd.isdigit():
-                rd = f'{rd[0:4]}-{rd[4:6]}-{rd[6:8]}'
+            # ReleaseDate is already formatted as yyyy-MM-dd by _wmi_batch
             out['bios'] = {
                 'manufacturer': str(b.get('Manufacturer','') or '').strip(),
                 'version': str(b.get('SMBIOSBIOSVersion','') or '').strip(),
-                'date': rd,
+                'date': str(b.get('ReleaseDate','') or '').strip(),
             }
     except Exception: pass
     # ── Audio devices ──
     try:
-        audios = _wmi_query('Win32_SoundDevice',
-                            'Name', 'Manufacturer', 'Status')
+        audios = W['audio']
         for a in audios:
             name = str(a.get('Name','') or '').strip()
             if not name: continue
@@ -1633,16 +1954,8 @@ def collect_system_info():
     except Exception: pass
     # ── Monitors (via WmiMonitorID under root/wmi) ──
     try:
-        cmd = ['powershell', '-NoProfile', '-NonInteractive', '-Command',
-               "Get-CimInstance -Namespace root/wmi -ClassName WmiMonitorID | "
-               "Select-Object ManufacturerName, UserFriendlyName, ProductCodeID, YearOfManufacture | "
-               "ConvertTo-Json -Compress -Depth 2"]
-        si = subprocess.STARTUPINFO()
-        si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-        r = subprocess.run(cmd, capture_output=True, text=True, timeout=6, startupinfo=si)
-        if r.stdout:
-            data = json.loads(r.stdout)
-            data = data if isinstance(data, list) else [data]
+        data = W['monitors']
+        if data:
             EDID_MFR = {  # 3-letter EDID codes → friendly name
                 'AOC':'AOC','ACI':'Asus','AUS':'Asus','ACR':'Acer','AUO':'AU Optronics',
                 'BNQ':'BenQ','BOE':'BOE','CMN':'Innolux','DEL':'Dell',
@@ -1671,8 +1984,7 @@ def collect_system_info():
     except Exception: pass
     # ── Optical drives ──
     try:
-        opts = _wmi_query('Win32_CDROMDrive',
-                          'Name', 'Manufacturer', 'MediaType', 'Drive')
+        opts = W['optical']
         for o in opts:
             name = str(o.get('Name','') or '').strip()
             if not name: continue
@@ -2039,13 +2351,83 @@ def action_restart_explorer():
         subprocess.run(['taskkill', '/F', '/IM', 'explorer.exe'],
                        startupinfo=_silent_startupinfo(), timeout=10,
                        capture_output=True)
-        # Windows auto-restarts explorer; if it doesn't, kick it manually.
-        time.sleep(0.6)
+        # Give the shell a moment to fully tear down so the relaunch picks up
+        # registry changes (e.g. the classic context-menu CLSID). Windows may
+        # auto-restart explorer; launching it again is harmless if so.
+        time.sleep(1.2)
         try:
-            os.startfile(os.path.join(os.environ.get('WINDIR', r'C:\Windows'),
-                                      'explorer.exe'))
+            subprocess.Popen([os.path.join(os.environ.get('WINDIR', r'C:\Windows'),
+                                            'explorer.exe')])
         except Exception:
-            pass
+            try: os.startfile('explorer.exe')
+            except Exception: pass
+        return True
+    except Exception:
+        return False
+
+# The shell CLSID that, when given an empty InprocServer32 default value,
+# restores the classic (Windows 10) right-click context menu on Windows 11.
+_CTX_CLSID = (r'Software\Classes\CLSID'
+              r'\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}')
+
+def is_classic_context():
+    """True if the classic (Windows 10) right-click menu is currently on."""
+    try:
+        k = winreg.OpenKey(winreg.HKEY_CURRENT_USER,
+                           _CTX_CLSID + r'\InprocServer32')
+        winreg.CloseKey(k)
+        return True
+    except OSError:
+        return False
+
+def action_classic_context(enable):
+    """Toggle the Windows 11 classic right-click menu (per-user, no admin).
+
+    Enabling creates CLSID\\…\\InprocServer32 with an empty default value;
+    disabling deletes the CLSID key so Windows 11's own menu returns. Explorer
+    is restarted so the change takes effect right away."""
+    try:
+        if enable:
+            k = winreg.CreateKey(winreg.HKEY_CURRENT_USER,
+                                 _CTX_CLSID + r'\InprocServer32')
+            winreg.SetValueEx(k, '', 0, winreg.REG_SZ, '')
+            winreg.CloseKey(k)
+        else:
+            # a key must be empty before it can be deleted → remove the child first
+            for sub in (_CTX_CLSID + r'\InprocServer32', _CTX_CLSID):
+                try: winreg.DeleteKey(winreg.HKEY_CURRENT_USER, sub)
+                except OSError: pass
+        action_restart_explorer()
+        return True
+    except Exception:
+        return False
+
+def _open_windir(exe, *args):
+    """Launch an executable that lives in the Windows dir (not System32),
+    e.g. regedit.exe. Falls back to ShellExecute by name."""
+    try:
+        subprocess.Popen([os.path.join(os.environ.get('WINDIR', r'C:\Windows'),
+                                       exe), *args])
+        return True
+    except Exception:
+        try: os.startfile(exe); return True
+        except Exception: return False
+
+def action_god_mode():
+    """Open the 'All Tasks' (God Mode) shell folder — every Control Panel task
+    in one searchable list. This is a read-only shell namespace view; nothing
+    is written to disk and no admin rights are needed."""
+    try:
+        os.startfile('shell:::{ED7BA470-8E54-465E-825C-99712043E01C}')
+        return True
+    except Exception:
+        return False
+
+def action_dev_mode():
+    """Open Settings → System → For developers (Developer Mode, sideloading,
+    terminal, etc.). We just open the page — the user flips the switch."""
+    try:
+        os.startfile('ms-settings:developers')
         return True
     except Exception:
         return False
@@ -2101,6 +2483,7 @@ TOOLS_CATALOG = [
         ('t_restore',     '⏮', ('exe', ['rstrui.exe'])),
         ('t_devmgr',      '🧷', ('msc', 'devmgmt.msc')),
         ('t_lock',        '🔒', ('action', 'lock_screen')),
+        ('t_classicmenu', '🖱', ('action', 'classic_context')),
         ('t_sound',       '🔊', ('exe', ['mmsys.cpl'])),
         ('t_micpriv',     '🎤', ('settings', 'ms-settings:privacy-microphone')),
         ('t_campriv',     '📷', ('settings', 'ms-settings:privacy-webcam')),
@@ -2708,10 +3091,13 @@ class CustomizeWindow:
         # frameless look.  There are no text-input fields in here, so the
         # overrideredirect keyboard-focus limitation doesn't matter.
         win.overrideredirect(True)
-        # topmost so the borderless window actually appears in front (an
-        # overrideredirect window does not activate itself, so without this it
-        # can open hidden behind whatever app currently has focus)
+        # Briefly mark it topmost so the borderless window surfaces in front on
+        # open (an overrideredirect window does not activate itself, so without
+        # this it can open hidden behind whatever app currently has focus). We
+        # release topmost shortly after (see _drop_topmost) so other windows the
+        # user opens afterwards are free to come in front of it.
         win.attributes('-topmost', True)
+        self._minimized = False
         win.geometry('760x600')
         win.configure(bg=self.T['bg'])
         try: win.iconbitmap(os.path.join(_base_dir(), 'app.ico'))
@@ -2737,6 +3123,11 @@ class CustomizeWindow:
         except Exception:
             pass
         win.lift(); win.focus_force()
+        # release always-on-top once it has surfaced, so other windows can be
+        # brought in front of the settings window afterwards
+        win.after(400, self._drop_topmost)
+        # allow restore-from-minimize (see _minimize / _on_restore)
+        win.bind('<Map>', self._on_restore)
 
     def _rz_press(self, e):
         self._rz = (e.x_root, e.y_root,
@@ -2793,6 +3184,14 @@ class CustomizeWindow:
         close_btn.bind('<Button-1>', lambda e: self.close())
         close_btn.bind('<Enter>', lambda e: close_btn.config(fg=T['red'], bg='#2a1518'))
         close_btn.bind('<Leave>', lambda e: close_btn.config(fg=T['muted'], bg=T['titlebar']))
+        # minimize button (left of close) — sends the window to the taskbar
+        min_btn = tk.Label(tb, text='—', fg=T['muted'], bg=T['titlebar'],
+                           font=('Segoe UI', 12, 'bold'), padx=16, pady=6,
+                           cursor='hand2')
+        min_btn.pack(side='right')
+        min_btn.bind('<Button-1>', lambda e: self._minimize())
+        min_btn.bind('<Enter>', lambda e: min_btn.config(fg=T['text'], bg='#1a2233'))
+        min_btn.bind('<Leave>', lambda e: min_btn.config(fg=T['muted'], bg=T['titlebar']))
         # title bar bottom divider
         tk.Frame(win, bg=T['line'], height=1).pack(side='top', fill='x')
         # ── footer FIRST so it reserves bottom space; body fills what's left ──
@@ -2811,6 +3210,7 @@ class CustomizeWindow:
             ('appearance', 'appearance', '🎨'),
             ('system',     'system',     '💻'),
             ('tools',      'tools',      '🧰'),
+            ('super',      'superuser',  '🛠'),
             ('about',      'about',      'ℹ'),
         ):
             b = tk.Label(tabs, text=f'  {icon}  {self.L[key]}', fg=T['muted'],
@@ -2911,6 +3311,47 @@ class CustomizeWindow:
         x = e.x_root - self._drag_data[0]
         y = e.y_root - self._drag_data[1]
         self._win.geometry(f'+{x}+{y}')
+
+    def _drop_topmost(self):
+        """Release always-on-top so the user can bring other windows in front."""
+        try:
+            if self._win: self._win.attributes('-topmost', False)
+        except Exception:
+            pass
+
+    def _minimize(self):
+        """Send the borderless window to the taskbar.
+
+        An overrideredirect window can't be iconified and has no taskbar
+        button, so we drop overrideredirect first — that gives Windows a real
+        taskbar entry and lets iconify() work. _on_restore re-applies the
+        custom chrome when the user clicks the taskbar button to restore it."""
+        win = self._win
+        if not win: return
+        try:
+            win.update_idletasks()
+            self._minimized = True
+            win.overrideredirect(False)
+            win.iconify()
+        except Exception:
+            pass
+
+    def _on_restore(self, e=None):
+        """Re-apply the frameless chrome after a restore-from-minimize."""
+        win = self._win
+        if not win or not getattr(self, '_minimized', False):
+            return
+        try:
+            if win.state() == 'normal':
+                self._minimized = False
+                win.overrideredirect(True)
+                win.attributes('-topmost', True)
+                win.lift(); win.focus_force()
+                win.after(300, self._drop_topmost)
+                try: self._round_corners(win, 12)
+                except Exception: pass
+        except Exception:
+            pass
 
     def close(self):
         try: self._win.destroy()
@@ -3106,6 +3547,8 @@ class CustomizeWindow:
         btn.bind('<Leave>', lambda e: btn.config(bg=T['panel']))
         self._check_row(body, L['lock_pos'], 'locked')
         self._check_row(body, L['tooltips'], 'tooltips')
+        self._check_row(body, L.get('hide_fs', 'Hide when an app goes fullscreen'),
+                        'follow_taskbar')
         self._check_row(body, L['check_upd'], 'check_updates')
         # startup row: a button that opens Settings (MSIX) or toggles (Win32)
         srow = tk.Frame(body, bg=T['bg']); srow.pack(fill='x', padx=24, pady=10)
@@ -3508,10 +3951,19 @@ class CustomizeWindow:
         canvas.pack(side='left', fill='both', expand=True)
         body = tk.Frame(canvas, bg=T['bg'])
         body_window = canvas.create_window((0, 0), window=body, anchor='nw')
+        # value labels that should re-wrap when the window is resized (so long
+        # values like the CPU model or BIOS string wrap instead of being clipped)
+        sys_vals = []
         # keep body the same width as the canvas viewport so right-packed
         # children (brand logos) stay visible.
         def _resize_body(e, _wid=body_window):
-            try: canvas.itemconfig(_wid, width=e.width)
+            try:
+                canvas.itemconfig(_wid, width=e.width)
+                # leave room for the key column (~150 px) + paddings + scrollbar
+                wl = max(140, e.width - 210)
+                for vl in sys_vals:
+                    try: vl.configure(wraplength=wl)
+                    except Exception: pass
             except Exception: pass
         canvas.bind('<Configure>', _resize_body)
         body.bind('<Configure>',
@@ -3602,9 +4054,13 @@ class CustomizeWindow:
             if v in (None, ''): return
             r = tk.Frame(parent, bg=T['panel']); r.pack(fill='x', padx=18, pady=2)
             tk.Label(r, text=k, fg=T['muted'], bg=T['panel'],
-                     font=('Segoe UI', 9), width=20, anchor='w').pack(side='left')
-            tk.Label(r, text=str(v), fg=(value_color or T['text']), bg=T['panel'],
-                     font=('Segoe UI', 9), anchor='w').pack(side='left')
+                     font=('Segoe UI', 9), width=20, anchor='nw').pack(
+                         side='left', anchor='n')
+            vl = tk.Label(r, text=str(v), fg=(value_color or T['text']),
+                          bg=T['panel'], font=('Segoe UI', 9), anchor='w',
+                          justify='left', wraplength=480)
+            vl.pack(side='left', fill='x', expand=True)
+            sys_vals.append(vl)
 
         # ── Performance / live bottleneck (v2.8) ──
         L = self.L
@@ -3709,6 +4165,24 @@ class CustomizeWindow:
 
         _refresh_bn()
 
+        # ── Machine (make / model) ──
+        mach = info.get('machine', {})
+        if mach.get('model') or mach.get('manufacturer'):
+            badge = (mach.get('manufacturer', '') + ' ' +
+                     mach.get('model', '')).strip()
+            s = section(L.get('sys_machine', 'System'), '🖥️', T['blue'],
+                        badge_src=badge)
+            if mach.get('manufacturer'): kv(s, 'Manufacturer', mach['manufacturer'])
+            if mach.get('model'):        kv(s, 'Model', mach['model'])
+            if mach.get('family') and mach['family'] != mach.get('model'):
+                kv(s, 'Family', mach['family'])
+            form = ' '.join(x for x in (mach.get('form', ''),
+                                        mach.get('type', '')) if x)
+            if form: kv(s, 'Type', form)
+            if mach.get('name'): kv(s, 'Device name', mach['name'])
+            if mach.get('user'): kv(s, 'Signed in', mach['user'])
+            tk.Frame(s, bg=T['panel'], height=8).pack()
+
         # ── CPU ──
         cpu = info.get('cpu', {})
         s = section('CPU', '💻', T['cyan'], badge_src=cpu.get('name', ''))
@@ -3747,6 +4221,21 @@ class CustomizeWindow:
             details = ' · '.join(x for x in (cap, spd, mfr) if x)
             kv(s, slot or f'Module {i+1}', details)
         tk.Frame(s, bg=T['panel'], height=8).pack()
+
+        # ── Battery ──
+        batt = info.get('battery', {})
+        if batt.get('percent') is not None:
+            s = section(L.get('sys_battery', 'Battery'), '🔋', T['green'])
+            pct = batt['percent']
+            pct_col = T['green'] if pct > 40 else (T['orange'] if pct > 15 else T['red'])
+            state = ('Charging' if batt.get('plugged') else 'On battery')
+            chg = f"{pct}%  ·  {state}"
+            if batt.get('left') and not batt.get('plugged'):
+                chg += f"  ·  {batt['left']} left"
+            kv(s, 'Charge', chg, pct_col)
+            if batt.get('name'):      kv(s, 'Model', batt['name'])
+            if batt.get('chemistry'): kv(s, 'Chemistry', batt['chemistry'])
+            tk.Frame(s, bg=T['panel'], height=8).pack()
 
         # ── GPU ──
         gpus = info.get('gpu', [])
@@ -3821,8 +4310,39 @@ class CustomizeWindow:
             if os_.get('build'): v += f"  (build {os_['build']})"
             kv(s, 'Version', v)
         if os_.get('arch'): kv(s, 'Architecture', os_['arch'])
+        if os_.get('installed'): kv(s, 'Installed', os_['installed'])
         # (uptime now lives in the live "Performance" section above)
         tk.Frame(s, bg=T['panel'], height=8).pack()
+
+        # ── Security (Secure Boot + TPM) ──
+        sec = info.get('security', {})
+        if sec:
+            s = section(L.get('sys_security', 'Security'), '🔐', T['green'])
+            sb = sec.get('secure_boot')
+            if sb is not None:
+                kv(s, 'Secure Boot', 'On' if sb else 'Off',
+                   T['green'] if sb else T['orange'])
+            if sec.get('tpm_present'):
+                v = 'TPM ' + (sec.get('tpm_version') or '?')
+                if not sec.get('tpm_enabled'): v += '  (disabled)'
+                kv(s, 'TPM', v,
+                   T['green'] if sec.get('tpm_enabled') else T['orange'])
+            tk.Frame(s, bg=T['panel'], height=8).pack()
+
+        # ── Physical drives (SSD/HDD hardware) ──
+        drives = info.get('drives', [])
+        if drives:
+            s = section(L.get('sys_drives', 'Drives'), '🖴', T['orange'],
+                        badge_src=drives[0].get('model', ''))
+            for d in drives:
+                bits = []
+                if d.get('size'): bits.append(_human_bytes(d['size']))
+                if d.get('kind'): bits.append(d['kind'])
+                if d.get('bus'):  bits.append(d['bus'])
+                kv(s, d.get('kind') or 'Drive', d['model'])
+                if bits:
+                    kv(s, '', '  ·  '.join(bits))
+            tk.Frame(s, bg=T['panel'], height=8).pack()
 
         # ── Disks ──
         disks = info.get('disks', [])
@@ -3887,6 +4407,13 @@ class CustomizeWindow:
     def _format_sysinfo_text(self, info):
         """Plain-text version of the system info for clipboard / support."""
         lines = [f'{DISPLAY_NAME} System Info  ·  {time.strftime("%Y-%m-%d %H:%M")}', '']
+        mach = info.get('machine', {})
+        if mach.get('model') or mach.get('manufacturer'):
+            lines.append('System')
+            for k in ('manufacturer','model','family','form','type'):
+                v = mach.get(k)
+                if v: lines.append(f'  {k}: {v}')
+            lines.append('')
         cpu = info.get('cpu', {})
         if cpu:
             lines.append('CPU')
@@ -3908,13 +4435,35 @@ class CustomizeWindow:
         os_ = info.get('os', {})
         if os_:
             lines.append(f"OS: {os_.get('name','?')}  ·  build {os_.get('build','?')}  ·  {os_.get('arch','?')}")
+            if os_.get('installed'): lines.append(f"Installed: {os_['installed']}")
             lines.append(f"Uptime: {os_.get('uptime','?')}")
             lines.append('')
+        sec = info.get('security', {})
+        if sec:
+            sb = sec.get('secure_boot')
+            sb_txt = ('on' if sb else 'off') if sb is not None else 'unknown'
+            line = f"Secure Boot: {sb_txt}"
+            if sec.get('tpm_present'):
+                line += f"  ·  TPM {sec.get('tpm_version','?')}" + (
+                    '' if sec.get('tpm_enabled') else ' (disabled)')
+            lines.append(line); lines.append('')
+        for d in info.get('drives', []):
+            bits = [x for x in (_human_bytes(d['size']) if d.get('size') else '',
+                                d.get('kind',''), d.get('bus','')) if x]
+            lines.append(f"Drive: {d['model']}" + (('  ·  ' + '  ·  '.join(bits)) if bits else ''))
+        if info.get('drives'): lines.append('')
         for d in info.get('disks', []):
             lines.append(f"Disk {d['device']}: {_human_bytes(d['used'])} / {_human_bytes(d['total'])} ({d['percent']:.0f}%)")
         if info.get('disks'): lines.append('')
         for n in info.get('net', []):
             lines.append(f"Net {n['name']}: IP {n.get('ip','?')}  MAC {n.get('mac','?')}  speed {n.get('speed_mbps','?')} Mbps")
+        batt = info.get('battery', {})
+        if batt.get('percent') is not None:
+            state = 'charging' if batt.get('plugged') else 'on battery'
+            extra = f"  ·  {batt['left']} left" if batt.get('left') else ''
+            lines.append('')
+            lines.append(f"Battery: {batt['percent']}%  ·  {state}{extra}"
+                         + (f"  ·  {batt.get('chemistry')}" if batt.get('chemistry') else ''))
         return '\n'.join(lines)
 
     # ── Tools tab (v2.8): safe shortcuts to built-in Windows utilities ──
@@ -4005,7 +4554,8 @@ class CustomizeWindow:
                         lambda e: canvas.yview_scroll(int(-e.delta / 120), 'units'))
 
         def _tool_row(parent, tkey, ticon, label, action):
-            destructive = action[0] == 'action' and action[1] != 'flush_dns'
+            destructive = action[0] == 'action' and action[1] not in (
+                'flush_dns', 'classic_context')
             row = tk.Frame(parent, bg=T['panel'], cursor='hand2')
             row.pack(fill='x', padx=10, pady=2)
             inner = tk.Frame(row, bg=T['panel']); inner.pack(fill='x', padx=8, pady=7)
@@ -4031,7 +4581,8 @@ class CustomizeWindow:
                 wgt.bind('<Button-1>', _click)
 
         def _tool_tile(parent, tkey, ticon, label, action):
-            destructive = action[0] == 'action' and action[1] != 'flush_dns'
+            destructive = action[0] == 'action' and action[1] not in (
+                'flush_dns', 'classic_context')
             tile = tk.Frame(parent, bg=T['panel'], cursor='hand2',
                             highlightbackground=T['line'], highlightthickness=1,
                             width=TILE_W - 14, height=82)
@@ -4131,6 +4682,21 @@ class CustomizeWindow:
                           self._do_hibernate)
         elif target == 'lock_screen':
             action_lock_screen()
+        elif target == 'classic_context':
+            if is_classic_context():
+                self._confirm(L.get('cf_ctx_off',
+                    'Restore the Windows 11 right-click menu? Explorer will restart.'),
+                    lambda: self._do_classic_context(False))
+            else:
+                self._confirm(L.get('cf_ctx_on',
+                    'Switch to the classic (Windows 10) right-click menu? Explorer will restart.'),
+                    lambda: self._do_classic_context(True))
+
+    def _do_classic_context(self, enable):
+        if action_classic_context(enable):
+            self._tool_toast(self.L.get('tt_ctx_on', 'Classic right-click menu enabled')
+                             if enable else
+                             self.L.get('tt_ctx_off', 'Windows 11 right-click menu restored'))
 
     def _do_clear_temp(self):
         freed = action_clear_temp()
@@ -4349,6 +4915,99 @@ class CustomizeWindow:
             find_btn.config(text='⏳  ' + L.get('dns_testing', 'Testing…'))
             threading.Thread(target=_worker, daemon=True).start()
         find_btn.bind('<Button-1>', _start)
+
+    # ── Superuser tab: power-user shortcuts into hidden Windows panels ──
+    def _tab_super(self):
+        T = self.T; L = self.L
+        f = tk.Frame(self._content, bg=T['bg'])
+        f.pack(side='top', fill='x', padx=24, pady=(14, 2))
+        tk.Label(f, text='🛠  ' + L.get('superuser', 'Superuser'),
+                 fg=T['text'], bg=T['bg'],
+                 font=('Segoe UI', 12, 'bold')).pack(side='left')
+        tk.Label(self._content, text='   ' + L.get('su_sub',
+                 'Shortcuts into advanced, normally-hidden Windows panels.'),
+                 fg=T['muted'], bg=T['bg'], font=('Segoe UI', 9),
+                 anchor='w').pack(side='top', anchor='w', padx=24, fill='x')
+        tk.Frame(self._content, bg=T['line'], height=1).pack(
+            side='top', fill='x', padx=24, pady=(6, 8))
+
+        def _card(icon, title, subtitle, action, color, parent):
+            row = tk.Frame(parent, bg=T['panel'], cursor='hand2')
+            row.pack(fill='x', padx=20, pady=5)
+            inner = tk.Frame(row, bg=T['panel']); inner.pack(fill='x', padx=12, pady=11)
+            tk.Label(inner, text=icon, bg=T['panel'], fg=color,
+                     font=('Segoe UI', 17), width=2).pack(side='left', padx=(0, 10))
+            txt = tk.Frame(inner, bg=T['panel'])
+            txt.pack(side='left', fill='x', expand=True)
+            tk.Label(txt, text=title, bg=T['panel'], fg=T['text'],
+                     font=('Segoe UI', 11, 'bold'), anchor='w').pack(anchor='w')
+            tk.Label(txt, text=subtitle, bg=T['panel'], fg=T['muted'],
+                     font=('Segoe UI', 9), anchor='w', justify='left').pack(anchor='w')
+            arrow = tk.Label(inner, text='›', bg=T['panel'], fg=T['muted'],
+                             font=('Segoe UI', 14))
+            arrow.pack(side='right')
+            # recolour the whole card on hover
+            widgets = [row, inner, txt, arrow] + list(txt.winfo_children()) \
+                + [c for c in inner.winfo_children() if c not in (txt, arrow)]
+            def _set(bg):
+                for wgt in widgets:
+                    try: wgt.config(bg=bg)
+                    except Exception: pass
+            def _click(_e):
+                try: action()
+                except Exception: pass
+                self.w._toast(L.get('tt_open', 'Opening…'))
+            for wgt in widgets:
+                wgt.bind('<Enter>', lambda e: _set(T['bg2']))
+                wgt.bind('<Leave>', lambda e: _set(T['panel']))
+                wgt.bind('<Button-1>', _click)
+
+        # scrollable body so the full list fits on smaller windows
+        outer = tk.Frame(self._content, bg=T['bg'])
+        outer.pack(fill='both', expand=True, padx=4, pady=(0, 4))
+        canvas = tk.Canvas(outer, bg=T['bg'], highlightthickness=0, bd=0)
+        sb = tk.Scrollbar(outer, orient='vertical', command=canvas.yview,
+                          bg=T['panel'], troughcolor=T['bg2'],
+                          activebackground=T['cyan'], bd=0, highlightthickness=0,
+                          width=10)
+        canvas.configure(yscrollcommand=sb.set)
+        sb.pack(side='right', fill='y'); canvas.pack(side='left', fill='both', expand=True)
+        holder = tk.Frame(canvas, bg=T['bg'])
+        hwin = canvas.create_window((0, 0), window=holder, anchor='nw')
+        canvas.bind('<Configure>', lambda e: canvas.itemconfig(hwin, width=e.width))
+        holder.bind('<Configure>',
+                    lambda e: canvas.configure(scrollregion=canvas.bbox('all')))
+        canvas.bind_all('<MouseWheel>',
+                        lambda e: canvas.yview_scroll(int(-e.delta / 120), 'units'))
+
+        items = [
+            ('👑', L.get('su_god', 'God Mode'),
+             L.get('su_god_d', 'Every Control Panel task in one searchable list'),
+             action_god_mode, T['orange']),
+            ('🔧', L.get('su_dev', 'Developer Mode'),
+             L.get('su_dev_d', 'Open Settings → For developers (sideloading, terminal…)'),
+             action_dev_mode, T['cyan']),
+            ('🧾', L.get('su_msconfig', 'System Configuration'),
+             L.get('su_msconfig_d', 'msconfig — boot options, services, startup'),
+             lambda: launch_tool(('exe', ['msconfig.exe'])), T['green']),
+            ('📝', L.get('su_regedit', 'Registry Editor'),
+             L.get('su_regedit_d', 'regedit — edit the Windows registry (careful!)'),
+             lambda: _open_windir('regedit.exe'), T['orange']),
+            ('🧩', L.get('su_gpedit', 'Group Policy Editor'),
+             L.get('su_gpedit_d', 'gpedit.msc — local policies (Pro editions)'),
+             lambda: launch_tool(('msc', 'gpedit.msc')), T['cyan']),
+            ('🛎', L.get('su_services', 'Services'),
+             L.get('su_services_d', 'services.msc — start/stop Windows services'),
+             lambda: launch_tool(('msc', 'services.msc')), T['green']),
+            ('🚀', L.get('su_startup', 'Startup folder'),
+             L.get('su_startup_d', 'shell:startup — apps that launch at sign-in'),
+             lambda: launch_tool(('shell', 'shell:startup')), T['cyan']),
+            ('📁', L.get('su_sys32', 'System32 folder'),
+             L.get('su_sys32_d', 'Open the Windows System32 directory'),
+             lambda: launch_tool(('shell', r'%WINDIR%\System32')), T['muted']),
+        ]
+        for icon, title, sub, act, color in items:
+            _card(icon, title, sub, act, color, holder)
 
     def _tab_about(self):
         T = self.T; L = self.L
@@ -5644,16 +6303,28 @@ class Widget:
             u.GetClassNameW(hwnd, buf, 256)
             if buf.value in ('Shell_TrayWnd', 'Progman', 'WorkerW', 'Windows.UI.Core.CoreWindow', ''):
                 self._fs_cache = False; return False
-            # A MAXIMIZED window (e.g. a maximized browser) is NOT fullscreen —
-            # the taskbar stays visible above it — yet its rect overhangs the
-            # screen by a few px and used to be mis-detected as fullscreen,
-            # making the widget vanish.  IsZoomed → maximized → never hide.
-            if u.IsZoomed(hwnd):
-                self._fs_cache = False; return False
             r = RECT()
             u.GetWindowRect(hwnd, ctypes.byref(r))
-            sw = u.GetSystemMetrics(0); sh = u.GetSystemMetrics(1)
-            result = r.left <= 0 and r.top <= 0 and r.right >= sw and r.bottom >= sh
+            # Distinguish TRUE fullscreen (game / fullscreen video) from a merely
+            # MAXIMIZED window. Both can report IsZoomed=True (Chrome reports
+            # fullscreen video as zoomed!), so IsZoomed is useless here. Instead:
+            #   • fullscreen fills the monitor EXACTLY, flush to its corners
+            #     (e.g. 0,0 … 1536,864).
+            #   • maximized overhangs the monitor by the invisible resize border
+            #     (e.g. -7,-7 … 1543,823) and stops short of the taskbar edge.
+            # An exact (±2 px) match against the window's own monitor cleanly
+            # tells them apart, on any monitor and at any DPI scaling.
+            MONITOR_DEFAULTTONEAREST = 2
+            hmon = u.MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST)
+            mi = MONITORINFO(); mi.cbSize = ctypes.sizeof(MONITORINFO)
+            if hmon and u.GetMonitorInfoW(hmon, ctypes.byref(mi)):
+                m = mi.rcMonitor
+            else:
+                m = RECT(); m.left = 0; m.top = 0
+                m.right = u.GetSystemMetrics(0); m.bottom = u.GetSystemMetrics(1)
+            tol = 2
+            result = (abs(r.left - m.left) <= tol and abs(r.top - m.top) <= tol and
+                      abs(r.right - m.right) <= tol and abs(r.bottom - m.bottom) <= tol)
             self._fs_cache = result
             return result
         except Exception:
