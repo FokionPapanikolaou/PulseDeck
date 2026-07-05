@@ -4,6 +4,23 @@ All notable changes to **PulseDeck** are documented here.
 
 ---
 
+## [2.9.3] — 2026-07-02
+
+### Added
+- **GPU detail:** vendor, GPU processor (chip), colour depth, plus **live GPU
+  usage %** and **VRAM in use** from the widget's own counters.
+- **Network detail:** default **gateway**, **DNS servers** in use, and **public IP**.
+- **CPU:** L2 cache size.
+- **Battery detail:** health/wear % (design vs full-charge capacity), capacity
+  (Wh), voltage and charge-cycle count (where the laptop exposes them).
+
+### Fixed
+- **RAM speed/type sometimes missing:** the big combined WMI scan could return
+  Win32_PhysicalMemory empty under load. RAM now falls back to a small
+  dedicated query, so speed (MHz) and type (DDR4/5) show reliably.
+
+---
+
 ## [2.9.2] — 2026-07-02
 
 ### Added

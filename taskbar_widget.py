@@ -18,7 +18,7 @@ import random
 
 APP_NAME = 'PulseDeck'       # internal identity: config dir, mutex, registry, Store package
 DISPLAY_NAME = 'PulseDeck'   # user-visible product name (rebrand)
-VERSION  = '2.9.2'
+VERSION  = '2.9.3'
 
 # ── Crash logging (enabled when NETCPURAM_DEBUG=1) ─────────────────────
 def _debug_log_path():
@@ -1674,7 +1674,7 @@ def _wmi_batch():
         "$o['cpu']=@(Get-CimInstance Win32_Processor|Select-Object Name,NumberOfCores,NumberOfLogicalProcessors,MaxClockSpeed,L2CacheSize,L3CacheSize,SocketDesignation,Manufacturer,VirtualizationFirmwareEnabled);"
         "$o['mem']=@(Get-CimInstance Win32_PhysicalMemory|Select-Object Capacity,Speed,Manufacturer,PartNumber,DeviceLocator,SMBIOSMemoryType,ConfiguredClockSpeed);"
         "$o['memarray']=@(Get-CimInstance Win32_PhysicalMemoryArray|Select-Object MemoryDevices,MaxCapacity,MaxCapacityEx);"
-        "$o['gpu']=@(Get-CimInstance Win32_VideoController|Select-Object Name,AdapterRAM,DriverVersion,CurrentHorizontalResolution,CurrentVerticalResolution,CurrentRefreshRate,@{n='DriverDate';e={if($_.DriverDate){$_.DriverDate.ToString('yyyy-MM-dd')}else{''}}});"
+        "$o['gpu']=@(Get-CimInstance Win32_VideoController|Select-Object Name,AdapterRAM,DriverVersion,CurrentHorizontalResolution,CurrentVerticalResolution,CurrentRefreshRate,VideoProcessor,AdapterCompatibility,CurrentBitsPerPixel,@{n='DriverDate';e={if($_.DriverDate){$_.DriverDate.ToString('yyyy-MM-dd')}else{''}}});"
         "$o['os']=@(Get-CimInstance Win32_OperatingSystem|Select-Object Caption,Version,BuildNumber,OSArchitecture,@{n='InstallDate';e={if($_.InstallDate){$_.InstallDate.ToString('yyyy-MM-dd')}else{''}}});"
         "$o['activation']=@(Get-CimInstance SoftwareLicensingProduct -Filter \"ApplicationID='55c92734-d682-4d71-983e-d6ec3f16059f' AND PartialProductKey IS NOT NULL\"|Select-Object LicenseStatus,Description);"
         "$o['cs']=@(Get-CimInstance Win32_ComputerSystem|Select-Object Manufacturer,Model,SystemFamily,SystemType,PCSystemType,Name,UserName,Domain,PartOfDomain,Workgroup);"
@@ -1765,7 +1765,8 @@ def collect_system_info():
     """Snapshot of CPU/RAM/GPU/OS/Disk/Network info. Best-effort."""
     out = {'cpu': {}, 'ram': {}, 'gpu': [], 'os': {}, 'disks': [], 'net': [],
            'mobo': {}, 'bios': {}, 'audio': [], 'monitors': [], 'optical': [],
-           'machine': {}, 'battery': {}, 'drives': [], 'security': {}}
+           'machine': {}, 'battery': {}, 'drives': [], 'security': {},
+           'net_info': {}}
     # One PowerShell process fetches every CIM class at once (see _wmi_batch);
     # doing them one-by-one cost ~70 s on slower laptops.
     W = _wmi_batch()
@@ -1777,6 +1778,16 @@ def collect_system_info():
         for _k in list(W):
             if not W.get(_k) and W2.get(_k):
                 W[_k] = W2[_k]
+    # SMBIOS-based classes (esp. Win32_PhysicalMemory) can come back empty from
+    # the big combined batch under load even though a small dedicated query
+    # succeeds. Fall back to those so RAM speed/type never go missing.
+    if not W.get('mem'):
+        W['mem'] = _wmi_query('Win32_PhysicalMemory', 'Capacity', 'Speed',
+                              'Manufacturer', 'PartNumber', 'DeviceLocator',
+                              'SMBIOSMemoryType', 'ConfiguredClockSpeed')
+    if not W.get('memarray'):
+        W['memarray'] = _wmi_query('Win32_PhysicalMemoryArray', 'MemoryDevices',
+                                   'MaxCapacity', 'MaxCapacityEx')
     # Registry copy of motherboard / BIOS / system identity — always available,
     # so these sections survive even if WMI returns them empty under load.
     REG = _reg_bios_info()
@@ -1897,6 +1908,9 @@ def collect_system_info():
                 'vram': int(g.get('AdapterRAM') or 0),
                 'driver': g.get('DriverVersion'),
                 'driver_date': str(g.get('DriverDate','') or '').strip(),
+                'processor': str(g.get('VideoProcessor','') or '').strip(),
+                'vendor': str(g.get('AdapterCompatibility','') or '').strip(),
+                'bpp': g.get('CurrentBitsPerPixel'),
                 'res': (g.get('CurrentHorizontalResolution'),
                         g.get('CurrentVerticalResolution')),
                 'hz': g.get('CurrentRefreshRate'),
@@ -1960,6 +1974,10 @@ def collect_system_info():
                 'speed_mbps': st.speed,
             })
     except Exception: pass
+    # gateway / DNS / public IP for the active connection
+    try:
+        out['net_info'] = _net_extra()
+    except Exception: pass
     # ── Battery (laptops) ──
     try:
         b = psutil.sensors_battery()
@@ -1983,6 +2001,16 @@ def collect_system_info():
             out.setdefault('battery', {})
             out['battery']['name'] = str(bw[0].get('Name', '') or '').strip()
             out['battery']['chemistry'] = CHEM.get(bw[0].get('Chemistry'), '')
+            dv = bw[0].get('DesignVoltage')
+            if dv: out['battery']['voltage'] = round(int(dv) / 1000.0, 2)  # mV → V
+        # health / capacity / cycles (root/wmi, no admin)
+        if out['battery'].get('percent') is not None:
+            bh = _battery_health()
+            if bh.get('full_mwh'):   out['battery']['full_mwh'] = bh['full_mwh']
+            if bh.get('design_mwh'): out['battery']['design_mwh'] = bh['design_mwh']
+            if bh.get('design_mwh') and bh.get('full_mwh'):
+                out['battery']['health'] = round(bh['full_mwh'] / bh['design_mwh'] * 100)
+            if bh.get('cycles'):     out['battery']['cycles'] = bh['cycles']
     except Exception: pass
     # ── Security (Secure Boot + TPM) ──
     try:
@@ -2700,6 +2728,57 @@ def get_current_dns():
         return out
     except Exception:
         return []
+
+def _net_extra():
+    """Active connection's default gateway, DNS servers and public IP.
+    Best-effort — each part is independent and degrades to blank."""
+    out = {'gateway': '', 'dns': [], 'public_ip': ''}
+    try:
+        cmd = ['powershell', '-NoProfile', '-NonInteractive', '-Command',
+               "(Get-CimInstance Win32_NetworkAdapterConfiguration -Filter "
+               "'IPEnabled=True' | Where-Object {$_.DefaultIPGateway} | "
+               "Select-Object -First 1).DefaultIPGateway"]
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=8,
+                           startupinfo=_silent_startupinfo())
+        for line in (r.stdout or '').splitlines():
+            a = line.strip()
+            if a and ':' not in a:      # first IPv4 gateway
+                out['gateway'] = a; break
+    except Exception: pass
+    try:
+        out['dns'] = get_current_dns()
+    except Exception: pass
+    try:
+        import urllib.request
+        req = urllib.request.Request('https://api.ipify.org',
+                                     headers={'User-Agent': 'PulseDeck'})
+        out['public_ip'] = urllib.request.urlopen(req, timeout=4).read().decode().strip()
+    except Exception: pass
+    return out
+
+def _battery_health():
+    """Battery design vs full-charge capacity (→ wear %) and cycle count, from
+    the root/wmi battery classes. No admin. Any field may be missing per laptop."""
+    out = {}
+    try:
+        cmd = ['powershell', '-NoProfile', '-NonInteractive', '-Command',
+               "$d=(Get-CimInstance -Namespace root/wmi -ClassName BatteryStaticData -EA 0).DesignedCapacity;"
+               "$f=(Get-CimInstance -Namespace root/wmi -ClassName BatteryFullChargedCapacity -EA 0).FullChargedCapacity;"
+               "$c=(Get-CimInstance -Namespace root/wmi -ClassName BatteryCycleCount -EA 0).CycleCount;"
+               "[pscustomobject]@{design=$d;full=$f;cycles=$c}|ConvertTo-Json -Compress"]
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=8,
+                           startupinfo=_silent_startupinfo())
+        if r.stdout:
+            d = json.loads(r.stdout)
+            def _num(v):
+                if isinstance(v, list): v = v[0] if v else None
+                try: return int(v)
+                except (TypeError, ValueError): return None
+            out['design_mwh'] = _num(d.get('design'))
+            out['full_mwh'] = _num(d.get('full'))
+            out['cycles'] = _num(d.get('cycles'))
+    except Exception: pass
+    return out
 
 # ── Diagnostics: hardware self-test (v2.8.2) ───────────────────────────
 # Runs every read-only hardware probe and collects what worked / what failed.
@@ -4368,6 +4447,8 @@ class CustomizeWindow:
             cur = cpu.get('current_mhz')
             kv(s, 'Clock',
                f"{cpu.get('current_mhz', cpu['base_mhz'])/1000:.2f} GHz / base {base_ghz:.2f} GHz")
+        if cpu.get('l2_kb'):
+            kv(s, 'L2 cache', f"{cpu['l2_kb']/1024:.0f} MB")
         if cpu.get('l3_kb'):
             kv(s, 'L3 cache', f"{cpu['l3_kb']/1024:.0f} MB")
         if cpu.get('socket'):
@@ -4410,6 +4491,9 @@ class CustomizeWindow:
                         badge_src=gpus[0].get('name', ''))
             for g in gpus:
                 kv(s, 'Model', g.get('name', '?'))
+                if g.get('vendor'):    kv(s, 'Vendor', g['vendor'])
+                if g.get('processor') and g['processor'] != g.get('name'):
+                    kv(s, 'Processor', g['processor'])
                 if g.get('vram'):
                     kv(s, 'VRAM', _human_bytes(g['vram']))
                 if g.get('driver'):
@@ -4419,8 +4503,19 @@ class CustomizeWindow:
                 if g.get('res') and g['res'][0]:
                     res = f"{g['res'][0]} × {g['res'][1]}"
                     if g.get('hz'): res += f"  @ {g['hz']} Hz"
+                    if g.get('bpp'): res += f"  ·  {g['bpp']}-bit"
                     kv(s, 'Resolution', res)
                 tk.Frame(s, bg=T['panel'], height=6).pack()
+            # live usage + VRAM in use (from the widget's own GPU counters)
+            gu = getattr(self.w, '_gpu', None)
+            if gu is not None:
+                kv(s, 'Usage (live)', f"{gu:.0f}%",
+                   T['orange'] if gu >= 80 else T['green'])
+            gm = getattr(self.w, '_gpu_mem', None)
+            vt = getattr(self.w, '_vram_total', None)
+            if gm is not None and vt:
+                kv(s, 'VRAM in use',
+                   f"{gm:.1f} / {vt:.1f} GB  ({gm/vt*100:.0f}%)")
             tk.Frame(s, bg=T['panel'], height=2).pack()
 
         # ── Motherboard ──
@@ -4541,6 +4636,10 @@ class CustomizeWindow:
                 if n.get('speed_mbps'):
                     bits.append(f"{n['speed_mbps']} Mbps")
                 kv(s, n['name'][:30], '  ·  '.join(bits))
+            ni = info.get('net_info', {})
+            if ni.get('gateway'): kv(s, 'Gateway', ni['gateway'])
+            if ni.get('dns'):     kv(s, 'DNS', ', '.join(ni['dns']))
+            if ni.get('public_ip'): kv(s, 'Public IP', ni['public_ip'])
             tk.Frame(s, bg=T['panel'], height=8).pack()
 
         # ── Battery (kept near the bottom) ──
@@ -4557,6 +4656,17 @@ class CustomizeWindow:
                 state += f"  ·  {batt['left']} left"
             kv(s, 'Charge', f"{pct}%", pct_col)
             kv(s, 'Status', state)
+            if batt.get('health') is not None:
+                h = batt['health']
+                kv(s, 'Health', f"{h}%  ({'Good' if h >= 80 else 'Fair' if h >= 60 else 'Poor'})",
+                   T['green'] if h >= 80 else (T['orange'] if h >= 60 else T['red']))
+            if batt.get('full_mwh'):
+                cap = f"{batt['full_mwh']/1000:.1f} Wh"
+                if batt.get('design_mwh'):
+                    cap += f"  (design {batt['design_mwh']/1000:.1f} Wh)"
+                kv(s, 'Capacity', cap)
+            if batt.get('voltage'):   kv(s, 'Voltage', f"{batt['voltage']} V")
+            if batt.get('cycles'):    kv(s, 'Cycles', str(batt['cycles']))
             if batt.get('name'):      kv(s, 'Model', batt['name'])
             if batt.get('chemistry'): kv(s, 'Chemistry', batt['chemistry'])
             tk.Frame(s, bg=T['panel'], height=8).pack()
