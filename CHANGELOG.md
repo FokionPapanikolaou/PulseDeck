@@ -18,6 +18,9 @@ All notable changes to **PulseDeck** are documented here.
 - **RAM speed/type sometimes missing:** the big combined WMI scan could return
   Win32_PhysicalMemory empty under load. RAM now falls back to a small
   dedicated query, so speed (MHz) and type (DDR4/5) show reliably.
+- **Classic right-click menu didn't always apply:** the Explorer restart was
+  too quick and raced Windows' own auto-restart. It now waits for the shell to
+  fully close and only relaunches it if Windows hasn't already.
 
 ---
 

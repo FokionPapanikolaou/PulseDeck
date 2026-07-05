@@ -2501,16 +2501,26 @@ def action_restart_explorer():
         subprocess.run(['taskkill', '/F', '/IM', 'explorer.exe'],
                        startupinfo=_silent_startupinfo(), timeout=10,
                        capture_output=True)
-        # Give the shell a moment to fully tear down so the relaunch picks up
-        # registry changes (e.g. the classic context-menu CLSID). Windows may
-        # auto-restart explorer; launching it again is harmless if so.
-        time.sleep(1.2)
+        # Let the shell fully tear down so the relaunch reads registry changes
+        # (e.g. the classic context-menu CLSID — a too-short wait raced Windows'
+        # own auto-restart and the tweak didn't apply). Then start explorer only
+        # if it hasn't come back on its own — a bare explorer.exe while the shell
+        # is already running would just open a stray File Explorer window.
+        time.sleep(2.0)
         try:
-            subprocess.Popen([os.path.join(os.environ.get('WINDIR', r'C:\Windows'),
-                                            'explorer.exe')])
+            tl = subprocess.run(['tasklist', '/FI', 'IMAGENAME eq explorer.exe'],
+                                startupinfo=_silent_startupinfo(), timeout=8,
+                                capture_output=True, text=True)
+            running = 'explorer.exe' in (tl.stdout or '').lower()
         except Exception:
-            try: os.startfile('explorer.exe')
-            except Exception: pass
+            running = False
+        if not running:
+            try:
+                subprocess.Popen([os.path.join(os.environ.get('WINDIR', r'C:\Windows'),
+                                                'explorer.exe')])
+            except Exception:
+                try: os.startfile('explorer.exe')
+                except Exception: pass
         return True
     except Exception:
         return False
