@@ -2543,20 +2543,22 @@ def is_classic_context():
 def action_classic_context(enable):
     """Toggle the Windows 11 classic right-click menu (per-user, no admin).
 
-    Enabling creates CLSID\\…\\InprocServer32 with an empty default value;
-    disabling deletes the CLSID key so Windows 11's own menu returns. Explorer
-    is restarted so the change takes effect right away."""
+    Shells out to reg.exe rather than the winreg module — confirmed more
+    reliable in practice (winreg's CreateKey/SetValueEx produced a key that
+    Explorer sometimes ignored; `reg add ... /f /ve` never did). Enabling
+    creates CLSID\\…\\InprocServer32 with an empty default value; disabling
+    deletes the CLSID key so Windows 11's own menu returns. Explorer is
+    restarted so the change takes effect right away."""
     try:
+        si = _silent_startupinfo()
         if enable:
-            k = winreg.CreateKey(winreg.HKEY_CURRENT_USER,
-                                 _CTX_CLSID + r'\InprocServer32')
-            winreg.SetValueEx(k, '', 0, winreg.REG_SZ, '')
-            winreg.CloseKey(k)
+            subprocess.run(['reg.exe', 'add',
+                            'HKCU\\' + _CTX_CLSID + '\\InprocServer32',
+                            '/f', '/ve'],
+                           startupinfo=si, timeout=8, capture_output=True)
         else:
-            # a key must be empty before it can be deleted → remove the child first
-            for sub in (_CTX_CLSID + r'\InprocServer32', _CTX_CLSID):
-                try: winreg.DeleteKey(winreg.HKEY_CURRENT_USER, sub)
-                except OSError: pass
+            subprocess.run(['reg.exe', 'delete', 'HKCU\\' + _CTX_CLSID, '/f'],
+                           startupinfo=si, timeout=8, capture_output=True)
         action_restart_explorer()
         return True
     except Exception:
