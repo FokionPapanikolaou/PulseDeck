@@ -1,6 +1,6 @@
 # PulseDeck — Privacy Policy
 
-**Effective date:** 9 June 2026
+**Effective date:** 6 July 2026
 **Publisher:** Fokion Papanikolaou
 
 PulseDeck ("the app") is a desktop system-monitor for Windows 10/11. This
@@ -9,7 +9,8 @@ goes, and what we do with it.
 
 > **TL;DR — we don't collect anything.** No accounts, no analytics, no
 > advertising, no telemetry. Your settings stay on your PC. The only network
-> calls are the optional weather widget hitting third-party weather APIs.
+> calls are an optional update check and, when you open the System tab, a
+> lookup of your own public IP so it can be shown to you.
 
 ---
 
@@ -23,23 +24,17 @@ preferences (chosen metrics, theme, language, position, etc.). It is stored
 locally in your user profile (the package's `LocalState` folder or, for the
 portable build, next to the executable). It is **never uploaded anywhere**.
 
-## 3. What goes over the network (weather only)
-The weather widget is **optional** and can be turned off from the tray menu
-(*Metrics → Weather*). If turned on, the app makes HTTPS requests to:
+## 3. What goes over the network
+- **Public IP display (System tab).** When you open *Settings → System*, the
+  app asks **api.ipify.org** for your own public IP address so it can be shown
+  in the Network section. The service simply echoes the address back; nothing
+  else is sent, and the result is only displayed on your screen — never stored
+  or transmitted elsewhere.
+  → Their privacy policy: https://www.ipify.org
 
-- **ipapi.co** — to obtain an approximate location based on your **public IP
-  address** (city / latitude / longitude). This is only used when you have not
-  entered a city manually.
-  → Their privacy policy: https://ipapi.co/privacy/
-
-- **open-meteo.com** — to fetch the current weather and a short forecast for
-  the resolved coordinates. Open-Meteo does **not** require an API key and
-  does **not** track users.
-  → Their privacy policy: https://open-meteo.com/en/terms
-
-If you set a city manually (*Weather → Set city…*), the IP-lookup call is
-skipped. If you disable the weather widget entirely, no network calls are
-made.
+No other feature makes network requests, apart from the update check below.
+(The weather and earthquake features that existed in older versions were
+removed in 2.8.5 and no longer make any calls.)
 
 ## 4. Update check (optional, on by default)
 On launch, PulseDeck may contact the public **GitHub Releases API**

@@ -2498,7 +2498,7 @@ def action_restart_explorer():
     """Kill and relaunch explorer.exe — refreshes the taskbar/desktop without
     a reboot. Useful when icons stop responding."""
     try:
-        subprocess.run(['taskkill', '/F', '/IM', 'explorer.exe'],
+        subprocess.run([_sys32('taskkill.exe'), '/F', '/IM', 'explorer.exe'],
                        startupinfo=_silent_startupinfo(), timeout=10,
                        capture_output=True)
         # Let the shell fully tear down so the relaunch reads registry changes
@@ -2508,7 +2508,7 @@ def action_restart_explorer():
         # is already running would just open a stray File Explorer window.
         time.sleep(2.0)
         try:
-            tl = subprocess.run(['tasklist', '/FI', 'IMAGENAME eq explorer.exe'],
+            tl = subprocess.run([_sys32('tasklist.exe'), '/FI', 'IMAGENAME eq explorer.exe'],
                                 startupinfo=_silent_startupinfo(), timeout=8,
                                 capture_output=True, text=True)
             running = 'explorer.exe' in (tl.stdout or '').lower()
@@ -2552,12 +2552,12 @@ def action_classic_context(enable):
     try:
         si = _silent_startupinfo()
         if enable:
-            subprocess.run(['reg.exe', 'add',
+            subprocess.run([_sys32('reg.exe'), 'add',
                             'HKCU\\' + _CTX_CLSID + '\\InprocServer32',
                             '/f', '/ve'],
                            startupinfo=si, timeout=8, capture_output=True)
         else:
-            subprocess.run(['reg.exe', 'delete', 'HKCU\\' + _CTX_CLSID, '/f'],
+            subprocess.run([_sys32('reg.exe'), 'delete', 'HKCU\\' + _CTX_CLSID, '/f'],
                            startupinfo=si, timeout=8, capture_output=True)
         action_restart_explorer()
         return True
@@ -2631,6 +2631,16 @@ TOOLS_CATALOG = [
         ('su_sys32',    '📁', ('shell', r'%WINDIR%\System32')),
     ]),
 ]
+
+# The classic context-menu toggle only makes sense on Windows 11 (build
+# 22000+); Windows 10 already has the classic menu, so hide the tool there.
+try:
+    if sys.getwindowsversion().build < 22000:
+        TOOLS_CATALOG = [
+            (cat, icon, [t for t in tools if t[0] != 't_classicmenu'])
+            for cat, icon, tools in TOOLS_CATALOG]
+except Exception:
+    pass
 
 # ── DNS Boost: benchmark popular resolvers, IPv4 + IPv6 (v2.8) ──────────
 # Pure measurement — sends real DNS queries over UDP/53 and times the reply,
@@ -2741,6 +2751,8 @@ def get_current_dns():
     except Exception:
         return []
 
+_PUBIP_CACHE = ('', 0.0)   # (ip, fetched-at) — see _net_extra
+
 def _net_extra():
     """Active connection's default gateway, DNS servers and public IP.
     Best-effort — each part is independent and degrades to blank."""
@@ -2761,10 +2773,18 @@ def _net_extra():
         out['dns'] = get_current_dns()
     except Exception: pass
     try:
-        import urllib.request
-        req = urllib.request.Request('https://api.ipify.org',
-                                     headers={'User-Agent': 'PulseDeck'})
-        out['public_ip'] = urllib.request.urlopen(req, timeout=4).read().decode().strip()
+        # cache for 30 min so reopening the System tab doesn't re-hit the API
+        global _PUBIP_CACHE
+        ip, ts = _PUBIP_CACHE
+        if ip and time.time() - ts < 1800:
+            out['public_ip'] = ip
+        else:
+            import urllib.request
+            req = urllib.request.Request('https://api.ipify.org',
+                                         headers={'User-Agent': 'PulseDeck'})
+            ip = urllib.request.urlopen(req, timeout=4).read().decode().strip()
+            out['public_ip'] = ip
+            _PUBIP_CACHE = (ip, time.time())
     except Exception: pass
     return out
 
@@ -3251,6 +3271,16 @@ def _entry_focus(widget):
         pass
     try:
         ctypes.windll.user32.SetFocus(widget.winfo_id())
+    except Exception:
+        pass
+
+def _safe_wheel(canvas, e):
+    """MouseWheel handler for the tab canvases. The bind is global
+    (bind_all), so after a tab switch it can still fire for a canvas that was
+    destroyed with the old tab — guard instead of raising TclError forever."""
+    try:
+        if canvas.winfo_exists():
+            canvas.yview_scroll(int(-e.delta / 120), 'units')
     except Exception:
         pass
 
@@ -4185,8 +4215,7 @@ class CustomizeWindow:
         canvas.bind('<Configure>', _resize_body)
         body.bind('<Configure>',
                   lambda e: canvas.configure(scrollregion=canvas.bbox('all')))
-        canvas.bind_all('<MouseWheel>',
-                        lambda e: canvas.yview_scroll(int(-e.delta/120), 'units'))
+        canvas.bind_all('<MouseWheel>', lambda e: _safe_wheel(canvas, e))
 
         def _brand_logo(parent, name, bg_color):
             """Brand logo image. Returns a Label with a PNG, or None."""
@@ -4901,8 +4930,7 @@ class CustomizeWindow:
         canvas.bind('<Configure>', _on_canvas_configure)
         body.bind('<Configure>',
                   lambda e: canvas.configure(scrollregion=canvas.bbox('all')))
-        canvas.bind_all('<MouseWheel>',
-                        lambda e: canvas.yview_scroll(int(-e.delta / 120), 'units'))
+        canvas.bind_all('<MouseWheel>', lambda e: _safe_wheel(canvas, e))
 
         def _tool_row(parent, tkey, ticon, label, action):
             destructive = action[0] == 'action' and action[1] not in (
@@ -5167,8 +5195,7 @@ class CustomizeWindow:
                     lambda e: canvas.itemconfig(body_window, width=e.width))
         body.bind('<Configure>',
                   lambda e: canvas.configure(scrollregion=canvas.bbox('all')))
-        canvas.bind_all('<MouseWheel>',
-                        lambda e: canvas.yview_scroll(int(-e.delta / 120), 'units'))
+        canvas.bind_all('<MouseWheel>', lambda e: _safe_wheel(canvas, e))
 
         def _copy(ip):
             try:

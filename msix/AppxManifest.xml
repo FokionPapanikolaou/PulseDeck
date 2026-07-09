@@ -4,7 +4,8 @@
     xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
     xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
     xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
-    IgnorableNamespaces="uap rescap desktop">
+    xmlns:desktop6="http://schemas.microsoft.com/appx/manifest/desktop/windows10/6"
+    IgnorableNamespaces="uap rescap desktop desktop6">
 
   <!-- Identity Name / Application Id / StartupTask id MUST stay "PulseBar":
        this is the Store-reserved package identity in Partner Center (the
@@ -20,10 +21,15 @@
     <DisplayName>PulseDeck</DisplayName>
     <PublisherDisplayName>Papanikolaou Fokion</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
+    <!-- Without this, HKCU writes (e.g. the classic context-menu CLSID the
+         Tools tab toggles) are virtualized into the package's private hive,
+         so Explorer never sees them and the feature silently no-ops in the
+         Store build. Requires MinVersion 10.0.18362+. -->
+    <desktop6:RegistryWriteVirtualization>disabled</desktop6:RegistryWriteVirtualization>
   </Properties>
 
   <Dependencies>
-    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.26100.0" />
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.18362.0" MaxVersionTested="10.0.26200.0" />
   </Dependencies>
 
   <Resources>
@@ -32,6 +38,11 @@
 
   <Capabilities>
     <rescap:Capability Name="runFullTrust" />
+    <!-- required by RegistryWriteVirtualization=disabled above; Partner Center
+         will ask for a justification: the Tools tab's classic context-menu
+         toggle must write a real HKCU key that Explorer (outside the
+         container) can read. -->
+    <rescap:Capability Name="unvirtualizedResources" />
   </Capabilities>
 
   <Applications>
