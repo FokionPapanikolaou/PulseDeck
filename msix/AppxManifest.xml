@@ -14,7 +14,7 @@
        name is DisplayName / DefaultTile below (PulseDeck). -->
   <Identity Name="PapanikolaouFokion.PulseBar"
             Publisher="CN=4DDDFD1C-63EA-4604-9FCA-35D0F04C71E3"
-            Version="2.9.3.0"
+            Version="2.9.4.0"
             ProcessorArchitecture="x64" />
 
   <Properties>
