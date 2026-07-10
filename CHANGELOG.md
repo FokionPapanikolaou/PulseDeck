@@ -4,6 +4,13 @@ All notable changes to **PulseDeck** are documented here.
 
 ---
 
+## [2.9.5] — 2026-07-10
+
+Identical to 2.9.4 — version bump for a clean Microsoft Store resubmission
+(the 2.9.4 submission was entangled with a stale, invalid package upload).
+
+---
+
 ## [2.9.4] — 2026-07-10
 
 ### Fixed

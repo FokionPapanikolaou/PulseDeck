@@ -1,6 +1,6 @@
 ; Inno Setup script — PulseDeck
 #define AppName "PulseDeck"
-#define AppVer "2.9.4"
+#define AppVer "2.9.5"
 #define AppPublisher "Fokion Papanikolaou"
 #define AppExe "PulseDeck.exe"
 
