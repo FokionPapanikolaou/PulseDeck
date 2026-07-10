@@ -4,25 +4,26 @@ All notable changes to **PulseDeck** are documented here.
 
 ---
 
-## [2.9.4] — 2026-07-09
+## [2.9.4] — 2026-07-10
 
 ### Fixed
-- **Classic right-click menu now works in the Store (MSIX) build** — the MSIX
-  container virtualizes HKCU registry writes, so the toggle's key never reached
-  the real hive Explorer reads. Registry write virtualization is now disabled
-  in the package manifest (`unvirtualizedResources` capability).
 - Scrolling right after switching Settings tabs no longer throws silent
   errors against the previous tab's destroyed canvas.
 
 ### Changed
+- **Classic right-click menu tool is hidden in the Store (MSIX) build.** The
+  MSIX container virtualizes HKCU registry writes into a private hive Explorer
+  never reads, and Microsoft denied the `unvirtualizedResources` capability
+  that would lift this (Store policy 10.6.3) — so inside the Store build the
+  toggle cannot take effect and is not shown. The portable and installer
+  builds keep the feature. It is also hidden on Windows 10, where the menu is
+  already classic.
 - `reg.exe` / `taskkill` / `tasklist` are now invoked via their full System32
   paths (hardening).
-- The classic context-menu tool is hidden on Windows 10, where the menu is
-  already classic.
 - The System tab's public-IP lookup is cached for 30 minutes.
 - Privacy policy refreshed: stale weather section removed, the System tab's
   public-IP lookup (api.ipify.org) documented.
-- MSIX: minimum Windows version is now 10.0.18362; MaxVersionTested 26200.
+- MSIX: MaxVersionTested raised to 10.0.26200.
 
 ---
 

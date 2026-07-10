@@ -2632,10 +2632,13 @@ TOOLS_CATALOG = [
     ]),
 ]
 
-# The classic context-menu toggle only makes sense on Windows 11 (build
-# 22000+); Windows 10 already has the classic menu, so hide the tool there.
+# The classic context-menu toggle is hidden where it cannot work:
+#  - Windows 10 (build < 22000): the menu is already classic.
+#  - MSIX/Store build: the container virtualizes HKCU writes into a private
+#    hive Explorer never reads, and the Store denied the
+#    unvirtualizedResources capability needed to turn that off (10.6.3).
 try:
-    if sys.getwindowsversion().build < 22000:
+    if sys.getwindowsversion().build < 22000 or _is_msix():
         TOOLS_CATALOG = [
             (cat, icon, [t for t in tools if t[0] != 't_classicmenu'])
             for cat, icon, tools in TOOLS_CATALOG]
