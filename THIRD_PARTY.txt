@@ -39,3 +39,18 @@ PyInstaller  (used as a build tool only; bootloader under Apache-style exception
   https://pyinstaller.org/en/stable/license.html
 
 --------------------------------------------------------------------------------
+Python.NET (pythonnet + clr_loader)  (MIT License)  — .NET interop bridge,
+used to read AMD/Intel GPU sensors
+  Copyright (c) Python for .NET / pythonnet contributors.
+  https://github.com/pythonnet/pythonnet
+
+--------------------------------------------------------------------------------
+LibreHardwareMonitorLib  (Mozilla Public License 2.0)  — hardware sensor
+library, used unmodified as a compiled assembly (LibreHardwareMonitorLib.dll,
+HidSharp.dll) via .NET interop, for AMD/Intel GPU temperature
+  Copyright (c) LibreHardwareMonitor contributors.
+  https://github.com/LibreHardwareMonitor/LibreHardwareMonitor
+  Source available unmodified from the project page under MPL 2.0; the full
+  license text ships alongside these DLLs (lhm/LICENSE.txt).
+
+--------------------------------------------------------------------------------

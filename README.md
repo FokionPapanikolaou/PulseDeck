@@ -194,7 +194,7 @@ Requires **Python 3.11+** on **Windows**.
 
 ```powershell
 # 1) dependencies
-pip install psutil Pillow pystray pyinstaller
+pip install psutil Pillow pystray pyinstaller pythonnet
 
 # 2) (optional) regenerate icons & banner
 python make_icons.py
@@ -204,12 +204,17 @@ python make_promo.py
 
 # 3) build the portable exe
 pyinstaller --noconfirm --onefile --windowed --name PulseDeck `
-  --icon app.ico --add-data "icons;icons" --add-data "app.ico;." `
-  --hidden-import pystray._win32 taskbar_widget.py
+  --icon app.ico --add-data "icons;icons" --add-data "app.ico;." --add-data "lhm;lhm" `
+  --hidden-import pystray._win32 --hidden-import clr_loader --hidden-import pythonnet `
+  taskbar_widget.py
 
 # 4) (optional) build the installer — needs Inno Setup 6
 ISCC installer.iss
 ```
+
+`lhm/` bundles [LibreHardwareMonitorLib](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor)
+(MPL 2.0, used unmodified) for AMD/Intel GPU temperature — no admin needed
+to read it. See [THIRD_PARTY.txt](THIRD_PARTY.txt) for attribution.
 
 The portable `dist\PulseDeck.exe` runs with no install; settings are saved as
 `config.json` next to it.

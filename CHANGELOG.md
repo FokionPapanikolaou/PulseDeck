@@ -4,6 +4,33 @@ All notable changes to **PulseDeck** are documented here.
 
 ---
 
+## [Unreleased]
+
+### Added
+- **Weather is back** — restored as an opt-in bar cell + its own "Weather"
+  settings tab (°C/°F), auto-locating by IP. Earthquake alerts stay removed.
+- **GPU temperature** on the bar/tooltip/System tab — NVIDIA via `nvidia-smi`
+  (exact reading, already had this for power draw); **AMD and Intel now too**,
+  via a bundled LibreHardwareMonitorLib (MPL 2.0, read-only, no admin needed).
+- **Startup Manager** (Tools → Performance & Power) — one consolidated list of
+  everything that launches at boot (HKCU/HKLM Run keys, both 32/64-bit views,
+  plus the per-user and all-users Startup folders), each tagged with its
+  source and flagged if the target no longer exists on disk. Per-user entries
+  (HKCU, personal Startup folder) can be removed with one click and a confirm
+  prompt; HKLM/all-users entries are shown read-only ("Needs admin") rather
+  than silently failing.
+
+### Investigated, not shipped
+- **Universal CPU temperature** (AMD/Intel) — prototyped via the same
+  LibreHardwareMonitor library, but the low-level MSR driver it needs is
+  blocked by Windows Memory Integrity (VBS/HVCI) on a growing share of
+  modern PCs — including ones where it's *required*, e.g. by some
+  anti-cheat. Admin elevation doesn't help once VBS is on: the sensor reads
+  back a hard 0 either way. A reliable version would need a separate
+  elevated helper process; shelved for now given the uncertain payoff.
+
+---
+
 ## [2.9.5] — 2026-07-10
 
 Identical to 2.9.4 — version bump for a clean Microsoft Store resubmission

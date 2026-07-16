@@ -185,42 +185,42 @@ TIP = {
  'en':{'top':'Top processes','used':'Used','free':'Free','total':'Total','session':'Session',
        'cores':'Cores','source':'Windows counters','charging':'Charging','onbatt':'On battery',
        'timeleft':'Time left','now':'Now','perdisk':'Per-disk · read / write','status':'Status',
-       'sampling':'sampling…','loading':'loading…','vramused':'VRAM used',
+       'sampling':'sampling…','loading':'loading…','vramused':'VRAM used','temp':'Temperature',
        'feels':'Feels like','humidity':'Humidity','wind':'Wind','forecast':'Forecast'},
  'el':{'top':'Κορυφαίες διεργασίες','used':'Σε χρήση','free':'Ελεύθερα','total':'Σύνολο','session':'Συνεδρία',
        'cores':'Πυρήνες','source':'Μετρητές Windows','charging':'Φόρτιση','onbatt':'Στη μπαταρία',
        'timeleft':'Απομένει','now':'Τώρα','perdisk':'Ανά δίσκο · ανάγν./εγγρ.','status':'Κατάσταση',
-       'sampling':'δειγματοληψία…','loading':'φόρτωση…','vramused':'VRAM σε χρήση',
+       'sampling':'δειγματοληψία…','loading':'φόρτωση…','vramused':'VRAM σε χρήση','temp':'Θερμοκρασία',
        'feels':'Αίσθηση','humidity':'Υγρασία','wind':'Άνεμος','forecast':'Πρόγνωση'},
  'es':{'top':'Procesos principales','used':'Usado','free':'Libre','total':'Total','session':'Sesión',
        'cores':'Núcleos','source':'Contadores de Windows','charging':'Cargando','onbatt':'Con batería',
        'timeleft':'Restante','now':'Ahora','perdisk':'Por disco · lect./escr.','status':'Estado',
-       'sampling':'muestreando…','loading':'cargando…','vramused':'VRAM usada',
+       'sampling':'muestreando…','loading':'cargando…','vramused':'VRAM usada','temp':'Temperatura',
        'feels':'Sensación','humidity':'Humedad','wind':'Viento','forecast':'Pronóstico'},
  'de':{'top':'Top-Prozesse','used':'Belegt','free':'Frei','total':'Gesamt','session':'Sitzung',
        'cores':'Kerne','source':'Windows-Zähler','charging':'Lädt','onbatt':'Akkubetrieb',
        'timeleft':'Restzeit','now':'Jetzt','perdisk':'Pro Datenträger · L/S','status':'Status',
-       'sampling':'Abtastung…','loading':'lädt…','vramused':'VRAM belegt',
+       'sampling':'Abtastung…','loading':'lädt…','vramused':'VRAM belegt','temp':'Temperatur',
        'feels':'Gefühlt','humidity':'Luftfeuchte','wind':'Wind','forecast':'Vorhersage'},
  'fr':{'top':'Processus principaux','used':'Utilisé','free':'Libre','total':'Total','session':'Session',
        'cores':'Cœurs','source':'Compteurs Windows','charging':'En charge','onbatt':'Sur batterie',
        'timeleft':'Restant','now':'Maintenant','perdisk':'Par disque · lect./écr.','status':'État',
-       'sampling':'échantillonnage…','loading':'chargement…','vramused':'VRAM utilisée',
+       'sampling':'échantillonnage…','loading':'chargement…','vramused':'VRAM utilisée','temp':'Température',
        'feels':'Ressenti','humidity':'Humidité','wind':'Vent','forecast':'Prévisions'},
  'it':{'top':'Processi principali','used':'Usato','free':'Libero','total':'Totale','session':'Sessione',
        'cores':'Core','source':'Contatori Windows','charging':'In carica','onbatt':'A batteria',
        'timeleft':'Rimanente','now':'Ora','perdisk':'Per disco · lett./scritt.','status':'Stato',
-       'sampling':'campionamento…','loading':'caricamento…','vramused':'VRAM usata',
+       'sampling':'campionamento…','loading':'caricamento…','vramused':'VRAM usata','temp':'Temperatura',
        'feels':'Percepita','humidity':'Umidità','wind':'Vento','forecast':'Previsioni'},
  'pt':{'top':'Processos principais','used':'Usado','free':'Livre','total':'Total','session':'Sessão',
        'cores':'Núcleos','source':'Contadores do Windows','charging':'Carregando','onbatt':'Na bateria',
        'timeleft':'Restante','now':'Agora','perdisk':'Por disco · leit./escr.','status':'Estado',
-       'sampling':'amostragem…','loading':'carregando…','vramused':'VRAM usada',
+       'sampling':'amostragem…','loading':'carregando…','vramused':'VRAM usada','temp':'Temperatura',
        'feels':'Sensação','humidity':'Humidade','wind':'Vento','forecast':'Previsão'},
  'ru':{'top':'Топ процессы','used':'Занято','free':'Свободно','total':'Всего','session':'Сессия',
        'cores':'Ядра','source':'Счётчики Windows','charging':'Зарядка','onbatt':'От батареи',
        'timeleft':'Осталось','now':'Сейчас','perdisk':'По дискам · чт./зап.','status':'Состояние',
-       'sampling':'выборка…','loading':'загрузка…','vramused':'VRAM занято',
+       'sampling':'выборка…','loading':'загрузка…','vramused':'VRAM занято','temp':'Температура',
        'feels':'Ощущается','humidity':'Влажность','wind':'Ветер','forecast':'Прогноз'},
 }
 # localized short weekday names (Mon=0 … Sun=6)
@@ -761,6 +761,76 @@ LAYOUT_I18N = {
 for _lng, _d in LAYOUT_I18N.items():
     CUST_LABELS.setdefault(_lng, {}).update(_d)
 
+# ── Startup Manager tab labels (v2.10) ─────────────────────────────────
+STARTUP_I18N = {
+ 'en':{'t_startuplist':'Startup manager','startup_title':'Startup Manager',
+       'startup_sub':'Apps and services that launch when Windows starts',
+       'startup_empty':'No startup entries found.','startup_disable':'Disable',
+       'startup_admin':'Needs admin','startup_missing':'Target not found',
+       'startup_confirm':'Remove "{}" from startup? You can always re-add it later.',
+       'startup_removed':'Removed from startup ✓','startup_refresh':'Refresh',
+       'startup_src_folder':'Startup folder','startup_src_common':'Common Startup folder',
+       'startup_count':'{} apps start with Windows'},
+ 'el':{'t_startuplist':'Διαχείριση εκκίνησης','startup_title':'Διαχείριση Εκκίνησης',
+       'startup_sub':'Εφαρμογές και υπηρεσίες που ξεκινούν μαζί με τα Windows',
+       'startup_empty':'Δεν βρέθηκαν καταχωρήσεις εκκίνησης.','startup_disable':'Απενεργοποίηση',
+       'startup_admin':'Χρειάζεται admin','startup_missing':'Ο στόχος δεν βρέθηκε',
+       'startup_confirm':'Αφαίρεση του «{}» από την εκκίνηση; Μπορείς πάντα να το ξαναπροσθέσεις.',
+       'startup_removed':'Αφαιρέθηκε από την εκκίνηση ✓','startup_refresh':'Ανανέωση',
+       'startup_src_folder':'Φάκελος εκκίνησης','startup_src_common':'Κοινός φάκελος εκκίνησης',
+       'startup_count':'{} εφαρμογές ξεκινούν με τα Windows'},
+ 'es':{'t_startuplist':'Gestor de inicio','startup_title':'Gestor de Inicio',
+       'startup_sub':'Apps y servicios que se inician con Windows',
+       'startup_empty':'No se encontraron entradas de inicio.','startup_disable':'Desactivar',
+       'startup_admin':'Requiere admin','startup_missing':'Destino no encontrado',
+       'startup_confirm':'¿Quitar "{}" del inicio? Siempre puedes volver a añadirlo.',
+       'startup_removed':'Eliminado del inicio ✓','startup_refresh':'Actualizar',
+       'startup_src_folder':'Carpeta de inicio','startup_src_common':'Carpeta de inicio común',
+       'startup_count':'{} apps se inician con Windows'},
+ 'de':{'t_startuplist':'Autostart-Verwaltung','startup_title':'Autostart-Verwaltung',
+       'startup_sub':'Apps und Dienste, die mit Windows starten',
+       'startup_empty':'Keine Autostart-Einträge gefunden.','startup_disable':'Deaktivieren',
+       'startup_admin':'Admin erforderlich','startup_missing':'Ziel nicht gefunden',
+       'startup_confirm':'"{}" aus dem Autostart entfernen? Du kannst es jederzeit wieder hinzufügen.',
+       'startup_removed':'Aus dem Autostart entfernt ✓','startup_refresh':'Aktualisieren',
+       'startup_src_folder':'Autostart-Ordner','startup_src_common':'Gemeinsamer Autostart-Ordner',
+       'startup_count':'{} Apps starten mit Windows'},
+ 'fr':{'t_startuplist':'Gestionnaire de démarrage','startup_title':'Gestionnaire de Démarrage',
+       'startup_sub':'Applications et services lancés au démarrage de Windows',
+       'startup_empty':'Aucune entrée de démarrage trouvée.','startup_disable':'Désactiver',
+       'startup_admin':'Admin requis','startup_missing':'Cible introuvable',
+       'startup_confirm':'Retirer « {} » du démarrage ? Vous pouvez toujours le rajouter.',
+       'startup_removed':'Retiré du démarrage ✓','startup_refresh':'Actualiser',
+       'startup_src_folder':'Dossier de démarrage','startup_src_common':'Dossier de démarrage commun',
+       'startup_count':'{} applications démarrent avec Windows'},
+ 'it':{'t_startuplist':'Gestione avvio','startup_title':'Gestione Avvio',
+       'startup_sub':'App e servizi avviati con Windows',
+       'startup_empty':'Nessuna voce di avvio trovata.','startup_disable':'Disattiva',
+       'startup_admin':'Richiede admin','startup_missing':'Destinazione non trovata',
+       'startup_confirm':'Rimuovere "{}" dall\'avvio? Puoi sempre riaggiungerlo.',
+       'startup_removed':'Rimosso dall\'avvio ✓','startup_refresh':'Aggiorna',
+       'startup_src_folder':'Cartella di avvio','startup_src_common':'Cartella di avvio comune',
+       'startup_count':'{} app si avviano con Windows'},
+ 'pt':{'t_startuplist':'Gestor de arranque','startup_title':'Gestor de Arranque',
+       'startup_sub':'Apps e serviços que arrancam com o Windows',
+       'startup_empty':'Nenhuma entrada de arranque encontrada.','startup_disable':'Desativar',
+       'startup_admin':'Requer admin','startup_missing':'Destino não encontrado',
+       'startup_confirm':'Remover "{}" do arranque? Pode voltar a adicioná-lo depois.',
+       'startup_removed':'Removido do arranque ✓','startup_refresh':'Atualizar',
+       'startup_src_folder':'Pasta de arranque','startup_src_common':'Pasta de arranque comum',
+       'startup_count':'{} apps arrancam com o Windows'},
+ 'ru':{'t_startuplist':'Диспетчер автозагрузки','startup_title':'Диспетчер Автозагрузки',
+       'startup_sub':'Приложения и службы, запускаемые с Windows',
+       'startup_empty':'Записи автозагрузки не найдены.','startup_disable':'Отключить',
+       'startup_admin':'Нужны права администратора','startup_missing':'Цель не найдена',
+       'startup_confirm':'Удалить «{}» из автозагрузки? Вы всегда можете добавить снова.',
+       'startup_removed':'Удалено из автозагрузки ✓','startup_refresh':'Обновить',
+       'startup_src_folder':'Папка автозагрузки','startup_src_common':'Общая папка автозагрузки',
+       'startup_count':'{} приложений запускаются с Windows'},
+}
+for _lng, _d in STARTUP_I18N.items():
+    CUST_LABELS.setdefault(_lng, {}).update(_d)
+
 # ── DNS Boost tab labels (v2.8) ────────────────────────────────────────
 DNS_I18N = {
  'en':{'dns':'DNS','dns_sub':'Find the fastest DNS for your connection',
@@ -924,6 +994,20 @@ TOOL_DESC = {
 }
 for _lng, _d in TOOL_DESC.items():
     CUST_LABELS.setdefault(_lng, {}).update({'desc__' + k: v for k, v in _d.items()})
+# "Startup manager" hover hint — one consolidated list (Run keys + Startup
+# folders) with orphan detection, vs. the OS's own startupapps page
+_STARTUPLIST_DESC = {
+ 'en':'All auto-start entries in one list, with broken shortcuts flagged',
+ 'el':'Όλες οι καταχωρήσεις αυτόματης εκκίνησης σε μια λίστα, με σήμανση χαλασμένων',
+ 'es':'Todas las entradas de inicio en una lista, con accesos rotos marcados',
+ 'de':'Alle Autostart-Einträge in einer Liste, defekte Verknüpfungen markiert',
+ 'fr':'Toutes les entrées de démarrage réunies, avec les raccourcis cassés signalés',
+ 'it':'Tutte le voci di avvio in un elenco, con i collegamenti rotti segnalati',
+ 'pt':'Todas as entradas de arranque numa lista, com atalhos quebrados assinalados',
+ 'ru':'Все записи автозагрузки в одном списке, битые ярлыки помечены',
+}
+for _lng, _v in _STARTUPLIST_DESC.items():
+    CUST_LABELS.setdefault(_lng, {})['desc__t_startuplist'] = _v
 
 # ── Bar marker (icons vs text) labels (v2.8) ───────────────────────────
 MARKER_I18N = {
@@ -1257,6 +1341,7 @@ CELL_META = (
     ('disk',    'Disk I/O',    '💿', 'show_disk'),
     ('batt',    'Battery',     '🔋', 'show_batt'),
     ('power',   'Power',       '⚡', 'show_power'),
+    ('weather', 'Weather',     '☁',  'show_weather'),
 )
 DEFAULT_CELL_ORDER = [c[0] for c in CELL_META]
 # Customize Window theme (matches the future PulseDeck dashboard)
@@ -1445,28 +1530,86 @@ def get_gpu_tdp_w(name):
 
 _NVSMI_OK = None   # None = untested, False = missing (never retry), True = works
 
-def _nvidia_smi_power():
-    """Return GPU power draw in watts via nvidia-smi, or None.
+def _nvidia_smi_stats():
+    """Return (power_w, temp_c) via a single nvidia-smi call, or (None, None).
     Caches availability: spawning a subprocess every poll on systems WITHOUT
     nvidia-smi (AMD/Intel) cost 10-50 ms on the calling thread per tick and
-    caused visible UI stutter."""
+    caused visible UI stutter. Power and temperature are queried together so
+    _SlowPoller only pays that cost once per tick, not twice."""
     global _NVSMI_OK
     if _NVSMI_OK is False:
-        return None
+        return None, None
     try:
         si = subprocess.STARTUPINFO()
         si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
         r = subprocess.run(
-            ['nvidia-smi', '--query-gpu=power.draw', '--format=csv,noheader,nounits'],
+            ['nvidia-smi', '--query-gpu=power.draw,temperature.gpu',
+             '--format=csv,noheader,nounits'],
             capture_output=True, text=True, timeout=2, startupinfo=si)
         out = (r.stdout or '').strip().splitlines()
         if out:
             _NVSMI_OK = True
-            return float(out[0].strip())
+            parts = [p.strip() for p in out[0].split(',')]
+            power = float(parts[0]) if parts and parts[0] else None
+            temp = float(parts[1]) if len(parts) > 1 and parts[1] else None
+            return power, temp
         _NVSMI_OK = False
     except Exception:
         _NVSMI_OK = False
-    return None
+    return None, None
+
+def _nvidia_smi_power():
+    """Return GPU power draw in watts via nvidia-smi, or None.
+    Kept as a thin wrapper for the startup diagnostics probe;  _SlowPoller
+    itself calls _nvidia_smi_stats() directly to also get temperature."""
+    return _nvidia_smi_stats()[0]
+
+_LHM_OK = None      # None = untested, False = unavailable (never retry), True = works
+_LHM_COMPUTER = None   # cached LibreHardwareMonitor.Hardware.Computer instance
+
+def _lhm_gpu_temp():
+    """Return AMD/Intel GPU core temperature in °C via LibreHardwareMonitor,
+    or None. NVIDIA GPUs use nvidia-smi instead (exact, no admin, cheaper) —
+    this is the fallback for vendors nvidia-smi can't cover.
+
+    No admin needed: unlike CPU temperature (which needs a kernel MSR driver
+    that Windows' Memory Integrity/VBS blocks on many modern PCs), GPU vendor
+    telemetry is exposed through user-mode driver APIs. Caches availability
+    like _nvidia_smi_stats() — a failed .NET/DLL load is retried once, then
+    given up on for the rest of the process lifetime."""
+    global _LHM_OK, _LHM_COMPUTER
+    if _LHM_OK is False:
+        return None
+    try:
+        if _LHM_COMPUTER is None:
+            lhm_dir = os.path.join(_base_dir(), 'lhm')
+            if lhm_dir not in sys.path:
+                sys.path.insert(0, lhm_dir)
+            import clr
+            clr.AddReference(os.path.join(lhm_dir, 'LibreHardwareMonitorLib.dll'))
+            from LibreHardwareMonitor.Hardware import Computer, SensorType
+            computer = Computer()
+            computer.IsGpuEnabled = True
+            computer.Open()
+            _LHM_COMPUTER = computer
+        from LibreHardwareMonitor.Hardware import SensorType
+        for hw in _LHM_COMPUTER.Hardware:
+            hw.Update()
+            for s in hw.Sensors:
+                if s.SensorType == SensorType.Temperature and 'core' in s.Name.lower():
+                    val = s.Value
+                    if val is not None:
+                        _LHM_OK = True
+                        return float(val)
+        # loaded fine but no GPU temp sensor found (e.g. no dGPU) — don't
+        # treat as a hard failure, just nothing to report this tick
+        if _LHM_OK is None:
+            _LHM_OK = True
+        return None
+    except Exception:
+        _LHM_OK = False
+        _LHM_COMPUTER = None
+        return None
 
 def _battery_discharge_w():
     """Return discharge wattage from battery (positive value), or None.
@@ -2198,7 +2341,7 @@ DEFAULTS = {
     'show_ram':  True,
     'show_net':  True,
     'show_gpu':  True,    # GPU utilization %
-    'show_weather': False, # weather removed
+    'show_weather': True,  # weather (Open-Meteo)
     'show_disk': False,   # disk read/write speed
     'show_batt': False,   # battery % (laptops)
     'cpu_freq':  False,   # (inline mode only) CPU clock speed next to CPU %
@@ -2470,6 +2613,138 @@ def action_empty_recyclebin():
     except Exception:
         return False
 
+def _lnk_target_path(lnk_path):
+    """Best-effort .lnk shortcut target extraction, stdlib-only (no pywin32).
+
+    Parses the documented MS-SHLLINK binary format just far enough to read
+    the LinkInfo → LocalBasePath string. Returns None (not a failure — most
+    shortcuts still work fine) for variants this doesn't cover: shortcuts
+    that only carry a shell-namespace ID list (no local path), or that
+    target a UNC/network path via CommonNetworkRelativeLink."""
+    try:
+        with open(lnk_path, 'rb') as f:
+            data = f.read()
+        if len(data) < 76 or data[:4] != b'\x4c\x00\x00\x00':
+            return None
+        flags = int.from_bytes(data[20:24], 'little')
+        pos = 76
+        if flags & 0x01:                       # HasLinkTargetIDList
+            id_list_size = int.from_bytes(data[pos:pos + 2], 'little')
+            pos += 2 + id_list_size
+        if flags & 0x02:                       # HasLinkInfo
+            info_size = int.from_bytes(data[pos:pos + 4], 'little')
+            info = data[pos:pos + info_size]
+            info_flags = int.from_bytes(info[8:12], 'little')
+            if info_flags & 0x01:              # VolumeIDAndLocalBasePath
+                base_off = int.from_bytes(info[16:20], 'little')
+                end = info.find(b'\x00', base_off)
+                if end > base_off:
+                    return info[base_off:end].decode('mbcs', errors='replace')
+        return None
+    except Exception:
+        return None
+
+def _startup_exe_from_cmd(cmd):
+    """Best-effort: pull the leading executable path out of a Run-key
+    command line (quoted path, or an unquoted path up to the first arg)."""
+    cmd = (cmd or '').strip()
+    if not cmd:
+        return None
+    if cmd.startswith('"'):
+        end = cmd.find('"', 1)
+        return cmd[1:end] if end > 0 else None
+    return cmd.split(' ', 1)[0]
+
+def _startup_reg_items(hive, subkey, wow_flag, source_label, editable):
+    items = []
+    try:
+        with winreg.OpenKey(hive, subkey, 0, winreg.KEY_READ | wow_flag) as k:
+            i = 0
+            while True:
+                try:
+                    name, value, _ = winreg.EnumValue(k, i)
+                except OSError:
+                    break
+                i += 1
+                if not isinstance(value, str):
+                    continue
+                exe = _startup_exe_from_cmd(value)
+                items.append({
+                    'name': name, 'source': source_label, 'command': value,
+                    'exists': os.path.exists(os.path.expandvars(exe)) if exe else None,
+                    'editable': editable, 'key': ('reg', hive, subkey, name),
+                })
+    except Exception:
+        pass
+    return items
+
+def _startup_folder_items(folder, source_label, editable):
+    items = []
+    try:
+        for fn in os.listdir(folder):
+            if fn.lower() == 'desktop.ini':
+                continue
+            full = os.path.join(folder, fn)
+            if not os.path.isfile(full):
+                continue
+            target = _lnk_target_path(full) if fn.lower().endswith('.lnk') else full
+            items.append({
+                'name': os.path.splitext(fn)[0], 'source': source_label,
+                'command': target or full,
+                'exists': os.path.exists(target) if target else True,
+                'editable': editable, 'key': ('file', full),
+            })
+    except Exception:
+        pass
+    return items
+
+def collect_startup_items():
+    """Enumerate boot-time auto-start entries: Run keys (HKCU + HKLM, both
+    64/32-bit views) and Startup folders (per-user + all-users). Enumerating
+    is read-only and needs no admin; only HKLM/common-folder entries need
+    admin to actually remove."""
+    items = []
+    items += _startup_reg_items(winreg.HKEY_CURRENT_USER,
+        r'Software\Microsoft\Windows\CurrentVersion\Run', 0, 'HKCU', True)
+    items += _startup_reg_items(winreg.HKEY_LOCAL_MACHINE,
+        r'Software\Microsoft\Windows\CurrentVersion\Run',
+        winreg.KEY_WOW64_64KEY, 'HKLM', False)
+    items += _startup_reg_items(winreg.HKEY_LOCAL_MACHINE,
+        r'Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Run',
+        winreg.KEY_WOW64_32KEY, 'HKLM32', False)
+    try:
+        user_startup = os.path.join(
+            os.environ.get('APPDATA', ''),
+            r'Microsoft\Windows\Start Menu\Programs\Startup')
+        items += _startup_folder_items(user_startup, 'folder', True)
+    except Exception:
+        pass
+    try:
+        common_startup = os.path.join(
+            os.environ.get('ProgramData', ''),
+            r'Microsoft\Windows\Start Menu\Programs\Startup')
+        items += _startup_folder_items(common_startup, 'common', False)
+    except Exception:
+        pass
+    return items
+
+def action_remove_startup_item(key):
+    """Remove one startup entry. HKCU / per-user-folder entries (editable)
+    need no admin; HKLM / common-folder entries will simply fail here —
+    surfaced to the user as 'needs admin' rather than force-prompting UAC."""
+    try:
+        if key[0] == 'reg':
+            _, hive, subkey, name = key
+            with winreg.OpenKey(hive, subkey, 0, winreg.KEY_SET_VALUE) as k:
+                winreg.DeleteValue(k, name)
+            return True
+        elif key[0] == 'file':
+            os.remove(key[1])
+            return True
+    except Exception:
+        return False
+    return False
+
 def action_reset_gpu_driver():
     """Send Win + Ctrl + Shift + B — the Windows shortcut to reset the
     display driver. Briefly blacks the screen and beeps; the desktop redraws
@@ -2596,6 +2871,7 @@ TOOLS_CATALOG = [
     ('cat_perf', '⚡', [
         ('t_power',       '🔋', ('applet', 'powercfg.cpl')),
         ('t_startup',     '🚀', ('settings', 'ms-settings:startupapps')),
+        ('t_startuplist', '📋', ('action', 'startup_list')),
         ('t_visualfx',    '🎚', ('exe', ['SystemPropertiesPerformance.exe'])),
         ('t_graphics',    '🖥', ('settings', 'ms-settings:display-advancedgraphics')),
         ('t_explorer',    '🔄', ('action', 'restart_explorer')),
@@ -3231,6 +3507,8 @@ class _SlowPoller(threading.Thread):
         self.battery      = None   # psutil battery namedtuple | None
         self.disk_perdisk = {}     # {disk_name: sdiskio namedtuple}
         self.nvidia_w     = None   # float | None  (GPU watts from nvidia-smi)
+        self.nvidia_temp_c = None  # float | None  (GPU °C from nvidia-smi)
+        self.lhm_gpu_temp_c = None # float | None  (AMD/Intel GPU °C, no nvidia-smi)
         self._stop        = False
 
     def run(self):
@@ -3253,9 +3531,16 @@ class _SlowPoller(threading.Thread):
         except Exception:
             pass
         try:
-            self.nvidia_w = _nvidia_smi_power()
+            self.nvidia_w, self.nvidia_temp_c = _nvidia_smi_stats()
         except Exception:
             pass
+        # AMD/Intel fallback — only once we're sure there's no NVIDIA GPU to
+        # read from nvidia-smi (skips the .NET call entirely on NVIDIA rigs)
+        if _NVSMI_OK is False:
+            try:
+                self.lhm_gpu_temp_c = _lhm_gpu_temp()
+            except Exception:
+                pass
 
     def stop(self):
         self._stop = True
@@ -3434,6 +3719,7 @@ class CustomizeWindow:
             ('general',    'general',    '⚙'),
             ('metrics',    'metrics',    '📊'),
             ('appearance', 'appearance', '🎨'),
+            ('weather',    'weather_lbl','🌤'),
             ('system',     'system',     '💻'),
             ('tools',      'tools',      '🧰'),
             ('about',      'about',      'ℹ'),
@@ -4078,7 +4364,18 @@ class CustomizeWindow:
                           [('C', '°C'), ('F', '°F')],
                           on_change=lambda v: setattr(self.w, '_weather_dirty', True))
 
-    # ── Alerts tab ──
+    # ── Weather tab ──
+    def _tab_weather(self):
+        T = self.T; L = self.L
+        self._section('🌤  ' + L.get('weather_lbl', 'Weather'))
+        body = tk.Frame(self._content, bg=T['bg']); body.pack(fill='both', expand=True)
+        self._check_row(body, L.get('weather_lbl', 'Weather'), 'show_weather',
+                        on_toggle=lambda v: (self.w._rebuild(),
+                                              self.w._ensure_weather_thread() if v else None))
+        tk.Frame(body, bg=T['line'], height=1).pack(fill='x', padx=24, pady=(8, 4))
+        self._weather_settings(body)
+
+    # ── Alerts tab (dormant — earthquakes stay removed; kept for reference) ──
     def _tab_alerts(self):
         T = self.T; L = self.L
         self._section('🚨  ' + L['alerts'])
@@ -4560,6 +4857,13 @@ class CustomizeWindow:
             if gm is not None and vt:
                 kv(s, 'VRAM in use',
                    f"{gm:.1f} / {vt:.1f} GB  ({gm/vt*100:.0f}%)")
+            _slow = getattr(self.w, '_slow', None)
+            gt = getattr(_slow, 'nvidia_temp_c', None)
+            if gt is None:
+                gt = getattr(_slow, 'lhm_gpu_temp_c', None)
+            if gt is not None:
+                kv(s, 'Temperature', f"{gt:.0f}°C",
+                   T['red'] if gt >= 85 else (T['orange'] if gt >= 70 else T['green']))
             tk.Frame(s, bg=T['panel'], height=2).pack()
 
         # ── Motherboard ──
@@ -4746,7 +5050,16 @@ class CustomizeWindow:
                 rv += f"  ({len(mods)}/{ram['slots']} slots)"
             kv(s, 'RAM', rv)
         if gpus:
-            kv(s, 'GPU', ', '.join(g.get('name', '') for g in gpus if g.get('name')))
+            gv = ', '.join(g.get('name', '') for g in gpus if g.get('name'))
+            _slow = getattr(self.w, '_slow', None)
+            gt = getattr(_slow, 'nvidia_temp_c', None)
+            if gt is None:
+                gt = getattr(_slow, 'lhm_gpu_temp_c', None)
+            gcol = None
+            if gt is not None:
+                gv += f"  ·  {gt:.0f}°C"
+                gcol = T['red'] if gt >= 85 else (T['orange'] if gt >= 70 else T['green'])
+            kv(s, 'GPU', gv, gcol)
         mb = info.get('mobo', {})
         if mb.get('product') or mb.get('manufacturer'):
             kv(s, L.get('sys_mobo', 'Motherboard'),
@@ -5044,6 +5357,9 @@ class CustomizeWindow:
         if target == 'dns_boost':
             self.show_tab('dns')          # full DNS Boost panel, returns via its Back link
             return
+        if target == 'startup_list':
+            self.show_tab('startup')      # Startup Manager panel, returns via its Back link
+            return
         if target == 'flush_dns':
             action_flush_dns()
             self._tool_toast(L.get('tt_dns', 'DNS cache flushed'))
@@ -5297,6 +5613,115 @@ class CustomizeWindow:
             threading.Thread(target=_worker, daemon=True).start()
         find_btn.bind('<Button-1>', _start)
 
+    def _tab_startup(self):
+        T = self.T; L = self.L
+        f = tk.Frame(self._content, bg=T['bg'])
+        f.pack(side='top', fill='x', padx=24, pady=(14, 2))
+        tk.Label(f, text='🚀  ' + L.get('startup_title', 'Startup Manager'), fg=T['text'], bg=T['bg'],
+                 font=('Segoe UI', 12, 'bold')).pack(side='left')
+        # back to Tools (Startup Manager lives inside the Tools tab)
+        back = tk.Label(f, text='←  ' + L.get('tools', 'Tools'), fg=T['cyan'], bg=T['bg'],
+                        font=('Segoe UI', 9), cursor='hand2')
+        back.pack(side='right')
+        back.bind('<Button-1>', lambda e: self.show_tab('tools'))
+        tk.Label(self._content, text='   ' + L.get('startup_sub', ''), fg=T['muted'],
+                 bg=T['bg'], font=('Segoe UI', 9)).pack(side='top', anchor='w', padx=24)
+        tk.Frame(self._content, bg=T['line'], height=1).pack(
+            side='top', fill='x', padx=24, pady=(6, 0))
+        # summary count (left) + refresh (right)
+        ar = tk.Frame(self._content, bg=T['bg'])
+        ar.pack(side='top', fill='x', padx=24, pady=(10, 4))
+        count_lbl = tk.Label(ar, text='', fg=T['muted'], bg=T['bg'], font=('Segoe UI', 9))
+        count_lbl.pack(side='left')
+        refresh_btn = tk.Label(ar, text='🔄  ' + L.get('startup_refresh', 'Refresh'),
+                               fg=T['cyan'], bg=T['panel'], font=('Segoe UI', 9),
+                               padx=12, pady=5, cursor='hand2')
+        refresh_btn.pack(side='right')
+        # scrollable body
+        outer = tk.Frame(self._content, bg=T['bg'])
+        outer.pack(fill='both', expand=True, padx=20, pady=4)
+        canvas = tk.Canvas(outer, bg=T['bg'], highlightthickness=0, bd=0)
+        sb = tk.Scrollbar(outer, orient='vertical', command=canvas.yview,
+                          bg=T['panel'], troughcolor=T['bg2'], activebackground=T['cyan'],
+                          bd=0, highlightthickness=0, width=10)
+        canvas.configure(yscrollcommand=sb.set)
+        sb.pack(side='right', fill='y'); canvas.pack(side='left', fill='both', expand=True)
+        body = tk.Frame(canvas, bg=T['bg'])
+        body_window = canvas.create_window((0, 0), window=body, anchor='nw')
+        canvas.bind('<Configure>',
+                    lambda e: canvas.itemconfig(body_window, width=e.width))
+        body.bind('<Configure>',
+                  lambda e: canvas.configure(scrollregion=canvas.bbox('all')))
+        canvas.bind_all('<MouseWheel>', lambda e: _safe_wheel(canvas, e))
+
+        SRC_LABEL = {
+            'HKCU': 'HKCU', 'HKLM': 'HKLM', 'HKLM32': 'HKLM (32-bit)',
+            'folder': L.get('startup_src_folder', 'Startup folder'),
+            'common': L.get('startup_src_common', 'Common Startup folder'),
+        }
+        SRC_COLOR = {
+            'HKCU': T['cyan'], 'HKLM': T['orange'], 'HKLM32': T['orange'],
+            'folder': T['green'], 'common': T['orange'],
+        }
+
+        def _load():
+            for c in body.winfo_children():
+                c.destroy()
+            items = collect_startup_items()
+            count_lbl.config(
+                text=L.get('startup_count', '{} apps start with Windows').format(len(items)))
+            if not items:
+                tk.Label(body, text=L.get('startup_empty', 'No startup entries found.'),
+                         fg=T['muted'], bg=T['bg'], font=('Segoe UI', 10)).pack(pady=24)
+            else:
+                for it in items:
+                    _row(body, it)
+            try: canvas.configure(scrollregion=canvas.bbox('all'))
+            except Exception: pass
+
+        def _remove(it):
+            def _go():
+                ok = action_remove_startup_item(it['key'])
+                self._tool_toast(L.get('startup_removed', 'Removed from startup ✓') if ok
+                                 else L.get('startup_admin', 'Needs admin'))
+                _load()
+            self._confirm(
+                L.get('startup_confirm', 'Remove "{}" from startup?').format(it['name']),
+                _go)
+
+        def _row(parent, it):
+            row = tk.Frame(parent, bg=T['panel']); row.pack(fill='x', padx=10, pady=2)
+            inner = tk.Frame(row, bg=T['panel']); inner.pack(fill='x', padx=10, pady=7)
+            top = tk.Frame(inner, bg=T['panel']); top.pack(fill='x')
+            tk.Label(top, text='🚀', bg=T['panel'], fg=T['text'],
+                     font=('Segoe UI', 11), width=2).pack(side='left')
+            tk.Label(top, text=it['name'], bg=T['panel'], fg=T['text'],
+                     font=('Segoe UI', 10, 'bold'), anchor='w').pack(side='left', padx=(2, 8))
+            tk.Label(top, text=SRC_LABEL.get(it['source'], it['source']), bg=T['panel'],
+                     fg=SRC_COLOR.get(it['source'], T['muted']),
+                     font=('Segoe UI', 8, 'bold')).pack(side='left')
+            if it['exists'] is False:
+                tk.Label(top, text='⚠ ' + L.get('startup_missing', 'Target not found'),
+                         bg=T['panel'], fg=T['red'], font=('Segoe UI', 8, 'bold')
+                         ).pack(side='left', padx=(8, 0))
+            if it['editable']:
+                act = tk.Label(top, text='🗑  ' + L.get('startup_disable', 'Disable'),
+                               bg=T['panel'], fg=T['orange'], font=('Segoe UI', 9),
+                               cursor='hand2')
+                act.bind('<Button-1>', lambda e, it=it: _remove(it))
+            else:
+                act = tk.Label(top, text='🔒 ' + L.get('startup_admin', 'Needs admin'),
+                               bg=T['panel'], fg=T['muted'], font=('Segoe UI', 8))
+            act.pack(side='right')
+            cmd = it.get('command') or ''
+            if cmd:
+                tk.Label(inner, text=cmd, bg=T['panel'], fg=T['muted'],
+                         font=('Consolas', 8), anchor='w', wraplength=560,
+                         justify='left').pack(fill='x', pady=(3, 0))
+
+        refresh_btn.bind('<Button-1>', lambda e: _load())
+        _load()
+
     def _tab_about(self):
         T = self.T; L = self.L
         body = tk.Frame(self._content, bg=T['bg']); body.pack(fill='both', expand=True)
@@ -5366,13 +5791,13 @@ class Widget:
     def __init__(self):
         self._first_run = not os.path.exists(CONFIG_PATH)
         self.cfg = load_config()
-        # weather + earthquake features were removed — scrub them from any
-        # existing saved config so old installs don't keep showing them.
-        self.cfg['show_weather'] = False
+        # earthquake alerts were removed — scrub them from any existing saved
+        # config so old installs don't keep showing them. (Weather was
+        # restored in 2.10 — no longer scrubbed.)
         self.cfg['quakes_on'] = False
         if isinstance(self.cfg.get('cell_order'), list):
             self.cfg['cell_order'] = [c for c in self.cfg['cell_order']
-                                      if c not in ('weather', 'quake')]
+                                      if c != 'quake']
         self.lang = self.cfg.get('language') or detect_language()
         if self.lang not in T:
             self.lang = 'en'
@@ -5460,6 +5885,7 @@ class Widget:
         self._bind_events()
         self._position()
         self._ensure_gpu_thread()
+        self._ensure_weather_thread()
 
         self._update()
         self._animate()
@@ -5573,12 +5999,14 @@ class Widget:
 
     # action helpers (always run on Tk thread)
     def _act_metric(self, key):
-        keys = ('show_cpu','show_ram','show_net','show_disk','show_batt','show_gpu','show_power')
+        keys = ('show_cpu','show_ram','show_net','show_disk','show_batt','show_gpu','show_weather','show_power')
         if self.cfg.get(key) and not any(self.cfg.get(o) for o in keys if o != key):
             return
         self._set(key, not self.cfg.get(key)); self._rebuild()
         if key == 'show_gpu' and self.cfg.get('show_gpu'):
             self._ensure_gpu_thread()
+        if key == 'show_weather' and self.cfg.get('show_weather'):
+            self._ensure_weather_thread()
 
     def _act_weather_unit(self, unit):
         self._set('weather_unit', unit)
@@ -5768,6 +6196,7 @@ class Widget:
             metric('show_disk', t('disk')),
             *([metric('show_batt', t('batt'))] if self._has_batt else []),
             metric('show_power', '⚡ ' + POWER_LABEL.get(self.lang, POWER_LABEL['en'])),
+            metric('show_weather', t('weather')),
         )
         layout = Menu(
             radio('orientation', 'horizontal', t('horizontal')),
@@ -6428,12 +6857,22 @@ class Widget:
                                           font=vf, anchor='w', padx=2, width=5)
                 self.lbl_power.pack(side='left'); self._rgb_targets.append(self.lbl_power)
             self._tip_cells.append((f, 'power', None))
+        def b_weather():
+            f = new_cell()
+            self.lbl_wx_icon = tk.Label(f, image=self._wx_icons.get('wx_cloudy'),
+                                        bg=self.bg, bd=0)
+            self.lbl_wx_icon.pack(side='left', padx=(4, 1))
+            self.lbl_wx = tk.Label(f, text='', fg=valcol, bg=self.bg,
+                                   font=(vf if not stacked else nf), width=5, anchor='w', padx=2)
+            self.lbl_wx.pack(side='left'); self._rgb_targets.append(self.lbl_wx)
+            self._tip_cells.append((f, 'weather', None))
         builders = {'cpu': b_cpu, 'ram': b_ram, 'gpu': b_gpu, 'net': b_net,
-                    'disk': b_disk, 'batt': b_batt, 'power': b_power}
+                    'disk': b_disk, 'batt': b_batt, 'power': b_power,
+                    'weather': b_weather}
         visible_keys = {
             'cpu': 'show_cpu', 'ram': 'show_ram', 'gpu': 'show_gpu',
             'net': 'show_net', 'disk': 'show_disk', 'batt': 'show_batt',
-            'power': 'show_power',
+            'power': 'show_power', 'weather': 'show_weather',
         }
         # Resolve order, then forcibly push critical cells to the end if asked
         order = list(self.cfg.get('cell_order') or DEFAULT_CELL_ORDER)
@@ -6756,7 +7195,7 @@ class Widget:
         return f'{used:.1f}/{total:.0f}'
 
     def _tip_content(self, kind, extra):
-        GREEN='#3fb950'; ORANGE='#ffa657'; BLUE='#58a6ff'; PURPLE='#a371f7'
+        GREEN='#3fb950'; ORANGE='#ffa657'; BLUE='#58a6ff'; PURPLE='#a371f7'; RED='#f85149'
         tp = self.tip
         rows = []; bars = []; title = ('', '')
         try:
@@ -6785,6 +7224,12 @@ class Widget:
                     rows.append((tp('vramused'), f'{self._gpu_mem:.1f} GB', GREEN))
                 elif self._vram_total:
                     rows.append(('VRAM', f'{self._vram_total:.1f} GB', GREEN))
+                gt = self._slow.nvidia_temp_c
+                if gt is None:
+                    gt = self._slow.lhm_gpu_temp_c
+                if gt is not None:
+                    rows.append((tp('temp'), f'{gt:.0f}°C',
+                                 RED if gt >= 85 else (ORANGE if gt >= 70 else GREEN)))
                 rows.append((tp('source'), '', None))
             elif kind == 'net':
                 title = (self.t('net'), '')
