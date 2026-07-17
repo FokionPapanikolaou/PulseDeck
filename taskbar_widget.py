@@ -3167,15 +3167,28 @@ def weather_icon_name(code):
     if code >= 95: return 'wx_storm'
     return 'wx_cloudy'
 
-def fetch_weather(unit='C', city=''):
+def fetch_weather(unit='C', city='', lang='en'):
     """Return a rich weather dict or None. Best-effort.
     Keys: temp, code, city, feels, humidity, wind, wind_unit,
-          daily=[{code,tmax,tmin,wd}] (next 3 days)."""
+          daily=[{code,tmax,tmin,wd}] (next 3 days).
+
+    lang: the app's current UI language (e.g. 'el'). The geocoder's
+    `language` param must match the SCRIPT the city name is typed in — a
+    Greek city typed in Greek ('Θεσσαλονίκη') returns zero results unless
+    language=el is passed; Latin-script names work fine either way (and
+    come back localized as a bonus, e.g. 'London' -> 'Λονδίνο'). If the
+    user's app language doesn't match what they typed, retry once with the
+    generic 'en' matcher rather than failing outright."""
     try:
         if city:
             q = urllib.parse.quote(city)
-            g = _http_json(f'https://geocoding-api.open-meteo.com/v1/search?name={q}&count=1')
+            g = _http_json(
+                f'https://geocoding-api.open-meteo.com/v1/search?name={q}&count=1&language={lang}')
             res = (g or {}).get('results')
+            if not res and lang != 'en':
+                g = _http_json(
+                    f'https://geocoding-api.open-meteo.com/v1/search?name={q}&count=1&language=en')
+                res = (g or {}).get('results')
             if not res:
                 return None
             lat, lon, name = res[0]['latitude'], res[0]['longitude'], res[0].get('name', city)
@@ -6349,7 +6362,8 @@ class Widget:
         while self.cfg.get('show_weather'):
             try:
                 self._weather = fetch_weather(self.cfg.get('weather_unit', 'C'),
-                                              self.cfg.get('weather_city', ''))
+                                              self.cfg.get('weather_city', ''),
+                                              self.lang)
             except Exception:
                 # Network/API blip — keep the loop alive so we retry next cycle.
                 pass
