@@ -1033,14 +1033,22 @@ for _lng, _v in _RATE.items():
 
 # ── Weather location settings (moved into Appearance from the old tray) ──
 WEATHER_I18N = {
- 'en':{'weather_lbl':'Weather','weather_city':'Weather city','weather_city_hint':'Leave empty to locate automatically by your IP.'},
- 'el':{'weather_lbl':'Καιρός','weather_city':'Πόλη καιρού','weather_city_hint':'Άφησέ το κενό για αυτόματο εντοπισμό μέσω IP.'},
- 'es':{'weather_lbl':'Tiempo','weather_city':'Ciudad del tiempo','weather_city_hint':'Déjalo vacío para localizar automáticamente por IP.'},
- 'de':{'weather_lbl':'Wetter','weather_city':'Wetter-Stadt','weather_city_hint':'Leer lassen, um automatisch per IP zu lokalisieren.'},
- 'fr':{'weather_lbl':'Météo','weather_city':'Ville météo','weather_city_hint':'Laissez vide pour localiser automatiquement par IP.'},
- 'it':{'weather_lbl':'Meteo','weather_city':'Città meteo','weather_city_hint':'Lascia vuoto per localizzare automaticamente tramite IP.'},
- 'pt':{'weather_lbl':'Tempo','weather_city':'Cidade do tempo','weather_city_hint':'Deixe vazio para localizar automaticamente por IP.'},
- 'ru':{'weather_lbl':'Погода','weather_city':'Город погоды','weather_city_hint':'Оставьте пустым для автоопределения по IP.'},
+ 'en':{'weather_lbl':'Weather','weather_city':'Weather city','weather_city_hint':'Leave empty to locate automatically by your IP.',
+       'weather_auto':'Auto (by IP)'},
+ 'el':{'weather_lbl':'Καιρός','weather_city':'Πόλη καιρού','weather_city_hint':'Άφησέ το κενό για αυτόματο εντοπισμό μέσω IP.',
+       'weather_auto':'Αυτόματα (μέσω IP)'},
+ 'es':{'weather_lbl':'Tiempo','weather_city':'Ciudad del tiempo','weather_city_hint':'Déjalo vacío para localizar automáticamente por IP.',
+       'weather_auto':'Automático (por IP)'},
+ 'de':{'weather_lbl':'Wetter','weather_city':'Wetter-Stadt','weather_city_hint':'Leer lassen, um automatisch per IP zu lokalisieren.',
+       'weather_auto':'Automatisch (per IP)'},
+ 'fr':{'weather_lbl':'Météo','weather_city':'Ville météo','weather_city_hint':'Laissez vide pour localiser automatiquement par IP.',
+       'weather_auto':'Automatique (par IP)'},
+ 'it':{'weather_lbl':'Meteo','weather_city':'Città meteo','weather_city_hint':'Lascia vuoto per localizzare automaticamente tramite IP.',
+       'weather_auto':'Automatico (via IP)'},
+ 'pt':{'weather_lbl':'Tempo','weather_city':'Cidade do tempo','weather_city_hint':'Deixe vazio para localizar automaticamente por IP.',
+       'weather_auto':'Automático (por IP)'},
+ 'ru':{'weather_lbl':'Погода','weather_city':'Город погоды','weather_city_hint':'Оставьте пустым для автоопределения по IP.',
+       'weather_auto':'Автоматически (по IP)'},
 }
 for _lng, _d in WEATHER_I18N.items():
     CUST_LABELS.setdefault(_lng, {}).update(_d)
@@ -4358,11 +4366,31 @@ class CustomizeWindow:
                           [('bytes', 'MB/s'), ('bits', 'Mbps')])
 
     def _weather_settings(self, body):
-        """Weather unit (city input removed — weather auto-locates by IP)."""
+        """Weather unit + location (a city, or auto-locate by IP)."""
         T = self.T; L = self.L
         self._radio_group(body, L.get('weather_lbl', 'Weather') + ' °', 'weather_unit',
                           [('C', '°C'), ('F', '°F')],
                           on_change=lambda v: setattr(self.w, '_weather_dirty', True))
+        # location row: current city (or "auto by IP") + a button to change it
+        row = tk.Frame(body, bg=T['bg']); row.pack(fill='x', padx=24, pady=(10, 2))
+        tk.Label(row, text=L.get('weather_city', 'City'), fg=T['muted'], bg=T['bg'],
+                 font=('Segoe UI', 10), width=20, anchor='w').pack(side='left')
+        def _display():
+            c = self.w.cfg.get('weather_city', '')
+            return c if c else ('📍 ' + L.get('weather_auto', 'Auto (by IP)'))
+        city_lbl = tk.Label(row, text=_display(), fg=T['text'], bg=T['bg'],
+                            font=('Segoe UI', 10))
+        city_lbl.pack(side='left', padx=(0, 10))
+        change = tk.Label(row, text='✏  ' + self.w.t('setcity'), fg=T['cyan'], bg=T['panel'],
+                          font=('Segoe UI', 9), padx=10, pady=4, cursor='hand2')
+        change.pack(side='left')
+        def _on_change(_e=None):
+            result = self.w._act_set_city(parent=self._win, title=L.get('weather_city', 'City'))
+            if result is not None:
+                city_lbl.config(text=_display())
+        change.bind('<Button-1>', _on_change)
+        tk.Label(body, text='   ' + L.get('weather_city_hint', ''), fg=T['muted'],
+                 bg=T['bg'], font=('Segoe UI', 8)).pack(anchor='w', padx=24, pady=(2, 0))
 
     # ── Weather tab ──
     def _tab_weather(self):
@@ -6012,18 +6040,27 @@ class Widget:
         self._set('weather_unit', unit)
         self._weather_dirty = True          # trigger a fast refetch
 
-    def _act_set_city(self):
+    def _act_set_city(self, parent=None, title=None, prompt=None):
+        """Prompt for a weather city (empty = auto-locate by IP). Returns the
+        new value (stripped) on change, or None if the user cancelled/left it
+        unchanged — lets the caller refresh its own display without polling."""
         try:
             from tkinter import simpledialog
-            city = simpledialog.askstring('Weather', 'City (empty = auto by IP):',
-                                          initialvalue=self.cfg.get('weather_city', ''),
-                                          parent=self.root)
-            if city is not None:
-                self._set('weather_city', city.strip())
-                self._weather_dirty = True
-                self._ensure_weather_thread()
+            city = simpledialog.askstring(
+                title or self.t('setcity'),
+                prompt or (self.t('setcity') + '  (' + CUST_LABELS.get(
+                    self.lang, CUST_LABELS['en']).get('weather_city_hint', '') + ')'),
+                initialvalue=self.cfg.get('weather_city', ''),
+                parent=parent or self.root)
+            if city is None:
+                return None
+            city = city.strip()
+            self._set('weather_city', city)
+            self._weather_dirty = True
+            self._ensure_weather_thread()
+            return city
         except Exception:
-            pass
+            return None
 
     def _act_set_rebuild(self, key, val):
         self._set(key, val); self._rebuild()
