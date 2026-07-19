@@ -1033,21 +1033,21 @@ for _lng, _v in _RATE.items():
 
 # ── Weather location settings (moved into Appearance from the old tray) ──
 WEATHER_I18N = {
- 'en':{'weather_lbl':'Weather','weather_city':'Weather city','weather_city_hint':'Leave empty to locate automatically by your IP.',
+ 'en':{'weather_lbl':'Weather','weather_city':'Weather city','weather_city_hint':'Leave empty to locate automatically (Windows Location if allowed, otherwise by IP).',
        'weather_auto':'Auto (by IP)'},
- 'el':{'weather_lbl':'Καιρός','weather_city':'Πόλη καιρού','weather_city_hint':'Άφησέ το κενό για αυτόματο εντοπισμό μέσω IP.',
+ 'el':{'weather_lbl':'Καιρός','weather_city':'Πόλη καιρού','weather_city_hint':'Άφησέ το κενό για αυτόματο εντοπισμό (Τοποθεσία Windows αν επιτρέπεται, αλλιώς μέσω IP).',
        'weather_auto':'Αυτόματα (μέσω IP)'},
- 'es':{'weather_lbl':'Tiempo','weather_city':'Ciudad del tiempo','weather_city_hint':'Déjalo vacío para localizar automáticamente por IP.',
+ 'es':{'weather_lbl':'Tiempo','weather_city':'Ciudad del tiempo','weather_city_hint':'Déjalo vacío para localizar automáticamente (Ubicación de Windows si está permitida, o por IP).',
        'weather_auto':'Automático (por IP)'},
- 'de':{'weather_lbl':'Wetter','weather_city':'Wetter-Stadt','weather_city_hint':'Leer lassen, um automatisch per IP zu lokalisieren.',
+ 'de':{'weather_lbl':'Wetter','weather_city':'Wetter-Stadt','weather_city_hint':'Leer lassen für automatische Ortung (Windows-Standort falls erlaubt, sonst per IP).',
        'weather_auto':'Automatisch (per IP)'},
- 'fr':{'weather_lbl':'Météo','weather_city':'Ville météo','weather_city_hint':'Laissez vide pour localiser automatiquement par IP.',
+ 'fr':{'weather_lbl':'Météo','weather_city':'Ville météo','weather_city_hint':'Laissez vide pour localiser automatiquement (localisation Windows si autorisée, sinon par IP).',
        'weather_auto':'Automatique (par IP)'},
- 'it':{'weather_lbl':'Meteo','weather_city':'Città meteo','weather_city_hint':'Lascia vuoto per localizzare automaticamente tramite IP.',
+ 'it':{'weather_lbl':'Meteo','weather_city':'Città meteo','weather_city_hint':'Lascia vuoto per la localizzazione automatica (Posizione di Windows se consentita, altrimenti via IP).',
        'weather_auto':'Automatico (via IP)'},
- 'pt':{'weather_lbl':'Tempo','weather_city':'Cidade do tempo','weather_city_hint':'Deixe vazio para localizar automaticamente por IP.',
+ 'pt':{'weather_lbl':'Tempo','weather_city':'Cidade do tempo','weather_city_hint':'Deixe vazio para localizar automaticamente (Localização do Windows se permitida, senão por IP).',
        'weather_auto':'Automático (por IP)'},
- 'ru':{'weather_lbl':'Погода','weather_city':'Город погоды','weather_city_hint':'Оставьте пустым для автоопределения по IP.',
+ 'ru':{'weather_lbl':'Погода','weather_city':'Город погоды','weather_city_hint':'Оставьте пустым для автоопределения (службы геолокации Windows, иначе по IP).',
        'weather_auto':'Автоматически (по IP)'},
 }
 for _lng, _d in WEATHER_I18N.items():
@@ -3175,6 +3175,58 @@ def _http_json(url, timeout=6):
     with urllib.request.urlopen(req, timeout=timeout) as r:
         return json.loads(r.read().decode('utf-8', 'ignore'))
 
+_SYSLOC_CACHE = (None, 0.0)   # ((lat, lon) | None, checked-at) — see _system_location
+
+def _system_location(timeout=10):
+    """(lat, lon) from the Windows Location Service, or None.
+
+    More accurate AND more private than the IP lookup (nothing leaves the
+    machine to get a fix), but only works when the user has Location enabled —
+    callers fall back to IP geolocation when this returns None. A registry
+    pre-check skips the whole attempt instantly when the system-wide Location
+    switch is off, so the common disabled case costs nothing. Results (either
+    way) are cached: a fix for 1 h, a failure for 10 min so flipping Location
+    on in Settings is picked up within minutes."""
+    global _SYSLOC_CACHE
+    loc, ts = _SYSLOC_CACHE
+    age = time.time() - ts
+    if ts and (age < 3600 if loc else age < 600):
+        return loc
+    try:
+        k = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
+                           r'SOFTWARE\Microsoft\Windows\CurrentVersion'
+                           r'\CapabilityAccessManager\ConsentStore\location')
+        val, _ = winreg.QueryValueEx(k, 'Value')
+        winreg.CloseKey(k)
+        if str(val).lower() != 'allow':
+            _SYSLOC_CACHE = (None, time.time())
+            return None
+    except OSError:
+        pass   # can't tell — let the watcher try
+    try:
+        ps = (
+            "Add-Type -AssemblyName System.Device;"
+            "$w=New-Object System.Device.Location.GeoCoordinateWatcher;"
+            "$w.Start();$d=(Get-Date).AddSeconds(%d);"
+            "while((Get-Date) -lt $d -and ($w.Status -ne 'Ready' -or "
+            "$w.Position.Location.IsUnknown)){Start-Sleep -Milliseconds 250};"
+            "if(-not $w.Position.Location.IsUnknown){"
+            "'{0} {1}' -f $w.Position.Location.Latitude,$w.Position.Location.Longitude};"
+            "$w.Stop()" % max(3, timeout - 2))
+        r = subprocess.run(['powershell', '-NoProfile', '-NonInteractive',
+                            '-Command', ps],
+                           capture_output=True, text=True, timeout=timeout + 4,
+                           startupinfo=_silent_startupinfo())
+        out = (r.stdout or '').strip().split()
+        if len(out) == 2:
+            loc = (float(out[0].replace(',', '.')), float(out[1].replace(',', '.')))
+            _SYSLOC_CACHE = (loc, time.time())
+            return loc
+    except Exception:
+        pass
+    _SYSLOC_CACHE = (None, time.time())
+    return None
+
 def weather_icon_name(code):
     if code == 0: return 'wx_clear'
     if code in (1, 2): return 'wx_partly'
@@ -3227,9 +3279,24 @@ def fetch_weather(unit='C', city='', lang='en'):
                 return None
             lat, lon, name = res[0]['latitude'], res[0]['longitude'], res[0].get('name', city)
         else:
-            g = _http_json('https://ipapi.co/json/')
-            lat, lon = g['latitude'], g['longitude']
-            name = g.get('city', '')
+            # Prefer the Windows Location Service (exact, nothing sent to a
+            # third party for the fix); fall back to IP geolocation when
+            # Location is off or no fix arrives.
+            loc = _system_location()
+            if loc:
+                lat, lon = loc
+                name = ''
+                try:
+                    rg = _http_json(
+                        'https://api.bigdatacloud.net/data/reverse-geocode-client'
+                        f'?latitude={lat}&longitude={lon}&localityLanguage={lang}')
+                    name = (rg or {}).get('city') or (rg or {}).get('locality') or ''
+                except Exception:
+                    pass
+            else:
+                g = _http_json('https://ipapi.co/json/')
+                lat, lon = g['latitude'], g['longitude']
+                name = g.get('city', '')
         tu = 'fahrenheit' if unit == 'F' else 'celsius'
         wu = 'mph' if unit == 'F' else 'kmh'
         w = _http_json(

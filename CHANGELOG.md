@@ -7,6 +7,12 @@ All notable changes to **PulseDeck** are documented here.
 ## [Unreleased]
 
 ### Added
+- **Weather auto-locate now prefers the Windows Location Service** (exact
+  position, resolved entirely on the PC) over IP geolocation, falling back to
+  the IP lookup when Location is off or no fix arrives. The city name for a
+  system fix comes from a free reverse-geocoding call; the result is cached
+  (1 h) so the location service isn't polled on every refresh. The MSIX
+  manifest declares the normal `location` device capability.
 - **Weather is back** — restored as an opt-in bar cell + its own "Weather"
   settings tab (°C/°F), auto-locating by IP. Earthquake alerts stay removed.
 - **GPU temperature** on the bar/tooltip/System tab — NVIDIA via `nvidia-smi`

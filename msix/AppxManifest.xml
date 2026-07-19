@@ -38,6 +38,9 @@
 
   <Capabilities>
     <rescap:Capability Name="runFullTrust" />
+    <!-- weather auto-locate prefers the Windows Location Service over IP
+         geolocation; a normal device capability, user-consented in Settings -->
+    <DeviceCapability Name="location" />
   </Capabilities>
 
   <Applications>

@@ -26,18 +26,24 @@ locally in your user profile (the package's `LocalState` folder or, for the
 portable build, next to the executable). It is **never uploaded anywhere**.
 
 ## 3. What goes over the network
-- **Weather (optional widget).** If the weather cell is enabled, the app makes
-  HTTPS requests to:
-  - **ipapi.co** — to get an approximate location from your **public IP**
-    (city / latitude / longitude), only when you have not set a city manually.
+- **Weather (optional widget).** If the weather cell is enabled and no city is
+  set, the app first asks the **Windows Location Service** for your position —
+  this happens entirely on your PC (nothing is sent anywhere to get the fix)
+  and only works if you have allowed Location in Windows Settings. Depending on
+  what is available, the app then makes HTTPS requests to:
+  - **bigdatacloud.net** — only when the Windows location fix succeeded: the
+    coordinates are sent to their free reverse-geocoding endpoint solely to
+    display your city's name. → https://www.bigdatacloud.com/privacy-and-cookie-policy
+  - **ipapi.co** — only when Windows Location is unavailable: an approximate
+    location (city / latitude / longitude) is derived from your **public IP**.
     → https://ipapi.co/privacy/
   - **open-meteo.com** (weather + geocoding) — to resolve a typed city name to
     coordinates and fetch the current conditions and short forecast. Open-Meteo
     requires no API key and does not track users.
     → https://open-meteo.com/en/terms
 
-  If you set a city manually the IP-lookup call is skipped; if you turn the
-  weather cell off, none of these calls are made.
+  If you set a city manually, no location lookup of any kind happens; if you
+  turn the weather cell off, none of these calls are made.
 
 - **Public IP display (System tab).** When you open *Settings → System*, the
   app asks **api.ipify.org** for your own public IP address so it can be shown
