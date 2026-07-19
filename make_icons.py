@@ -25,8 +25,15 @@ def font(px):
             continue
     return ImageFont.load_default()
 
-# ── CPU — bright blue chip ─────────────────────────────────────────────
+# ── CPU — hand-made art (assets/cpu_icon_src.png) when present, else the
+#    procedural blue chip. The src file is the user's original at full res;
+#    regeneration must never clobber it with the drawn fallback. ─────────
 def cpu():
+    src = os.path.join(os.path.dirname(OUT), 'assets', 'cpu_icon_src.png')
+    if os.path.exists(src):
+        im = Image.open(src).convert('RGBA')
+        im.resize((SIZE, SIZE), Image.LANCZOS).save(os.path.join(OUT, 'cpu.png'))
+        return
     img = new(); d = ImageDraw.Draw(img)
     m = S * 0.18
     bx0, by0, bx1, by1 = m, m, S-m, S-m
