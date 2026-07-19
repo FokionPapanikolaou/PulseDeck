@@ -1340,6 +1340,60 @@ for _lng in list(CUST_LABELS):
         if _dv:
             CUST_LABELS[_lng]['desc__' + _k] = _dv
 
+# ── PowerToys-inspired tools (v2.10): Keep Awake, Light Switch, Env Vars ──
+POWERTOOLS_I18N = {
+ 'en':{'t_awake':'Keep awake','desc__t_awake':'Prevent sleep & screen-off while enabled (click again to turn off)',
+       'tt_awake_on':"☕ Keep awake ON — the PC won't sleep",
+       'tt_awake_off':'Keep awake off — normal power settings',
+       't_lightswitch':'Dark / light mode','desc__t_lightswitch':'Toggle the Windows dark & light theme',
+       'tt_theme_light':'☀ Light mode ✓','tt_theme_dark':'🌙 Dark mode ✓',
+       'su_envvars':'Environment Variables','desc__su_envvars':'Edit user & system environment variables'},
+ 'el':{'t_awake':'Keep awake (χωρίς ύπνο)','desc__t_awake':'Αποτρέπει ύπνο & σβήσιμο οθόνης όσο είναι ενεργό (ξαναπάτησέ το για απενεργοποίηση)',
+       'tt_awake_on':'☕ Keep awake ενεργό — το PC δεν θα κοιμηθεί',
+       'tt_awake_off':'Keep awake ανενεργό — κανονική εξοικονόμηση',
+       't_lightswitch':'Σκούρο / ανοιχτό θέμα','desc__t_lightswitch':'Εναλλαγή σκούρου & ανοιχτού θέματος των Windows',
+       'tt_theme_light':'☀ Ανοιχτό θέμα ✓','tt_theme_dark':'🌙 Σκούρο θέμα ✓',
+       'su_envvars':'Μεταβλητές περιβάλλοντος','desc__su_envvars':'Επεξεργασία μεταβλητών περιβάλλοντος χρήστη & συστήματος'},
+ 'es':{'t_awake':'Mantener despierto','desc__t_awake':'Evita la suspensión y el apagado de pantalla mientras está activo',
+       'tt_awake_on':'☕ Activado — el PC no se suspenderá',
+       'tt_awake_off':'Desactivado — energía normal',
+       't_lightswitch':'Modo oscuro / claro','desc__t_lightswitch':'Alternar el tema oscuro y claro de Windows',
+       'tt_theme_light':'☀ Modo claro ✓','tt_theme_dark':'🌙 Modo oscuro ✓',
+       'su_envvars':'Variables de entorno','desc__su_envvars':'Editar variables de entorno de usuario y sistema'},
+ 'de':{'t_awake':'Wach halten','desc__t_awake':'Verhindert Standby & Bildschirm-Aus, solange aktiv',
+       'tt_awake_on':'☕ Aktiv — der PC schläft nicht ein',
+       'tt_awake_off':'Aus — normale Energieeinstellungen',
+       't_lightswitch':'Dunkel-/Hellmodus','desc__t_lightswitch':'Windows-Design zwischen Dunkel und Hell umschalten',
+       'tt_theme_light':'☀ Heller Modus ✓','tt_theme_dark':'🌙 Dunkler Modus ✓',
+       'su_envvars':'Umgebungsvariablen','desc__su_envvars':'Benutzer- & Systemumgebungsvariablen bearbeiten'},
+ 'fr':{'t_awake':'Garder éveillé','desc__t_awake':"Empêche la veille et l'extinction de l'écran tant qu'actif",
+       'tt_awake_on':'☕ Actif — le PC ne se mettra pas en veille',
+       'tt_awake_off':'Désactivé — alimentation normale',
+       't_lightswitch':'Mode sombre / clair','desc__t_lightswitch':'Basculer le thème Windows sombre / clair',
+       'tt_theme_light':'☀ Mode clair ✓','tt_theme_dark':'🌙 Mode sombre ✓',
+       'su_envvars':"Variables d'environnement",'desc__su_envvars':"Modifier les variables d'environnement utilisateur et système"},
+ 'it':{'t_awake':'Mantieni attivo','desc__t_awake':'Impedisce sospensione e spegnimento schermo finché attivo',
+       'tt_awake_on':'☕ Attivo — il PC non andrà in sospensione',
+       'tt_awake_off':'Disattivato — alimentazione normale',
+       't_lightswitch':'Tema scuro / chiaro','desc__t_lightswitch':'Alterna il tema scuro e chiaro di Windows',
+       'tt_theme_light':'☀ Tema chiaro ✓','tt_theme_dark':'🌙 Tema scuro ✓',
+       'su_envvars':"Variabili d'ambiente",'desc__su_envvars':"Modifica le variabili d'ambiente utente e di sistema"},
+ 'pt':{'t_awake':'Manter acordado','desc__t_awake':'Impede a suspensão e o desligar do ecrã enquanto ativo',
+       'tt_awake_on':'☕ Ativo — o PC não vai dormir',
+       'tt_awake_off':'Desativado — energia normal',
+       't_lightswitch':'Modo escuro / claro','desc__t_lightswitch':'Alternar o tema escuro e claro do Windows',
+       'tt_theme_light':'☀ Modo claro ✓','tt_theme_dark':'🌙 Modo escuro ✓',
+       'su_envvars':'Variáveis de ambiente','desc__su_envvars':'Editar variáveis de ambiente do utilizador e do sistema'},
+ 'ru':{'t_awake':'Не засыпать','desc__t_awake':'Пока включено, ПК не уходит в сон и экран не гаснет',
+       'tt_awake_on':'☕ Включено — ПК не уснёт',
+       'tt_awake_off':'Выключено — обычное энергосбережение',
+       't_lightswitch':'Тёмная / светлая тема','desc__t_lightswitch':'Переключить тёмную и светлую тему Windows',
+       'tt_theme_light':'☀ Светлая тема ✓','tt_theme_dark':'🌙 Тёмная тема ✓',
+       'su_envvars':'Переменные среды','desc__su_envvars':'Изменить переменные среды пользователя и системы'},
+}
+for _lng, _d in POWERTOOLS_I18N.items():
+    CUST_LABELS.setdefault(_lng, {}).update(_d)
+
 # Cell metadata for the Metrics tab (id -> friendly name, icon glyph, config key)
 CELL_META = (
     ('cpu',     'CPU',         '💻', 'show_cpu'),
@@ -2797,6 +2851,68 @@ def action_lock_screen():
     except Exception:
         return False
 
+# ── Keep Awake (PowerToys "Awake"-style) ───────────────────────────────
+_AWAKE_ON = False
+
+def action_toggle_awake():
+    """Toggle keep-awake: while on, the PC won't sleep and the display stays
+    on (SetThreadExecutionState with ES_CONTINUOUS). Thread-affine, so it must
+    always be called from the Tk main thread — which _run_tool guarantees.
+    The state clears automatically when the process exits. Returns the new
+    state, or None on failure."""
+    global _AWAKE_ON
+    ES_CONTINUOUS       = 0x80000000
+    ES_SYSTEM_REQUIRED  = 0x00000001
+    ES_DISPLAY_REQUIRED = 0x00000002
+    try:
+        if _AWAKE_ON:
+            ctypes.windll.kernel32.SetThreadExecutionState(ES_CONTINUOUS)
+            _AWAKE_ON = False
+        else:
+            ctypes.windll.kernel32.SetThreadExecutionState(
+                ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED)
+            _AWAKE_ON = True
+        return _AWAKE_ON
+    except Exception:
+        return None
+
+# ── Dark/Light theme toggle (PowerToys "Light Switch"-style) ───────────
+_THEME_KEY = r'Software\Microsoft\Windows\CurrentVersion\Themes\Personalize'
+
+def is_light_theme():
+    try:
+        k = winreg.OpenKey(winreg.HKEY_CURRENT_USER, _THEME_KEY)
+        v, _ = winreg.QueryValueEx(k, 'AppsUseLightTheme')
+        winreg.CloseKey(k)
+        return bool(v)
+    except OSError:
+        return True
+
+def action_toggle_theme():
+    """Flip Windows between dark and light mode (apps + shell together) and
+    broadcast ImmersiveColorSet so running apps repaint immediately. HKCU
+    only, no admin. Hidden in the MSIX build (registry write virtualization
+    would keep the change invisible to the rest of the system). Returns True
+    if now light, False if now dark, None on failure."""
+    try:
+        new = 0 if is_light_theme() else 1
+        k = winreg.OpenKey(winreg.HKEY_CURRENT_USER, _THEME_KEY, 0,
+                           winreg.KEY_SET_VALUE)
+        winreg.SetValueEx(k, 'AppsUseLightTheme', 0, winreg.REG_DWORD, new)
+        winreg.SetValueEx(k, 'SystemUsesLightTheme', 0, winreg.REG_DWORD, new)
+        winreg.CloseKey(k)
+        try:
+            HWND_BROADCAST, WM_SETTINGCHANGE, SMTO_ABORTIFHUNG = 0xFFFF, 0x001A, 0x0002
+            res = ctypes.c_ulong()
+            ctypes.windll.user32.SendMessageTimeoutW(
+                HWND_BROADCAST, WM_SETTINGCHANGE, 0, 'ImmersiveColorSet',
+                SMTO_ABORTIFHUNG, 2000, ctypes.byref(res))
+        except Exception:
+            pass
+        return bool(new)
+    except Exception:
+        return None
+
 def action_restart_explorer():
     """Kill and relaunch explorer.exe — refreshes the taskbar/desktop without
     a reboot. Useful when icons stop responding."""
@@ -2898,6 +3014,7 @@ TOOLS_CATALOG = [
     ]),
     ('cat_perf', '⚡', [
         ('t_power',       '🔋', ('applet', 'powercfg.cpl')),
+        ('t_awake',       '☕', ('action', 'toggle_awake')),
         ('t_startup',     '🚀', ('settings', 'ms-settings:startupapps')),
         ('t_startuplist', '📋', ('action', 'startup_list')),
         ('t_visualfx',    '🎚', ('exe', ['SystemPropertiesPerformance.exe'])),
@@ -2919,6 +3036,7 @@ TOOLS_CATALOG = [
         ('t_restore',     '⏮', ('exe', ['rstrui.exe'])),
         ('t_devmgr',      '🧷', ('msc', 'devmgmt.msc')),
         ('t_lock',        '🔒', ('action', 'lock_screen')),
+        ('t_lightswitch', '🌓', ('action', 'toggle_theme')),
         ('t_classicmenu', '🖱', ('action', 'classic_context')),
         ('t_sound',       '🔊', ('exe', ['mmsys.cpl'])),
         ('t_micpriv',     '🎤', ('settings', 'ms-settings:privacy-microphone')),
@@ -2931,20 +3049,27 @@ TOOLS_CATALOG = [
         ('su_regedit',  '📝', ('win', ['regedit.exe'])),
         ('su_gpedit',   '🧩', ('msc', 'gpedit.msc')),
         ('su_services', '🛎', ('msc', 'services.msc')),
+        ('su_envvars',  '🧬', ('exe', ['rundll32.exe', 'sysdm.cpl,EditEnvironmentVariables'])),
         ('su_startup',  '🚀', ('shell', 'shell:startup')),
         ('su_sys32',    '📁', ('shell', r'%WINDIR%\System32')),
     ]),
 ]
 
-# The classic context-menu toggle is hidden where it cannot work:
-#  - Windows 10 (build < 22000): the menu is already classic.
-#  - MSIX/Store build: the container virtualizes HKCU writes into a private
-#    hive Explorer never reads, and the Store denied the
-#    unvirtualizedResources capability needed to turn that off (10.6.3).
+# Some tools are hidden where they cannot work:
+#  - classic context-menu: pointless on Windows 10 (menu already classic), and
+#    inoperative in MSIX (HKCU writes are virtualized into a private hive
+#    Explorer never reads; the Store denied unvirtualizedResources — 10.6.3).
+#  - dark/light theme toggle: same MSIX virtualization problem (the theme
+#    keys would change only inside our container).
 try:
-    if sys.getwindowsversion().build < 22000 or _is_msix():
+    _hidden = set()
+    if sys.getwindowsversion().build < 22000:
+        _hidden.add('t_classicmenu')
+    if _is_msix():
+        _hidden.update(('t_classicmenu', 't_lightswitch'))
+    if _hidden:
         TOOLS_CATALOG = [
-            (cat, icon, [t for t in tools if t[0] != 't_classicmenu'])
+            (cat, icon, [t for t in tools if t[0] not in _hidden])
             for cat, icon, tools in TOOLS_CATALOG]
 except Exception:
     pass
@@ -5408,7 +5533,7 @@ class CustomizeWindow:
 
         def _tool_row(parent, tkey, ticon, label, action):
             destructive = action[0] == 'action' and action[1] not in (
-                'flush_dns', 'classic_context')
+                'flush_dns', 'classic_context', 'toggle_awake', 'toggle_theme')
             row = tk.Frame(parent, bg=T['panel'], cursor='hand2')
             row.pack(fill='x', padx=10, pady=2)
             inner = tk.Frame(row, bg=T['panel']); inner.pack(fill='x', padx=8, pady=7)
@@ -5435,7 +5560,7 @@ class CustomizeWindow:
 
         def _tool_tile(parent, tkey, ticon, label, action):
             destructive = action[0] == 'action' and action[1] not in (
-                'flush_dns', 'classic_context')
+                'flush_dns', 'classic_context', 'toggle_awake', 'toggle_theme')
             tile = tk.Frame(parent, bg=T['panel'], cursor='hand2',
                             highlightbackground=T['line'], highlightthickness=1,
                             width=TILE_W - 14, height=82)
@@ -5538,6 +5663,17 @@ class CustomizeWindow:
                           self._do_hibernate)
         elif target == 'lock_screen':
             action_lock_screen()
+        elif target == 'toggle_awake':
+            on = action_toggle_awake()
+            if on is not None:
+                self._tool_toast(L.get('tt_awake_on', "☕ Keep awake ON — the PC won't sleep")
+                                 if on else
+                                 L.get('tt_awake_off', 'Keep awake off — normal power settings'))
+        elif target == 'toggle_theme':
+            light = action_toggle_theme()
+            if light is not None:
+                self._tool_toast(L.get('tt_theme_light', '☀ Light mode ✓') if light
+                                 else L.get('tt_theme_dark', '🌙 Dark mode ✓'))
         elif target == 'classic_context':
             if is_classic_context():
                 self._confirm(L.get('cf_ctx_off',

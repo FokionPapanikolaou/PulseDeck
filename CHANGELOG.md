@@ -7,6 +7,12 @@ All notable changes to **PulseDeck** are documented here.
 ## [Unreleased]
 
 ### Added
+- **Three PowerToys-inspired tools** (all native, no PowerToys needed):
+  **Keep awake** (Tools → Performance — while on, the PC won't sleep and the
+  screen stays on; click again to turn off, auto-clears on exit),
+  **Dark / light mode** one-click theme toggle (Tools → System; hidden in the
+  MSIX build where registry virtualization would swallow it), and
+  **Environment Variables** (Tools → Superuser — opens the Windows editor).
 - **Weather auto-locate now prefers the Windows Location Service** (exact
   position, resolved entirely on the PC) over IP geolocation, falling back to
   the IP lookup when Location is off or no fix arrives. The city name for a
