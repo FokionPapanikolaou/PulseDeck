@@ -1606,7 +1606,9 @@ def _lhm_gpu_temp():
             for s in hw.Sensors:
                 if s.SensorType == SensorType.Temperature and 'core' in s.Name.lower():
                     val = s.Value
-                    if val is not None:
+                    # some iGPUs expose the sensor but read a hard 0 (no real
+                    # telemetry) — showing "0°C" would look broken, skip it
+                    if val is not None and float(val) > 0:
                         _LHM_OK = True
                         return float(val)
         # loaded fine but no GPU temp sensor found (e.g. no dGPU) — don't
@@ -2654,14 +2656,24 @@ def _lnk_target_path(lnk_path):
 
 def _startup_exe_from_cmd(cmd):
     """Best-effort: pull the leading executable path out of a Run-key
-    command line (quoted path, or an unquoted path up to the first arg)."""
+    command line. Handles a quoted path directly; for unquoted commands it
+    can't tell a space-in-path from the start of the arguments (both are
+    legal), so it joins tokens progressively and takes the longest prefix
+    that exists on disk (e.g. `C:\\Program Files\\Foo\\bar.exe -x` →
+    `C:\\Program Files\\Foo\\bar.exe`, not `C:\\Program`)."""
     cmd = (cmd or '').strip()
     if not cmd:
         return None
     if cmd.startswith('"'):
         end = cmd.find('"', 1)
         return cmd[1:end] if end > 0 else None
-    return cmd.split(' ', 1)[0]
+    parts = cmd.split(' ')
+    best = parts[0]
+    for i in range(len(parts)):
+        cand = ' '.join(parts[:i + 1])
+        if os.path.exists(os.path.expandvars(cand)):
+            best = cand
+    return best
 
 def _startup_reg_items(hive, subkey, wow_flag, source_label, editable):
     items = []
@@ -2734,6 +2746,14 @@ def collect_startup_items():
         items += _startup_folder_items(common_startup, 'common', False)
     except Exception:
         pass
+    # Inside the MSIX container HKCU writes and AppData file deletes are
+    # copy-on-write virtualized: a "remove" would only mask the entry in our
+    # private view while Windows keeps launching the app at logon. Show the
+    # list read-only there instead of offering a button that silently no-ops
+    # (same rationale as hiding the classic context-menu tool in MSIX).
+    if _is_msix():
+        for it in items:
+            it['editable'] = False
     return items
 
 def action_remove_startup_item(key):
@@ -3181,14 +3201,28 @@ def fetch_weather(unit='C', city='', lang='en'):
     generic 'en' matcher rather than failing outright."""
     try:
         if city:
+            # The geocoder only matches non-Latin input when `language` matches
+            # the SCRIPT the name is typed in — so besides the app language,
+            # also try the language guessed from the text itself (fixes e.g.
+            # 'Αθήνα' typed while the app UI is English), then plain 'en'.
+            def _script_lang(s):
+                for ch in s:
+                    o = ord(ch)
+                    if 0x0370 <= o <= 0x03FF or 0x1F00 <= o <= 0x1FFF: return 'el'
+                    if 0x0400 <= o <= 0x04FF: return 'ru'
+                return None
+            tries = [lang]
+            for cand in (_script_lang(city), 'en'):
+                if cand and cand not in tries:
+                    tries.append(cand)
             q = urllib.parse.quote(city)
-            g = _http_json(
-                f'https://geocoding-api.open-meteo.com/v1/search?name={q}&count=1&language={lang}')
-            res = (g or {}).get('results')
-            if not res and lang != 'en':
+            res = None
+            for lng in tries:
                 g = _http_json(
-                    f'https://geocoding-api.open-meteo.com/v1/search?name={q}&count=1&language=en')
+                    f'https://geocoding-api.open-meteo.com/v1/search?name={q}&count=1&language={lng}')
                 res = (g or {}).get('results')
+                if res:
+                    break
             if not res:
                 return None
             lat, lon, name = res[0]['latitude'], res[0]['longitude'], res[0].get('name', city)

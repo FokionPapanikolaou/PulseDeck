@@ -9,8 +9,9 @@ goes, and what we do with it.
 
 > **TL;DR — we don't collect anything.** No accounts, no analytics, no
 > advertising, no telemetry. Your settings stay on your PC. The only network
-> calls are an optional update check and, when you open the System tab, a
-> lookup of your own public IP so it can be shown to you.
+> calls are the optional weather widget, an optional update check and, when
+> you open the System tab, a lookup of your own public IP so it can be shown
+> to you.
 
 ---
 
@@ -25,16 +26,28 @@ locally in your user profile (the package's `LocalState` folder or, for the
 portable build, next to the executable). It is **never uploaded anywhere**.
 
 ## 3. What goes over the network
+- **Weather (optional widget).** If the weather cell is enabled, the app makes
+  HTTPS requests to:
+  - **ipapi.co** — to get an approximate location from your **public IP**
+    (city / latitude / longitude), only when you have not set a city manually.
+    → https://ipapi.co/privacy/
+  - **open-meteo.com** (weather + geocoding) — to resolve a typed city name to
+    coordinates and fetch the current conditions and short forecast. Open-Meteo
+    requires no API key and does not track users.
+    → https://open-meteo.com/en/terms
+
+  If you set a city manually the IP-lookup call is skipped; if you turn the
+  weather cell off, none of these calls are made.
+
 - **Public IP display (System tab).** When you open *Settings → System*, the
   app asks **api.ipify.org** for your own public IP address so it can be shown
   in the Network section. The service simply echoes the address back; nothing
   else is sent, and the result is only displayed on your screen — never stored
-  or transmitted elsewhere.
+  or transmitted elsewhere. The result is cached for 30 minutes.
   → Their privacy policy: https://www.ipify.org
 
 No other feature makes network requests, apart from the update check below.
-(The weather and earthquake features that existed in older versions were
-removed in 2.8.5 and no longer make any calls.)
+(The earthquake alerts that existed in older versions were removed in 2.8.5.)
 
 ## 4. Update check (optional, on by default)
 On launch, PulseDeck may contact the public **GitHub Releases API**
