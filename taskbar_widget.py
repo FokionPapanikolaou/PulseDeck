@@ -1034,21 +1034,21 @@ for _lng, _v in _RATE.items():
 # ── Weather location settings (moved into Appearance from the old tray) ──
 WEATHER_I18N = {
  'en':{'weather_lbl':'Weather','weather_city':'Weather city','weather_city_hint':'Leave empty to locate automatically (Windows Location if allowed, otherwise by IP).',
-       'weather_auto':'Auto (by IP)'},
+       'weather_auto':'Auto (by IP)','weather_loc_btn':'Windows location settings'},
  'el':{'weather_lbl':'Καιρός','weather_city':'Πόλη καιρού','weather_city_hint':'Άφησέ το κενό για αυτόματο εντοπισμό (Τοποθεσία Windows αν επιτρέπεται, αλλιώς μέσω IP).',
-       'weather_auto':'Αυτόματα (μέσω IP)'},
+       'weather_auto':'Αυτόματα (μέσω IP)','weather_loc_btn':'Ρυθμίσεις τοποθεσίας των Windows'},
  'es':{'weather_lbl':'Tiempo','weather_city':'Ciudad del tiempo','weather_city_hint':'Déjalo vacío para localizar automáticamente (Ubicación de Windows si está permitida, o por IP).',
-       'weather_auto':'Automático (por IP)'},
+       'weather_auto':'Automático (por IP)','weather_loc_btn':'Configuración de ubicación de Windows'},
  'de':{'weather_lbl':'Wetter','weather_city':'Wetter-Stadt','weather_city_hint':'Leer lassen für automatische Ortung (Windows-Standort falls erlaubt, sonst per IP).',
-       'weather_auto':'Automatisch (per IP)'},
+       'weather_auto':'Automatisch (per IP)','weather_loc_btn':'Windows-Standorteinstellungen'},
  'fr':{'weather_lbl':'Météo','weather_city':'Ville météo','weather_city_hint':'Laissez vide pour localiser automatiquement (localisation Windows si autorisée, sinon par IP).',
-       'weather_auto':'Automatique (par IP)'},
+       'weather_auto':'Automatique (par IP)','weather_loc_btn':'Paramètres de localisation Windows'},
  'it':{'weather_lbl':'Meteo','weather_city':'Città meteo','weather_city_hint':'Lascia vuoto per la localizzazione automatica (Posizione di Windows se consentita, altrimenti via IP).',
-       'weather_auto':'Automatico (via IP)'},
+       'weather_auto':'Automatico (via IP)','weather_loc_btn':'Impostazioni posizione di Windows'},
  'pt':{'weather_lbl':'Tempo','weather_city':'Cidade do tempo','weather_city_hint':'Deixe vazio para localizar automaticamente (Localização do Windows se permitida, senão por IP).',
-       'weather_auto':'Automático (por IP)'},
+       'weather_auto':'Automático (por IP)','weather_loc_btn':'Definições de localização do Windows'},
  'ru':{'weather_lbl':'Погода','weather_city':'Город погоды','weather_city_hint':'Оставьте пустым для автоопределения (службы геолокации Windows, иначе по IP).',
-       'weather_auto':'Автоматически (по IP)'},
+       'weather_auto':'Автоматически (по IP)','weather_loc_btn':'Настройки местоположения Windows'},
 }
 for _lng, _d in WEATHER_I18N.items():
     CUST_LABELS.setdefault(_lng, {}).update(_d)
@@ -2356,7 +2356,7 @@ DEFAULTS = {
     'show_batt': False,   # battery % (laptops)
     'cpu_freq':  False,   # (inline mode only) CPU clock speed next to CPU %
     'ram_gb':    False,   # (inline mode only) RAM used in GB next to RAM %
-    'weather_unit': 'C',  # C | F
+    'weather_unit': 'C',  # C | F | K
     'weather_city': '',   # '' = auto-locate via IP
     'orientation': 'horizontal',  # horizontal | vertical
     'stacked':   True,    # label on top, value below (like the net rows)
@@ -3297,8 +3297,11 @@ def fetch_weather(unit='C', city='', lang='en'):
                 g = _http_json('https://ipapi.co/json/')
                 lat, lon = g['latitude'], g['longitude']
                 name = g.get('city', '')
+        # Open-Meteo only serves celsius/fahrenheit — for Kelvin fetch °C and
+        # shift by +273.15 locally (temp, feels, and the daily min/max alike).
         tu = 'fahrenheit' if unit == 'F' else 'celsius'
         wu = 'mph' if unit == 'F' else 'kmh'
+        _cv = (lambda v: v + 273.15) if unit == 'K' else (lambda v: v)
         w = _http_json(
             f'https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}'
             f'&current=temperature_2m,apparent_temperature,relative_humidity_2m,'
@@ -3306,9 +3309,9 @@ def fetch_weather(unit='C', city='', lang='en'):
             f'&daily=weather_code,temperature_2m_max,temperature_2m_min'
             f'&forecast_days=4&timezone=auto&temperature_unit={tu}&wind_speed_unit={wu}')
         cur = w['current']
-        out = {'temp': round(cur['temperature_2m']), 'code': int(cur['weather_code']),
+        out = {'temp': round(_cv(cur['temperature_2m'])), 'code': int(cur['weather_code']),
                'city': name,
-               'feels': round(cur.get('apparent_temperature', cur['temperature_2m'])),
+               'feels': round(_cv(cur.get('apparent_temperature', cur['temperature_2m']))),
                'humidity': int(cur.get('relative_humidity_2m', 0)),
                'wind': round(cur.get('wind_speed_10m', 0)),
                'wind_unit': ('mph' if unit == 'F' else 'km/h')}
@@ -3322,8 +3325,8 @@ def fetch_weather(unit='C', city='', lang='en'):
         for i in range(1, min(4, len(codes))):
             try: wd = datetime.date.fromisoformat(times[i]).weekday()
             except Exception: wd = 0
-            daily.append({'code': int(codes[i]), 'tmax': round(tmax[i]),
-                          'tmin': round(tmin[i]), 'wd': wd})
+            daily.append({'code': int(codes[i]), 'tmax': round(_cv(tmax[i])),
+                          'tmin': round(_cv(tmin[i])), 'wd': wd})
         out['daily'] = daily
         return out
     except Exception:
@@ -4483,7 +4486,7 @@ class CustomizeWindow:
         """Weather unit + location (a city, or auto-locate by IP)."""
         T = self.T; L = self.L
         self._radio_group(body, L.get('weather_lbl', 'Weather') + ' °', 'weather_unit',
-                          [('C', '°C'), ('F', '°F')],
+                          [('C', '°C'), ('F', '°F'), ('K', 'K')],
                           on_change=lambda v: setattr(self.w, '_weather_dirty', True))
         # location row: current city (or "auto by IP") + a button to change it
         row = tk.Frame(body, bg=T['bg']); row.pack(fill='x', padx=24, pady=(10, 2))
@@ -4505,6 +4508,19 @@ class CustomizeWindow:
         change.bind('<Button-1>', _on_change)
         tk.Label(body, text='   ' + L.get('weather_city_hint', ''), fg=T['muted'],
                  bg=T['bg'], font=('Segoe UI', 8)).pack(anchor='w', padx=24, pady=(2, 0))
+        # shortcut to the Windows privacy page where Location is switched on —
+        # auto-locate prefers the system fix, which needs that toggle enabled
+        loc_btn = tk.Label(body, text='📍  ' + L.get('weather_loc_btn',
+                           'Windows location settings'),
+                           fg=T['cyan'], bg=T['panel'], font=('Segoe UI', 9),
+                           padx=12, pady=5, cursor='hand2')
+        loc_btn.pack(anchor='w', padx=24, pady=(8, 0))
+        def _open_loc(_e=None):
+            try: os.startfile('ms-settings:privacy-location')
+            except Exception: pass
+        loc_btn.bind('<Button-1>', _open_loc)
+        loc_btn.bind('<Enter>', lambda e: loc_btn.config(bg=T['bg2']))
+        loc_btn.bind('<Leave>', lambda e: loc_btn.config(bg=T['panel']))
 
     # ── Weather tab ──
     def _tab_weather(self):
@@ -7417,10 +7433,11 @@ class Widget:
                 w = self._weather or {}
                 if w:
                     unit = self.cfg.get('weather_unit', 'C')
+                    usym = 'K' if unit == 'K' else '°' + unit
                     if w.get('city'): rows.append((str(w.get('city')), '', None))
-                    rows.append((tp('now'), f"{w.get('temp','?')}°{unit}", ORANGE))
+                    rows.append((tp('now'), f"{w.get('temp','?')}{usym}", ORANGE))
                     if w.get('feels') is not None:
-                        rows.append((tp('feels'), f"{w['feels']}°{unit}", None))
+                        rows.append((tp('feels'), f"{w['feels']}{usym}", None))
                     if w.get('humidity'):
                         rows.append((tp('humidity'), f"{w['humidity']}%", BLUE))
                     if w.get('wind') is not None:
@@ -7678,7 +7695,8 @@ class Widget:
                           if self._gpu_mem is not None else ''))
         if getattr(self, 'lbl_wx', None):
             w = self._weather
-            sym = '°' + (self.cfg.get('weather_unit', 'C'))
+            _u = self.cfg.get('weather_unit', 'C')
+            sym = 'K' if _u == 'K' else '°' + _u   # kelvin takes no degree sign
             if w:
                 ic = self._wx_icons.get(weather_icon_name(w['code']))
                 if ic is not None:
