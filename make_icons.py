@@ -25,28 +25,38 @@ def font(px):
             continue
     return ImageFont.load_default()
 
-# ── CPU — bright blue chip ─────────────────────────────────────────────
+# ── CPU — modern blue chip: slim gold pins, layered die, cyan core ─────
 def cpu():
     img = new(); d = ImageDraw.Draw(img)
-    m = S * 0.18
+    m = S * 0.17
     bx0, by0, bx1, by1 = m, m, S-m, S-m
-    pin = S * 0.05; plen = S * 0.10
+    pin = S * 0.028; plen = S * 0.09
     gold = (255, 205, 40, 255)
-    for i in range(4):
-        t = bx0 + (bx1-bx0)*(i+0.5)/4
-        d.rectangle([t-pin, by0-plen, t+pin, by0], fill=gold)
-        d.rectangle([t-pin, by1, t+pin, by1+plen], fill=gold)
-        d.rectangle([bx0-plen, t-pin, bx0, t+pin], fill=gold)
-        d.rectangle([bx1, t-pin, bx1+plen, t+pin], fill=gold)
-    r = S*0.06
-    d.rounded_rectangle([bx0, by0, bx1, by1], radius=r, fill=(59, 130, 246, 255))   # blue
-    inset = S*0.10
-    d.rounded_rectangle([bx0+inset, by0+inset, bx1-inset, by1-inset], radius=r*0.6,
-                        fill=(37, 99, 235, 255))                                     # deeper blue
-    fnt = font(int(S*0.20))
-    tb = d.textbbox((0, 0), 'CPU', font=fnt)
-    tw, th = tb[2]-tb[0], tb[3]-tb[1]
-    d.text(((S-tw)/2 - tb[0], (S-th)/2 - tb[1]), 'CPU', font=fnt, fill=WHITE)
+    for i in range(6):                              # 6 slim pins per side
+        t = bx0 + (bx1-bx0)*(i+0.5)/6
+        d.rounded_rectangle([t-pin, by0-plen, t+pin, by0+S*0.02], radius=pin, fill=gold)
+        d.rounded_rectangle([t-pin, by1-S*0.02, t+pin, by1+plen], radius=pin, fill=gold)
+        d.rounded_rectangle([bx0-plen, t-pin, bx0+S*0.02, t+pin], radius=pin, fill=gold)
+        d.rounded_rectangle([bx1-S*0.02, t-pin, bx1+plen, t+pin], radius=pin, fill=gold)
+    r = S*0.07
+    d.rounded_rectangle([bx0, by0, bx1, by1], radius=r, fill=(59, 130, 246, 255))   # blue body
+    inset = S*0.085
+    d.rounded_rectangle([bx0+inset, by0+inset, bx1-inset, by1-inset], radius=r*0.55,
+                        fill=(29, 78, 216, 255))                                     # deep die
+    # cyan core + glow
+    cx, cy = S/2, S/2
+    core = S*0.085
+    d.rounded_rectangle([cx-core*1.7, cy-core*1.7, cx+core*1.7, cy+core*1.7],
+                        radius=core*0.6, fill=(37, 99, 235, 255))
+    d.rounded_rectangle([cx-core, cy-core, cx+core, cy+core],
+                        radius=core*0.4, fill=(103, 232, 249, 255))                  # cyan core
+    # circuit traces from the core to the die edge
+    tr = int(S*0.022); tcol = (147, 197, 253, 255)
+    off = core*1.7
+    edge = inset + S*0.03
+    for sgn in (-1, 1):
+        d.line([cx+sgn*off, cy, bx1-edge if sgn > 0 else bx0+edge, cy], fill=tcol, width=tr)
+        d.line([cx, cy+sgn*off, cx, by1-edge if sgn > 0 else by0+edge], fill=tcol, width=tr)
     save(img, 'cpu.png')
 
 # ── RAM — bright green stick ───────────────────────────────────────────
@@ -85,6 +95,42 @@ def net():
     for fw in (0.40, 0.78):
         d.ellipse([cx-r*fw, cy-r, cx+r*fw, cy+r], outline=col, width=lw)
     save(img, 'net.png')
+
+# ── NET (Wi-Fi) — cyan signal arcs + dot ──────────────────────────────
+def net_wifi():
+    img = new(); d = ImageDraw.Draw(img)
+    col = (34, 211, 238, 255)
+    cx, cy = S/2, S*0.82
+    lw = int(S*0.075)
+    for fr in (0.62, 0.44, 0.26):                   # three arcs, outer→inner
+        r = S*fr
+        d.arc([cx-r, cy-r, cx+r, cy+r], start=222, end=318, fill=col, width=lw)
+    dr = S*0.075
+    d.ellipse([cx-dr, cy-dr*1.9, cx+dr, cy+dr*0.1], fill=col)
+    save(img, 'net_wifi.png')
+
+# ── NET (Ethernet) — cyan LAN topology: hub on top, two nodes below ───
+def net_eth():
+    img = new(); d = ImageDraw.Draw(img)
+    col = (34, 211, 238, 255)
+    lw = int(S*0.055)
+    bs = S*0.20                                     # node box size
+    hubx, huby = S/2, S*0.24
+    n1x = S*0.24; n2x = S*0.76; ny = S*0.76
+    busy = S*0.52                                   # horizontal bus height
+    # links
+    d.line([hubx, huby, hubx, busy], fill=col, width=lw)
+    d.line([n1x, busy, n2x, busy], fill=col, width=lw)
+    d.line([n1x, busy, n1x, ny], fill=col, width=lw)
+    d.line([n2x, busy, n2x, ny], fill=col, width=lw)
+    # nodes (filled, the hub slightly larger)
+    hb = bs*1.12
+    d.rounded_rectangle([hubx-hb/2, huby-hb/2, hubx+hb/2, huby+hb/2],
+                        radius=S*0.035, fill=col)
+    for nx in (n1x, n2x):
+        d.rounded_rectangle([nx-bs/2, ny-bs/2, nx+bs/2, ny+bs/2],
+                            radius=S*0.035, fill=col)
+    save(img, 'net_eth.png')
 
 # ── DISK — blue drive ──────────────────────────────────────────────────
 def disk():
@@ -203,6 +249,6 @@ def wx_storm():
                (S*0.44, S*0.98), (S*0.64, S*0.72), (S*0.52, S*0.72)], fill=bolt)
     save(img, 'wx_storm.png')
 
-cpu(); ram(); net(); disk(); battery(); gpu()
+cpu(); ram(); net(); net_wifi(); net_eth(); disk(); battery(); gpu()
 wx_clear(); wx_partly(); wx_cloudy(); wx_fog(); wx_rain(); wx_snow(); wx_storm()
 print('Vibrant icons saved to', OUT)

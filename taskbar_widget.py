@@ -3183,6 +3183,51 @@ def get_current_dns():
     except Exception:
         return []
 
+def _active_net_kind():
+    """'wifi' | 'eth' | None — what carries the default route right now.
+
+    GetBestInterface answers "which interface would route to 8.8.8.8" (pure
+    routing-table lookup, no traffic is sent), then GetIfEntry's dwType says
+    what that interface physically is (IEEE 802.11 vs Ethernet). Both are
+    micro-second Win32 calls, safe to poll."""
+    try:
+        iphlp = ctypes.windll.iphlpapi
+        idx = ctypes.c_ulong()
+        dest = ctypes.c_ulong(int.from_bytes(socket.inet_aton('8.8.8.8'), 'little'))
+        if iphlp.GetBestInterface(dest, ctypes.byref(idx)) != 0:
+            return None
+
+        class _MIB_IFROW(ctypes.Structure):
+            _fields_ = [('wszName', ctypes.c_wchar * 256),
+                        ('dwIndex', ctypes.c_ulong), ('dwType', ctypes.c_ulong),
+                        ('dwMtu', ctypes.c_ulong), ('dwSpeed', ctypes.c_ulong),
+                        ('dwPhysAddrLen', ctypes.c_ulong),
+                        ('bPhysAddr', ctypes.c_ubyte * 8),
+                        ('dwAdminStatus', ctypes.c_ulong),
+                        ('dwOperStatus', ctypes.c_ulong),
+                        ('dwLastChange', ctypes.c_ulong),
+                        ('dwInOctets', ctypes.c_ulong), ('dwInUcastPkts', ctypes.c_ulong),
+                        ('dwInNUcastPkts', ctypes.c_ulong), ('dwInDiscards', ctypes.c_ulong),
+                        ('dwInErrors', ctypes.c_ulong), ('dwInUnknownProtos', ctypes.c_ulong),
+                        ('dwOutOctets', ctypes.c_ulong), ('dwOutUcastPkts', ctypes.c_ulong),
+                        ('dwOutNUcastPkts', ctypes.c_ulong), ('dwOutDiscards', ctypes.c_ulong),
+                        ('dwOutErrors', ctypes.c_ulong), ('dwOutQLen', ctypes.c_ulong),
+                        ('dwDescrLen', ctypes.c_ulong),
+                        ('bDescr', ctypes.c_ubyte * 256)]
+
+        row = _MIB_IFROW()
+        row.dwIndex = idx.value
+        if iphlp.GetIfEntry(ctypes.byref(row)) != 0:
+            return None
+        IF_TYPE_ETHERNET, IF_TYPE_IEEE80211 = 6, 71
+        if row.dwType == IF_TYPE_IEEE80211:
+            return 'wifi'
+        if row.dwType == IF_TYPE_ETHERNET:
+            return 'eth'
+        return None
+    except Exception:
+        return None
+
 _PUBIP_CACHE = ('', 0.0)   # (ip, fetched-at) — see _net_extra
 
 def _net_extra():
@@ -3759,6 +3804,7 @@ class _SlowPoller(threading.Thread):
         self.nvidia_w     = None   # float | None  (GPU watts from nvidia-smi)
         self.nvidia_temp_c = None  # float | None  (GPU °C from nvidia-smi)
         self.lhm_gpu_temp_c = None # float | None  (AMD/Intel GPU °C, no nvidia-smi)
+        self.net_kind     = None   # 'wifi' | 'eth' | None (default-route interface)
         self._stop        = False
 
     def run(self):
@@ -3791,6 +3837,10 @@ class _SlowPoller(threading.Thread):
                 self.lhm_gpu_temp_c = _lhm_gpu_temp()
             except Exception:
                 pass
+        try:
+            self.net_kind = _active_net_kind()
+        except Exception:
+            pass
 
     def stop(self):
         self._stop = True
@@ -6989,6 +7039,23 @@ class Widget:
                      'net.png': 'NET', 'disk.png': 'DISK', 'battery.png': 'BAT'}
         text_mode = self.cfg.get('bar_labels') == 'text'
 
+        def load_icon_img(name):
+            """Bar-icon PhotoImage with the chroma-key edge treatment:
+            binary-alpha + 1px erode so the keyed edges stay clean (no pale
+            fringe) — same treatment as the standalone _icon."""
+            key = self.bg if isinstance(self.bg, str) else ''
+            if key.startswith('#') and len(key) == 7:
+                from PIL import Image, ImageTk, ImageFilter
+                im = Image.open(os.path.join(ICON_DIR, name)).convert('RGBA')
+                r, g, b, a = im.split()
+                a = a.point(lambda v: 255 if v >= 110 else 0)
+                a = a.filter(ImageFilter.MinFilter(3))
+                img = ImageTk.PhotoImage(Image.merge('RGBA', (r, g, b, a)))
+            else:
+                img = tk.PhotoImage(file=os.path.join(ICON_DIR, name))
+            self._imgs.append(img)
+            return img
+
         def icon(name, parent):
             # text mode: show a short label instead of the glyph (weather/quake
             # have no sensible text form, so they keep their icon)
@@ -6996,24 +7063,14 @@ class Widget:
                 tk.Label(parent, text=ICON_TEXT[name], fg=th.get('accent', valcol),
                          bg=self.bg, font=('Consolas', small, 'bold'),
                          padx=2).pack(side='left', padx=(2, 1))
-                return
+                return None
             try:
-                # binary-alpha + 1px erode so the chroma-key edges stay clean
-                # (no pale fringe) — same treatment as the standalone _icon.
-                key = self.bg if isinstance(self.bg, str) else ''
-                if key.startswith('#') and len(key) == 7:
-                    from PIL import Image, ImageTk, ImageFilter
-                    im = Image.open(os.path.join(ICON_DIR, name)).convert('RGBA')
-                    r, g, b, a = im.split()
-                    a = a.point(lambda v: 255 if v >= 110 else 0)
-                    a = a.filter(ImageFilter.MinFilter(3))
-                    img = ImageTk.PhotoImage(Image.merge('RGBA', (r, g, b, a)))
-                else:
-                    img = tk.PhotoImage(file=os.path.join(ICON_DIR, name))
-                self._imgs.append(img)
-                tk.Label(parent, image=img, bg=self.bg, bd=0).pack(side='left', padx=(2, 0))
+                img = load_icon_img(name)
+                lbl = tk.Label(parent, image=img, bg=self.bg, bd=0)
+                lbl.pack(side='left', padx=(2, 0))
+                return lbl
             except Exception:
-                pass
+                return None
 
         def val(parent, width):
             # natural width in transparent mode (otherwise the extra space
@@ -7081,6 +7138,8 @@ class Widget:
         self.lbl_disk_r = self.lbl_disk_w = None
         self.lbl_batt = None
         self.lbl_wx = self.lbl_wx_icon = None
+        self.lbl_net_icon = None
+        self._net_icon_imgs = {}
         self.lbl_power = self.lbl_power_top = None
         self.lbl_quake = None
 
@@ -7095,7 +7154,20 @@ class Widget:
             f, self.lbl_gpu, self.lbl_gpu_top = stat('gpu.png', sw if stacked else 4, stacked)
             self._tip_cells.append((f, 'gpu', None))
         def b_net():
-            f = new_cell(); icon('net.png', f)
+            f = new_cell()
+            # icon follows the default-route interface type: Wi-Fi arcs, LAN
+            # topology for cable, the globe when undetermined (e.g. offline)
+            _NET_FILE = {'wifi': 'net_wifi.png', 'eth': 'net_eth.png'}
+            kind = getattr(self._slow, 'net_kind', None)
+            self.lbl_net_icon = icon(_NET_FILE.get(kind, 'net.png'), f)
+            self._net_kind_shown = kind
+            self._net_icon_imgs = {}
+            if self.lbl_net_icon is not None:
+                try:
+                    for k in ('wifi', 'eth', None):
+                        self._net_icon_imgs[k] = load_icon_img(_NET_FILE.get(k, 'net.png'))
+                except Exception:
+                    self._net_icon_imgs = {}
             nfr = tk.Frame(f, bg=self.bg); nfr.pack(side='left', padx=2)
             def net_row(arrow, color):
                 row = tk.Frame(nfr, bg=self.bg); row.pack(side='top', anchor='w')
@@ -7537,6 +7609,10 @@ class Widget:
                 rows.append((tp('source'), '', None))
             elif kind == 'net':
                 title = (self.t('net'), '')
+                nk = getattr(self._slow, 'net_kind', None)
+                if nk:
+                    rows.append((tp('status'),
+                                 '📶 Wi-Fi' if nk == 'wifi' else '🖧 Ethernet', BLUE))
                 rows.append((tp('session') + ' ↑', self._hb(self._net_session['up']), BLUE))
                 rows.append((tp('session') + ' ↓', self._hb(self._net_session['dn']), GREEN))
                 io = psutil.net_io_counters()
@@ -7766,6 +7842,15 @@ class Widget:
             # monospaced, fixed-width=7 net cells never resize → no black strip
             self.lbl_up.config(text=f'{self._fmt(up):>7}')
             self.lbl_dn.config(text=f'{self._fmt(dn):>7}')
+            # swap the cell icon when the connection type changes (Wi-Fi ⇄ cable)
+            kind = getattr(self._slow, 'net_kind', None)
+            if (self.lbl_net_icon is not None and self._net_icon_imgs
+                    and kind != getattr(self, '_net_kind_shown', None)):
+                img = self._net_icon_imgs.get(kind) or self._net_icon_imgs.get(None)
+                if img is not None:
+                    try: self.lbl_net_icon.config(image=img)
+                    except Exception: pass
+                self._net_kind_shown = kind
         if self.lbl_disk_r:
             try:
                 d = psutil.disk_io_counters()
