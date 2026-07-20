@@ -6154,7 +6154,7 @@ class Widget:
                 pass
         self.root.report_callback_exception = _rce
         self._micons = self._load_menu_icons()
-        self._wx_icons = self._load_wx_icons()
+        self._wx_icons = {}     # filled in _build_ui, once self.bg is known
         self.root.overrideredirect(True)
         self.root.attributes('-topmost', True)
         self._apply_bg_mode()
@@ -6864,11 +6864,27 @@ class Widget:
         return icons
 
     def _load_wx_icons(self):
-        """Load the weather condition icons once; return name->PhotoImage dict."""
+        """name->PhotoImage dict for the weather glyphs, with the SAME
+        chroma-key edge treatment as every other bar icon (binary alpha +
+        1px erode). A raw PhotoImage keeps antialiased semi-transparent
+        edges that Tk blends against the near-black key colour — which the
+        key never matches, so a dark fringe ringed the glyph on the bar.
+        Loaded from _build_ui (after self.bg is known) and re-loaded on every
+        rebuild so an adaptive-key change re-treats them too."""
         icons = {}
+        key = self.bg if isinstance(getattr(self, 'bg', None), str) else ''
         for name in ('wx_clear','wx_partly','wx_cloudy','wx_fog','wx_rain','wx_snow','wx_storm'):
             try:
-                icons[name] = tk.PhotoImage(file=os.path.join(ICON_DIR, name + '.png'))
+                path = os.path.join(ICON_DIR, name + '.png')
+                if key.startswith('#') and len(key) == 7:
+                    from PIL import Image, ImageTk, ImageFilter
+                    im = Image.open(path).convert('RGBA')
+                    r, g, b, a = im.split()
+                    a = a.point(lambda v: 255 if v >= 110 else 0)
+                    a = a.filter(ImageFilter.MinFilter(3))
+                    icons[name] = ImageTk.PhotoImage(Image.merge('RGBA', (r, g, b, a)))
+                else:
+                    icons[name] = tk.PhotoImage(file=path)
             except Exception:
                 icons[name] = None
         return icons
@@ -7019,6 +7035,9 @@ class Widget:
                 pass
             w.destroy()
         self._imgs = []
+        # (re)load the weather glyphs against the CURRENT chroma key —
+        # see _load_wx_icons for why this can't happen in __init__
+        self._wx_icons = self._load_wx_icons()
         self._tip_cells = []     # [(frame, kind, extra)] for hover tooltips
         self._disk_lbls = {}     # {drive: label} for per-drive space %
         self._rgb_targets = []   # value labels recolored by RGB animation
