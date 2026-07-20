@@ -249,12 +249,40 @@ print('Vibrant icons saved to', OUT)
 # background already removed). It always wins over the procedural drawings
 # above: regeneration downscales it to the standard 32px instead of clobbering
 # it with the drawn fallback.
+from PIL import ImageChops
+
+def downscale_clean(im, size):
+    """Downscale RGBA artwork without the black edge fringe.
+
+    A naive RGBA resize mixes the RGB of fully transparent pixels — which is
+    (0,0,0) — into the edge pixels, and semi-transparent shadow haze survives
+    with alpha above the bar's chroma-key threshold: both paint a dark outline
+    around the icon on the taskbar. Fix: harden the alpha at full resolution
+    (drops the haze), resize PREMULTIPLIED (transparent black then contributes
+    nothing), and un-premultiply the small result."""
+    r, g, b, a = im.split()
+    a = a.point(lambda v: 255 if v >= 128 else 0)
+    rp = ImageChops.multiply(r, a)
+    gp = ImageChops.multiply(g, a)
+    bp = ImageChops.multiply(b, a)
+    small = Image.merge('RGBA', (rp, gp, bp, a)).resize((size, size), Image.LANCZOS)
+    px = small.load()
+    for y in range(size):
+        for x in range(size):
+            R, G, B, A = px[x, y]
+            if A:
+                px[x, y] = (min(255, R * 255 // A), min(255, G * 255 // A),
+                            min(255, B * 255 // A), A)
+            else:
+                px[x, y] = (0, 0, 0, 0)
+    return small
+
 SRC_DIR = os.path.join(os.path.dirname(OUT), 'assets', 'icon_src')
 if os.path.isdir(SRC_DIR):
     n = 0
     for fn in sorted(os.listdir(SRC_DIR)):
         if fn.lower().endswith('.png'):
             im = Image.open(os.path.join(SRC_DIR, fn)).convert('RGBA')
-            im.resize((SIZE, SIZE), Image.LANCZOS).save(os.path.join(OUT, fn))
+            downscale_clean(im, SIZE).save(os.path.join(OUT, fn))
             n += 1
     print(f'{n} hand-made overrides applied from assets/icon_src')
