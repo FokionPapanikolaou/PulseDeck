@@ -14,8 +14,25 @@ WHITE = (255, 255, 255, 255)
 def new():
     return Image.new('RGBA', (S, S), (0, 0, 0, 0))
 
+def _resize_premult(im, size):
+    """LANCZOS-downscale RGBA without letting the (0,0,0) RGB of transparent
+    pixels bleed into edge colours: resize premultiplied, un-premultiply."""
+    from PIL import ImageChops
+    r, g, b, a = im.split()
+    rp = ImageChops.multiply(r, a)
+    gp = ImageChops.multiply(g, a)
+    bp = ImageChops.multiply(b, a)
+    small = Image.merge('RGBA', (rp, gp, bp, a)).resize((size, size), Image.LANCZOS)
+    px = small.load()
+    for y in range(size):
+        for x in range(size):
+            R, G, B, A = px[x, y]
+            px[x, y] = ((min(255, R * 255 // A), min(255, G * 255 // A),
+                         min(255, B * 255 // A), A) if A else (0, 0, 0, 0))
+    return small
+
 def save(img, name):
-    img.resize((SIZE, SIZE), Image.LANCZOS).save(os.path.join(OUT, name))
+    _resize_premult(img, SIZE).save(os.path.join(OUT, name))
 
 def font(px):
     for f in ('arialbd.ttf', 'segoeuib.ttf', 'arial.ttf'):
@@ -252,44 +269,14 @@ print('Vibrant icons saved to', OUT)
 from PIL import ImageChops
 
 def downscale_clean(im, size):
-    """Downscale RGBA artwork for the bar without black fringes AND without
-    losing thin features (sun rays, snowflakes, rain streaks).
-
-    Two hostile steps live downstream in the app's icon pipeline:
-      * a naive RGBA resize mixes the (0,0,0) RGB of transparent pixels into
-        edges → dark outline. Countered by resizing PREMULTIPLIED and
-        un-premultiplying the result.
-      * the bar binarizes alpha at ≥110 and erodes 1px (MinFilter 3) to keep
-        chroma-key edges clean → 2px-thin features vanish entirely (the sun
-        became a bare disc). Countered here by binarizing at a LOW threshold
-        (thin半-covered pixels survive) and pre-DILATING the silhouette by
-        the same 1px the bar will erode — the erosion then lands back on the
-        intended outline instead of eating into it."""
-    from PIL import ImageFilter
+    """Downscale hand-made RGBA artwork: harden the alpha at full resolution
+    (drops semi-transparent shadow haze that would survive the bar's alpha
+    threshold as a dark rim), then the shared premultiplied resize (clean
+    edge colours). Thin features survive because the bar keeps every pixel
+    above a LOW alpha threshold and no longer erodes (see load_icon_img)."""
     r, g, b, a = im.split()
     a = a.point(lambda v: 255 if v >= 128 else 0)
-    rp = ImageChops.multiply(r, a)
-    gp = ImageChops.multiply(g, a)
-    bp = ImageChops.multiply(b, a)
-    small = Image.merge('RGBA', (rp, gp, bp, a)).resize((size, size), Image.LANCZOS)
-    px = small.load()
-    for y in range(size):
-        for x in range(size):
-            R, G, B, A = px[x, y]
-            if A:
-                px[x, y] = (min(255, R * 255 // A), min(255, G * 255 // A),
-                            min(255, B * 255 // A), A)
-            else:
-                px[x, y] = (0, 0, 0, 0)
-    r, g, b, a = small.split()
-    a_bin = a.point(lambda v: 255 if v >= 45 else 0)
-    a_dil = a_bin.filter(ImageFilter.MaxFilter(3))
-    # the dilated ring needs colour too: spread each channel outward, but only
-    # onto pixels that were transparent (composite keeps the interior intact)
-    r = Image.composite(r, r.filter(ImageFilter.MaxFilter(3)), a_bin)
-    g = Image.composite(g, g.filter(ImageFilter.MaxFilter(3)), a_bin)
-    b = Image.composite(b, b.filter(ImageFilter.MaxFilter(3)), a_bin)
-    return Image.merge('RGBA', (r, g, b, a_dil))
+    return _resize_premult(Image.merge('RGBA', (r, g, b, a)), size)
 
 SRC_DIR = os.path.join(os.path.dirname(OUT), 'assets', 'icon_src')
 if os.path.isdir(SRC_DIR):

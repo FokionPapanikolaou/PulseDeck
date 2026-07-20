@@ -6880,8 +6880,10 @@ class Widget:
                     from PIL import Image, ImageTk, ImageFilter
                     im = Image.open(path).convert('RGBA')
                     r, g, b, a = im.split()
-                    a = a.point(lambda v: 255 if v >= 110 else 0)
-                    a = a.filter(ImageFilter.MinFilter(3))
+                    # low threshold, no erode: icon files carry clean edge
+                    # colours (premultiplied downscale), so semi-covered
+                    # thin-feature pixels can safely render fully opaque
+                    a = a.point(lambda v: 255 if v >= 60 else 0)
                     icons[name] = ImageTk.PhotoImage(Image.merge('RGBA', (r, g, b, a)))
                 else:
                     icons[name] = tk.PhotoImage(file=path)
@@ -6965,10 +6967,11 @@ class Widget:
             from PIL import Image, ImageTk, ImageFilter
             icon = Image.open(path).convert('RGBA')
             r, g, b, a = icon.split()
-            a = a.point(lambda v: 255 if v >= 110 else 0)
-            # erode the alpha by 1px so the outermost (often light) anti-aliased
-            # edge ring is dropped — kills the faint white outline on the bar.
-            a = a.filter(ImageFilter.MinFilter(3))
+            # Low threshold, and no 1px erode any more: the icon files are
+            # produced with a premultiplied downscale so their edge colours
+            # are uncontaminated — rendering semi-covered pixels opaque adds
+            # no fringe, and thin details (sun rays…) stay intact.
+            a = a.point(lambda v: 255 if v >= 60 else 0)
             icon = Image.merge('RGBA', (r, g, b, a))
             img = ImageTk.PhotoImage(icon)
         except Exception:
@@ -7067,8 +7070,8 @@ class Widget:
                 from PIL import Image, ImageTk, ImageFilter
                 im = Image.open(os.path.join(ICON_DIR, name)).convert('RGBA')
                 r, g, b, a = im.split()
-                a = a.point(lambda v: 255 if v >= 110 else 0)
-                a = a.filter(ImageFilter.MinFilter(3))
+                # low threshold, no erode — see the standalone _icon note
+                a = a.point(lambda v: 255 if v >= 60 else 0)
                 img = ImageTk.PhotoImage(Image.merge('RGBA', (r, g, b, a)))
             else:
                 img = tk.PhotoImage(file=os.path.join(ICON_DIR, name))
