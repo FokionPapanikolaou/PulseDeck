@@ -252,14 +252,20 @@ print('Vibrant icons saved to', OUT)
 from PIL import ImageChops
 
 def downscale_clean(im, size):
-    """Downscale RGBA artwork without the black edge fringe.
+    """Downscale RGBA artwork for the bar without black fringes AND without
+    losing thin features (sun rays, snowflakes, rain streaks).
 
-    A naive RGBA resize mixes the RGB of fully transparent pixels — which is
-    (0,0,0) — into the edge pixels, and semi-transparent shadow haze survives
-    with alpha above the bar's chroma-key threshold: both paint a dark outline
-    around the icon on the taskbar. Fix: harden the alpha at full resolution
-    (drops the haze), resize PREMULTIPLIED (transparent black then contributes
-    nothing), and un-premultiply the small result."""
+    Two hostile steps live downstream in the app's icon pipeline:
+      * a naive RGBA resize mixes the (0,0,0) RGB of transparent pixels into
+        edges → dark outline. Countered by resizing PREMULTIPLIED and
+        un-premultiplying the result.
+      * the bar binarizes alpha at ≥110 and erodes 1px (MinFilter 3) to keep
+        chroma-key edges clean → 2px-thin features vanish entirely (the sun
+        became a bare disc). Countered here by binarizing at a LOW threshold
+        (thin半-covered pixels survive) and pre-DILATING the silhouette by
+        the same 1px the bar will erode — the erosion then lands back on the
+        intended outline instead of eating into it."""
+    from PIL import ImageFilter
     r, g, b, a = im.split()
     a = a.point(lambda v: 255 if v >= 128 else 0)
     rp = ImageChops.multiply(r, a)
@@ -275,7 +281,15 @@ def downscale_clean(im, size):
                             min(255, B * 255 // A), A)
             else:
                 px[x, y] = (0, 0, 0, 0)
-    return small
+    r, g, b, a = small.split()
+    a_bin = a.point(lambda v: 255 if v >= 45 else 0)
+    a_dil = a_bin.filter(ImageFilter.MaxFilter(3))
+    # the dilated ring needs colour too: spread each channel outward, but only
+    # onto pixels that were transparent (composite keeps the interior intact)
+    r = Image.composite(r, r.filter(ImageFilter.MaxFilter(3)), a_bin)
+    g = Image.composite(g, g.filter(ImageFilter.MaxFilter(3)), a_bin)
+    b = Image.composite(b, b.filter(ImageFilter.MaxFilter(3)), a_bin)
+    return Image.merge('RGBA', (r, g, b, a_dil))
 
 SRC_DIR = os.path.join(os.path.dirname(OUT), 'assets', 'icon_src')
 if os.path.isdir(SRC_DIR):
