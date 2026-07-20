@@ -25,15 +25,9 @@ def font(px):
             continue
     return ImageFont.load_default()
 
-# ── CPU — hand-made art (assets/cpu_icon_src.png) when present, else the
-#    procedural blue chip. The src file is the user's original at full res;
-#    regeneration must never clobber it with the drawn fallback. ─────────
+# ── CPU — bright blue chip (procedural fallback; see the hand-made
+#    override pass at the bottom of this file) ─────────────────────────
 def cpu():
-    src = os.path.join(os.path.dirname(OUT), 'assets', 'cpu_icon_src.png')
-    if os.path.exists(src):
-        im = Image.open(src).convert('RGBA')
-        im.resize((SIZE, SIZE), Image.LANCZOS).save(os.path.join(OUT, 'cpu.png'))
-        return
     img = new(); d = ImageDraw.Draw(img)
     m = S * 0.18
     bx0, by0, bx1, by1 = m, m, S-m, S-m
@@ -249,3 +243,18 @@ def wx_storm():
 cpu(); ram(); net(); net_wifi(); net_eth(); disk(); battery(); gpu()
 wx_clear(); wx_partly(); wx_cloudy(); wx_fog(); wx_rain(); wx_snow(); wx_storm()
 print('Vibrant icons saved to', OUT)
+
+# ── Hand-made art overrides ────────────────────────────────────────────
+# Anything in assets/icon_src/<name>.png is user-supplied artwork (full-res,
+# background already removed). It always wins over the procedural drawings
+# above: regeneration downscales it to the standard 32px instead of clobbering
+# it with the drawn fallback.
+SRC_DIR = os.path.join(os.path.dirname(OUT), 'assets', 'icon_src')
+if os.path.isdir(SRC_DIR):
+    n = 0
+    for fn in sorted(os.listdir(SRC_DIR)):
+        if fn.lower().endswith('.png'):
+            im = Image.open(os.path.join(SRC_DIR, fn)).convert('RGBA')
+            im.resize((SIZE, SIZE), Image.LANCZOS).save(os.path.join(OUT, fn))
+            n += 1
+    print(f'{n} hand-made overrides applied from assets/icon_src')
