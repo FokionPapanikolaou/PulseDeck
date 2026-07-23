@@ -6,7 +6,33 @@ All notable changes to **PulseDeck** are documented here.
 
 ## [Unreleased]
 
+---
+
+## [2.10.1] — 2026-07-24
+
 ### Added
+- **New hand-made icon artwork** for CPU, RAM, GPU, Ethernet, Wi-Fi, and
+  Battery, plus refreshed weather icons — replacing the earlier procedurally
+  drawn shapes with detailed source art, downscaled through the existing
+  hand-made-override pipeline (`assets/icon_src/` → `make_icons.py`).
+- **Wi-Fi signal strength** and **live network ping** (round-trip to
+  1.1.1.1) in the Network hover tooltip — both parsed/measured in a way
+  that's independent of the Windows display language.
+- **Live CPU% on the tray icon's hover tooltip** — the icon image stays the
+  PulseDeck logo; only the tooltip text updates, so Windows' own hover
+  popup does the work with no custom mouse-tracking code. Unlike the bar
+  itself, the tray is part of the taskbar's own surface, so this stays
+  visible even when Start/Search/Notification Center are covering everything
+  else (a shell z-order limitation with no app-level workaround).
+- **Performance alerts** — a Windows toast (via the tray icon, same
+  mechanism as the former quake alerts) when CPU or RAM stays at/above 90%,
+  or battery drops to/below 15% while unplugged. Hysteresis (fires once,
+  re-arms after dropping back under a lower threshold) avoids repeat spam.
+  Off by default — toggle in General settings (🔔 Performance alerts).
+- **Battery health report** button (System tab → Battery) — runs the
+  built-in `powercfg /batteryreport` and opens the resulting HTML, which
+  adds Windows' own multi-day usage/wear history on top of the live
+  snapshot (health %, cycles, capacity) already shown there.
 - **Three PowerToys-inspired tools** (all native, no PowerToys needed):
   **Keep awake** (Tools → Performance — while on, the PC won't sleep and the
   screen stays on; click again to turn off, auto-clears on exit),
@@ -32,6 +58,31 @@ All notable changes to **PulseDeck** are documented here.
   prompt; HKLM/all-users entries are shown read-only ("Needs admin") rather
   than silently failing.
 
+### Fixed
+- **The bar no longer hides while a borderless desktop app merely has
+  focus.** The fullscreen detector used to infer "game/video in front"
+  from the foreground window's geometry (exact-monitor rect), but
+  borderless Electron-style apps (Claude, Discord, …) legitimately match
+  that shape while the taskbar is still showing — so focusing one hid the
+  bar for as long as you typed in it. The detector now probes what is
+  visually on top at the taskbar's clock corner (WindowFromPoint respects
+  the compositor's z-bands): the bar hides only when the taskbar itself is
+  actually covered by a fullscreen surface — exactly the clock's behavior.
+  Games and fullscreen video still hide it as before.
+- **Bar icons render with smooth anti-aliased edges** instead of the old
+  jagged "staircase" look. The chroma-keyed window can't show true
+  semi-transparent pixels, so edge pixels used to be hard-thresholded to
+  fully-on/fully-off; they are now pre-blended ("matted") onto the adaptive
+  key colour — which is sampled from the real taskbar pixels behind the
+  widget, so the blend matches what's actually there and no fringe appears.
+- **Battery cell's value sat off the shared baseline** relative to the other
+  metric cells — it now uses a single centered line (it only ever shows one
+  number, unlike CPU/RAM/GPU's two-row layout) instead of a two-row layout
+  with a permanently-empty top line.
+- **Power cell's icon and value** were bottom-heavy against a too-wide gap;
+  both are now vertically centered with the value pulled in closer to the
+  icon.
+
 ### Investigated, not shipped
 - **Universal CPU temperature** (AMD/Intel) — prototyped via the same
   LibreHardwareMonitor library, but the low-level MSR driver it needs is
@@ -40,6 +91,17 @@ All notable changes to **PulseDeck** are documented here.
   anti-cheat. Admin elevation doesn't help once VBS is on: the sensor reads
   back a hard 0 either way. A reliable version would need a separate
   elevated helper process; shelved for now given the uncertain payoff.
+- **Bar staying visible above Start/Search/Notification Center** — two
+  approaches tested live. (1) Confirmed (via Win32 `IsWindowVisible`, while
+  Start was open) that the bar's own window stays alive, positioned, and
+  topmost the whole time; the shell surfaces' compositor z-band simply sits
+  above *all* ordinary topmost windows. (2) Reparenting the bar INTO
+  Shell_TrayWnd (`SetParent`, the TrafficMonitor approach) — docking
+  worked, but the moment Start opened this Windows build (11/26200)
+  actively EVICTED the foreign child window, silently reparenting it back
+  to the desktop with mangled styles. There is no supported way for a
+  normal app to stay visible over the shell surfaces — the tray-icon live
+  tooltip (above) is the workaround.
 
 ---
 

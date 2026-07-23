@@ -18,7 +18,7 @@ import random
 
 APP_NAME = 'PulseDeck'       # internal identity: config dir, mutex, registry, Store package
 DISPLAY_NAME = 'PulseDeck'   # user-visible product name (rebrand)
-VERSION  = '2.9.5'
+VERSION  = '2.10.1'
 
 # ── Crash logging (enabled when NETCPURAM_DEBUG=1) ─────────────────────
 def _debug_log_path():
@@ -186,42 +186,50 @@ TIP = {
        'cores':'Cores','source':'Windows counters','charging':'Charging','onbatt':'On battery',
        'timeleft':'Time left','now':'Now','perdisk':'Per-disk · read / write','status':'Status',
        'sampling':'sampling…','loading':'loading…','vramused':'VRAM used','temp':'Temperature',
-       'feels':'Feels like','humidity':'Humidity','wind':'Wind','forecast':'Forecast'},
+       'feels':'Feels like','humidity':'Humidity','wind':'Wind','forecast':'Forecast','signal':'Signal',
+       'ping':'Ping'},
  'el':{'top':'Κορυφαίες διεργασίες','used':'Σε χρήση','free':'Ελεύθερα','total':'Σύνολο','session':'Συνεδρία',
        'cores':'Πυρήνες','source':'Μετρητές Windows','charging':'Φόρτιση','onbatt':'Στη μπαταρία',
        'timeleft':'Απομένει','now':'Τώρα','perdisk':'Ανά δίσκο · ανάγν./εγγρ.','status':'Κατάσταση',
        'sampling':'δειγματοληψία…','loading':'φόρτωση…','vramused':'VRAM σε χρήση','temp':'Θερμοκρασία',
-       'feels':'Αίσθηση','humidity':'Υγρασία','wind':'Άνεμος','forecast':'Πρόγνωση'},
+       'feels':'Αίσθηση','humidity':'Υγρασία','wind':'Άνεμος','forecast':'Πρόγνωση','signal':'Σήμα',
+       'ping':'Ping'},
  'es':{'top':'Procesos principales','used':'Usado','free':'Libre','total':'Total','session':'Sesión',
        'cores':'Núcleos','source':'Contadores de Windows','charging':'Cargando','onbatt':'Con batería',
        'timeleft':'Restante','now':'Ahora','perdisk':'Por disco · lect./escr.','status':'Estado',
        'sampling':'muestreando…','loading':'cargando…','vramused':'VRAM usada','temp':'Temperatura',
-       'feels':'Sensación','humidity':'Humedad','wind':'Viento','forecast':'Pronóstico'},
+       'feels':'Sensación','humidity':'Humedad','wind':'Viento','forecast':'Pronóstico','signal':'Señal',
+       'ping':'Ping'},
  'de':{'top':'Top-Prozesse','used':'Belegt','free':'Frei','total':'Gesamt','session':'Sitzung',
        'cores':'Kerne','source':'Windows-Zähler','charging':'Lädt','onbatt':'Akkubetrieb',
        'timeleft':'Restzeit','now':'Jetzt','perdisk':'Pro Datenträger · L/S','status':'Status',
        'sampling':'Abtastung…','loading':'lädt…','vramused':'VRAM belegt','temp':'Temperatur',
-       'feels':'Gefühlt','humidity':'Luftfeuchte','wind':'Wind','forecast':'Vorhersage'},
+       'feels':'Gefühlt','humidity':'Luftfeuchte','wind':'Wind','forecast':'Vorhersage','signal':'Signal',
+       'ping':'Ping'},
  'fr':{'top':'Processus principaux','used':'Utilisé','free':'Libre','total':'Total','session':'Session',
        'cores':'Cœurs','source':'Compteurs Windows','charging':'En charge','onbatt':'Sur batterie',
        'timeleft':'Restant','now':'Maintenant','perdisk':'Par disque · lect./écr.','status':'État',
        'sampling':'échantillonnage…','loading':'chargement…','vramused':'VRAM utilisée','temp':'Température',
-       'feels':'Ressenti','humidity':'Humidité','wind':'Vent','forecast':'Prévisions'},
+       'feels':'Ressenti','humidity':'Humidité','wind':'Vent','forecast':'Prévisions','signal':'Signal',
+       'ping':'Ping'},
  'it':{'top':'Processi principali','used':'Usato','free':'Libero','total':'Totale','session':'Sessione',
        'cores':'Core','source':'Contatori Windows','charging':'In carica','onbatt':'A batteria',
        'timeleft':'Rimanente','now':'Ora','perdisk':'Per disco · lett./scritt.','status':'Stato',
        'sampling':'campionamento…','loading':'caricamento…','vramused':'VRAM usata','temp':'Temperatura',
-       'feels':'Percepita','humidity':'Umidità','wind':'Vento','forecast':'Previsioni'},
+       'feels':'Percepita','humidity':'Umidità','wind':'Vento','forecast':'Previsioni','signal':'Segnale',
+       'ping':'Ping'},
  'pt':{'top':'Processos principais','used':'Usado','free':'Livre','total':'Total','session':'Sessão',
        'cores':'Núcleos','source':'Contadores do Windows','charging':'Carregando','onbatt':'Na bateria',
        'timeleft':'Restante','now':'Agora','perdisk':'Por disco · leit./escr.','status':'Estado',
        'sampling':'amostragem…','loading':'carregando…','vramused':'VRAM usada','temp':'Temperatura',
-       'feels':'Sensação','humidity':'Humidade','wind':'Vento','forecast':'Previsão'},
+       'feels':'Sensação','humidity':'Humidade','wind':'Vento','forecast':'Previsão','signal':'Sinal',
+       'ping':'Ping'},
  'ru':{'top':'Топ процессы','used':'Занято','free':'Свободно','total':'Всего','session':'Сессия',
        'cores':'Ядра','source':'Счётчики Windows','charging':'Зарядка','onbatt':'От батареи',
        'timeleft':'Осталось','now':'Сейчас','perdisk':'По дискам · чт./зап.','status':'Состояние',
        'sampling':'выборка…','loading':'загрузка…','vramused':'VRAM занято','temp':'Температура',
-       'feels':'Ощущается','humidity':'Влажность','wind':'Ветер','forecast':'Прогноз'},
+       'feels':'Ощущается','humidity':'Влажность','wind':'Ветер','forecast':'Прогноз','signal':'Сигнал',
+       'ping':'Пинг'},
 }
 # localized short weekday names (Mon=0 … Sun=6)
 WDAYS = {
@@ -290,6 +298,16 @@ QUAKES_TOAST_TITLE = {
  'en':'Earthquake felt','el':'Αισθητός σεισμός','es':'Terremoto sentido',
  'de':'Erdbeben gespürt','fr':'Tremblement de terre ressenti',
  'it':'Terremoto avvertito','pt':'Terramoto sentido','ru':'Землетрясение',
+}
+PERF_ALERT_TITLE = {
+ 'en':{'cpu':'High CPU load','ram':'High RAM usage','batt':'Battery low'},
+ 'el':{'cpu':'Υψηλό φορτίο CPU','ram':'Υψηλή χρήση RAM','batt':'Χαμηλή μπαταρία'},
+ 'es':{'cpu':'Carga de CPU alta','ram':'Uso de RAM alto','batt':'Batería baja'},
+ 'de':{'cpu':'Hohe CPU-Last','ram':'Hohe RAM-Nutzung','batt':'Akku schwach'},
+ 'fr':{'cpu':'Charge CPU élevée','ram':'Utilisation RAM élevée','batt':'Batterie faible'},
+ 'it':{'cpu':'CPU molto carica','ram':'RAM molto usata','batt':'Batteria scarica'},
+ 'pt':{'cpu':'CPU sobrecarregada','ram':'Uso de RAM alto','batt':'Bateria fraca'},
+ 'ru':{'cpu':'Высокая загрузка CPU','ram':'Высокое использование RAM','batt':'Низкий заряд батареи'},
 }
 # ── power consumption (v2.7) ──
 POWER_LABEL = {
@@ -476,7 +494,7 @@ CUST_EXTRA = {
        'felt_near':'Recent felt events near you','no_felt':'No felt events recently.',
        'sys_mobo':'Motherboard','sys_monitor':'Monitor','sys_audio':'Audio',
        'sys_optical':'Optical drive','sys_storage':'Storage','sys_network':'Network',
-       'sys_machine':'System','sys_battery':'Battery','sys_drives':'Drives',
+       'sys_machine':'System','sys_battery':'Battery','sys_battreport':'Battery report','sys_drives':'Drives',
        'sys_security':'Security','sys_summary':'Summary','sys_advanced':'Advanced',
        'sys_windows':'Windows','sys_ram':'RAM','copy_all':'Copy all','copied':'Copied!',
        'paypal':'PayPal','revolut':'Revolut','quake_dist':'Alert radius (km)',
@@ -486,7 +504,7 @@ CUST_EXTRA = {
        'felt_near':'Πρόσφατα αισθητά συμβάντα κοντά σου','no_felt':'Κανένα αισθητό συμβάν πρόσφατα.',
        'sys_mobo':'Μητρική','sys_monitor':'Οθόνη','sys_audio':'Ήχος',
        'sys_optical':'Οπτικός δίσκος','sys_storage':'Αποθήκευση','sys_network':'Δίκτυο',
-       'sys_machine':'Σύστημα','sys_battery':'Μπαταρία','sys_drives':'Δίσκοι',
+       'sys_machine':'Σύστημα','sys_battery':'Μπαταρία','sys_battreport':'Αναφορά μπαταρίας','sys_drives':'Δίσκοι',
        'sys_security':'Ασφάλεια','sys_summary':'Σύνοψη','sys_advanced':'Προχωρημένα',
        'sys_windows':'Windows','sys_ram':'RAM','copy_all':'Αντιγραφή όλων','copied':'Αντιγράφηκε!',
        'paypal':'PayPal','revolut':'Revolut','quake_dist':'Ακτίνα ειδοποίησης (km)',
@@ -1220,7 +1238,7 @@ for _lng, _d in NEW_TOOLS_I18N.items():
 #    inline above). Values use double quotes so apostrophes need no escaping. ──
 NEW_V29_I18N = {
  'es': {
-   'sys_machine':"Sistema", 'sys_battery':"Batería", 'sys_drives':"Discos",
+   'sys_machine':"Sistema", 'sys_battery':"Batería", 'sys_battreport':"Informe de batería", 'sys_drives':"Discos",
    'sys_security':"Seguridad", 'sys_summary':"Resumen", 'sys_advanced':"Avanzado",
    'hide_fs':"Ocultar cuando una app pasa a pantalla completa",
    'desc__t_classicmenu':"Alternar el menú contextual estilo Windows 10",
@@ -1238,7 +1256,7 @@ NEW_V29_I18N = {
    'su_sys32':"Carpeta System32", 'su_sys32_d':"Abrir el directorio System32 de Windows",
  },
  'de': {
-   'sys_machine':"System", 'sys_battery':"Akku", 'sys_drives':"Laufwerke",
+   'sys_machine':"System", 'sys_battery':"Akku", 'sys_battreport':"Akkubericht", 'sys_drives':"Laufwerke",
    'sys_security':"Sicherheit", 'sys_summary':"Übersicht", 'sys_advanced':"Erweitert",
    'hide_fs':"Ausblenden, wenn eine App in den Vollbildmodus wechselt",
    'desc__t_classicmenu':"Klassisches Kontextmenü (Windows 10) umschalten",
@@ -1256,7 +1274,7 @@ NEW_V29_I18N = {
    'su_sys32':"System32-Ordner", 'su_sys32_d':"Windows-System32-Verzeichnis öffnen",
  },
  'fr': {
-   'sys_machine':"Système", 'sys_battery':"Batterie", 'sys_drives':"Disques",
+   'sys_machine':"Système", 'sys_battery':"Batterie", 'sys_battreport':"Rapport de batterie", 'sys_drives':"Disques",
    'sys_security':"Sécurité", 'sys_summary':"Résumé", 'sys_advanced':"Avancé",
    'hide_fs':"Masquer quand une appli passe en plein écran",
    'desc__t_classicmenu':"Basculer le menu contextuel style Windows 10",
@@ -1274,7 +1292,7 @@ NEW_V29_I18N = {
    'su_sys32':"Dossier System32", 'su_sys32_d':"Ouvrir le répertoire System32 de Windows",
  },
  'it': {
-   'sys_machine':"Sistema", 'sys_battery':"Batteria", 'sys_drives':"Dischi",
+   'sys_machine':"Sistema", 'sys_battery':"Batteria", 'sys_battreport':"Rapporto batteria", 'sys_drives':"Dischi",
    'sys_security':"Sicurezza", 'sys_summary':"Riepilogo", 'sys_advanced':"Avanzate",
    'hide_fs':"Nascondi quando un'app va a schermo intero",
    'desc__t_classicmenu':"Attiva/disattiva il menu contestuale stile Windows 10",
@@ -1292,7 +1310,7 @@ NEW_V29_I18N = {
    'su_sys32':"Cartella System32", 'su_sys32_d':"Apri la directory System32 di Windows",
  },
  'pt': {
-   'sys_machine':"Sistema", 'sys_battery':"Bateria", 'sys_drives':"Discos",
+   'sys_machine':"Sistema", 'sys_battery':"Bateria", 'sys_battreport':"Relatório da bateria", 'sys_drives':"Discos",
    'sys_security':"Segurança", 'sys_summary':"Resumo", 'sys_advanced':"Avançado",
    'hide_fs':"Ocultar quando uma app entra em ecrã inteiro",
    'desc__t_classicmenu':"Alternar o menu de contexto estilo Windows 10",
@@ -1310,7 +1328,7 @@ NEW_V29_I18N = {
    'su_sys32':"Pasta System32", 'su_sys32_d':"Abrir o diretório System32 do Windows",
  },
  'ru': {
-   'sys_machine':"Система", 'sys_battery':"Батарея", 'sys_drives':"Диски",
+   'sys_machine':"Система", 'sys_battery':"Батарея", 'sys_battreport':"Отчёт о батарее", 'sys_drives':"Диски",
    'sys_security':"Безопасность", 'sys_summary':"Сводка", 'sys_advanced':"Подробно",
    'hide_fs':"Скрывать, когда приложение в полноэкранном режиме",
    'desc__t_classicmenu':"Переключить контекстное меню в стиле Windows 10",
@@ -2449,6 +2467,10 @@ DEFAULTS = {
     'cell_order': None,      # None = use DEFAULT_CELL_ORDER; else list of ids
     'critical_last': True,   # always force the quake alert cell to the end
     'single_row_mode': 'percent',  # when stacked is OFF: 'percent' | 'detail'
+    # ── performance alerts (v2.17): Windows toast on sustained CPU/RAM load
+    # or low battery, via the tray icon — reaches the user even when a
+    # shell surface (Start, Search, …) is covering the bar itself ──
+    'perf_alerts_on': False,
 }
 
 # Color themes — 'accent' tints icons-divider, 'val' is the calm value color
@@ -3228,6 +3250,54 @@ def _active_net_kind():
     except Exception:
         return None
 
+def _wifi_signal_percent():
+    """Current Wi-Fi signal strength 0-100, or None (not on Wi-Fi / unavailable).
+    'Signal' is the only field netsh prints as a bare 'NN%' value, so matching
+    on that shape (rather than the field's label, which netsh localizes to the
+    Windows display language) works regardless of language."""
+    try:
+        si = subprocess.STARTUPINFO()
+        si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        r = subprocess.run(['netsh', 'wlan', 'show', 'interfaces'],
+                            capture_output=True, text=True, timeout=2, startupinfo=si)
+        for line in (r.stdout or '').splitlines():
+            line = line.strip()
+            if ':' not in line:
+                continue
+            val = line.split(':', 1)[1].strip()
+            if val.endswith('%'):
+                num = val[:-1].strip()
+                if num.isdigit():
+                    v = int(num)
+                    if 0 <= v <= 100:
+                        return v
+    except Exception:
+        pass
+    return None
+
+def _ping_latency_ms(target='1.1.1.1'):
+    """Round-trip latency to `target` in ms, or None. Parsed by locating the
+    digits right before the first 'ms' in ping's output — that unit isn't
+    localized even though the surrounding label text is (e.g. Greek's
+    'χρόνος=' instead of 'time='), so this works on any Windows language."""
+    try:
+        si = subprocess.STARTUPINFO()
+        si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        r = subprocess.run(['ping', '-n', '1', '-w', '800', target],
+                            capture_output=True, text=True, timeout=2, startupinfo=si)
+        out = r.stdout or ''
+        idx = out.find('ms')
+        if idx == -1:
+            return None
+        j = idx
+        digits = ''
+        while j > 0 and out[j - 1].isdigit():
+            digits = out[j - 1] + digits
+            j -= 1
+        return int(digits) if digits else None
+    except Exception:
+        return None
+
 _PUBIP_CACHE = ('', 0.0)   # (ip, fetched-at) — see _net_extra
 
 def _net_extra():
@@ -3805,6 +3875,9 @@ class _SlowPoller(threading.Thread):
         self.nvidia_temp_c = None  # float | None  (GPU °C from nvidia-smi)
         self.lhm_gpu_temp_c = None # float | None  (AMD/Intel GPU °C, no nvidia-smi)
         self.net_kind     = None   # 'wifi' | 'eth' | None (default-route interface)
+        self.wifi_signal  = None   # int 0-100 | None (only polled while on Wi-Fi)
+        self.ping_ms      = None   # int | None (round-trip to 1.1.1.1, every 3rd poll)
+        self._poll_n      = 0
         self._stop        = False
 
     def run(self):
@@ -3839,8 +3912,17 @@ class _SlowPoller(threading.Thread):
                 pass
         try:
             self.net_kind = _active_net_kind()
+            self.wifi_signal = _wifi_signal_percent() if self.net_kind == 'wifi' else None
         except Exception:
             pass
+        # ping is the slowest of these reads (up to the 800 ms timeout on a
+        # dead link) — every 3rd poll (~3 s) is plenty "live" for a hover tip
+        self._poll_n += 1
+        if self._poll_n % 3 == 0:
+            try:
+                self.ping_ms = _ping_latency_ms()
+            except Exception:
+                pass
 
     def stop(self):
         self._stop = True
@@ -4360,6 +4442,7 @@ class CustomizeWindow:
         self._check_row(body, L['tooltips'], 'tooltips')
         self._check_row(body, L.get('hide_fs', 'Hide when an app goes fullscreen'),
                         'follow_taskbar')
+        self._check_row(body, '🔔  Performance alerts (CPU/RAM/battery)', 'perf_alerts_on')
         self._check_row(body, L['check_upd'], 'check_updates')
         # startup row: a button that opens Settings (MSIX) or toggles (Win32)
         srow = tk.Frame(body, bg=T['bg']); srow.pack(fill='x', padx=24, pady=10)
@@ -5350,6 +5433,12 @@ class CustomizeWindow:
             if batt.get('cycles'):    kv(s, 'Cycles', str(batt['cycles']))
             if batt.get('name'):      kv(s, 'Model', batt['name'])
             if batt.get('chemistry'): kv(s, 'Chemistry', batt['chemistry'])
+            tk.Button(s, text='📄  ' + L.get('sys_battreport', 'Battery report'),
+                     command=self._open_battery_report,
+                     bg=T['panel'], fg=T['text'], bd=0,
+                     font=('Segoe UI', 10), padx=14, pady=6,
+                     activebackground=T['bg2'], activeforeground=T['cyan'],
+                     cursor='hand2').pack(anchor='w', padx=4, pady=(4, 0))
             tk.Frame(s, bg=T['panel'], height=8).pack()
 
         _footer()
@@ -5765,6 +5854,24 @@ class CustomizeWindow:
             self.w._toast(msg)
         except Exception:
             pass
+
+    def _open_battery_report(self):
+        """Run the built-in `powercfg /batteryreport` and open the resulting
+        HTML — Windows' own multi-day usage/wear history, which complements
+        the live snapshot above (health %, cycles, capacity) rather than
+        duplicating it."""
+        def _bg():
+            try:
+                path = os.path.join(os.environ.get('TEMP', os.getcwd()),
+                                     'PulseDeck_battery_report.html')
+                si = subprocess.STARTUPINFO()
+                si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                subprocess.run(['powercfg', '/batteryreport', '/output', path],
+                                capture_output=True, timeout=15, startupinfo=si)
+                webbrowser.open('file:///' + path.replace('\\', '/'))
+            except Exception:
+                pass
+        threading.Thread(target=_bg, daemon=True).start()
 
     def _confirm(self, msg, on_yes):
         """Small modal yes/cancel dialog centered over the Customize window."""
@@ -6219,6 +6326,10 @@ class Widget:
         # rolling history for sparklines
         from collections import deque
         self._hist = {'cpu': deque(maxlen=32), 'ram': deque(maxlen=32)}
+        # armed/fired state per metric, for the perf-alert toasts below —
+        # hysteresis (fire-threshold vs a lower clear-threshold) so one
+        # sustained spike sends exactly one toast instead of one per tick
+        self._alert_fired = {'cpu': False, 'ram': False, 'batt': False}
         self._pending_rebuild = False
         self._rgb_targets = []
         self._sep_labels = []
@@ -6267,9 +6378,9 @@ class Widget:
             return
         try:
             from PIL import ImageGrab
+            x, y = self._bar_screen_xy()   # real coords, valid while docked
             self.root.withdraw()
             self.root.update_idletasks()
-            x = self.root.winfo_x(); y = self.root.winfo_y()
             w = max(60, self.root.winfo_width())
             h = max(20, self.root.winfo_height())
             img = ImageGrab.grab(bbox=(x, y, x + w, y + h))
@@ -6502,6 +6613,7 @@ class Widget:
         self._rebuild()
 
     def _act_quit(self):
+        self._user_quit = True   # deliberate exit — see run()'s watchdog
         try:
             if getattr(self, '_tray', None):
                 self._tray.stop()
@@ -6524,7 +6636,48 @@ class Widget:
                 img = Image.new('RGBA', (32, 32), (47, 129, 247, 255))
         self._pystray = pystray
         self._tray = pystray.Icon(APP_NAME, img, DISPLAY_NAME, self._tray_menu())
+        self._tray_last_val = None
         threading.Thread(target=self._tray.run, daemon=True).start()
+
+    def _update_tray_cpu(self, cpu):
+        """Keep the tray icon's hover tooltip showing live CPU% — Windows
+        pops that text up natively when the mouse sits over the icon, so
+        no hover-detection code is needed here. The icon image itself stays
+        the static PulseDeck logo; only the tooltip string changes.
+
+        The tray belongs to the taskbar's own surface, so — unlike the
+        floating bar — it stays visible even when Start/Search/Notification
+        Center are open (those sit in a shell z-band above ordinary
+        always-on-top windows; nothing painted by a regular app can beat
+        that, the tray is the one spot that isn't affected)."""
+        if not getattr(self, '_tray', None):
+            return
+        v = int(round(cpu))
+        if v == self._tray_last_val:
+            return
+        self._tray_last_val = v
+        try:
+            self._tray.title = f'{DISPLAY_NAME} — CPU {v}%'
+        except Exception:
+            pass
+
+    def _perf_alert(self, key, above, fire_at, clear_at, title, body):
+        """Fire a Windows toast once when `above` crosses `fire_at`, then
+        re-arm only once it drops back under `clear_at` — the same
+        armed/fired + hysteresis shape as the quake alerts, so a value
+        sitting right at the line doesn't toast every tick."""
+        if not self.cfg.get('perf_alerts_on'):
+            return
+        fired = self._alert_fired[key]
+        if not fired and above >= fire_at:
+            self._alert_fired[key] = True
+            if getattr(self, '_tray', None):
+                try:
+                    self._tray.notify(body, title)
+                except Exception:
+                    pass
+        elif fired and above < clear_at:
+            self._alert_fired[key] = False
 
     def _tray_menu(self):
         from pystray import Menu, MenuItem as MI
@@ -6872,21 +7025,9 @@ class Widget:
         Loaded from _build_ui (after self.bg is known) and re-loaded on every
         rebuild so an adaptive-key change re-treats them too."""
         icons = {}
-        key = self.bg if isinstance(getattr(self, 'bg', None), str) else ''
         for name in ('wx_clear','wx_partly','wx_cloudy','wx_fog','wx_rain','wx_snow','wx_storm'):
             try:
-                path = os.path.join(ICON_DIR, name + '.png')
-                if key.startswith('#') and len(key) == 7:
-                    from PIL import Image, ImageTk, ImageFilter
-                    im = Image.open(path).convert('RGBA')
-                    r, g, b, a = im.split()
-                    # low threshold, no erode: icon files carry clean edge
-                    # colours (premultiplied downscale), so semi-covered
-                    # thin-feature pixels can safely render fully opaque
-                    a = a.point(lambda v: 255 if v >= 60 else 0)
-                    icons[name] = ImageTk.PhotoImage(Image.merge('RGBA', (r, g, b, a)))
-                else:
-                    icons[name] = tk.PhotoImage(file=path)
+                icons[name] = self._matte_icon(os.path.join(ICON_DIR, name + '.png'))
             except Exception:
                 icons[name] = None
         return icons
@@ -6930,7 +7071,15 @@ class Widget:
         if self.cfg.get('free_pos'):
             # custom position from dragging
             x = min(max(0, int(self.cfg.get('pos_x', 0))), max(0, screen_w - w))
-            y = min(max(0, int(self.cfg.get('pos_y', 0))), max(0, max_y))
+            if on_tb:
+                # X stays where the user dragged it, but Y is ALWAYS derived
+                # from the live taskbar band: a stored Y can be stale — saved
+                # under a different DPI-virtualization space (portable config
+                # travelling between builds) or while the shell was mid-
+                # restart — and would strand the bar mid-screen.
+                y = wa_bottom + max(0, (taskbar_h - h) // 2)
+            else:
+                y = min(max(0, int(self.cfg.get('pos_y', 0))), max(0, max_y))
         else:
             align = self.cfg['align']
             if align == 'center':
@@ -6945,7 +7094,7 @@ class Widget:
             else:
                 # float just ABOVE the taskbar — always visible, any layout
                 y = max(0, wa_bottom - h - 1)
-        self.root.geometry(f'+{x}+{y}')
+        self._set_bar_pos(x, y)
         # keep the colour key alive after any resize (Windows quirk)
         if self.cfg.get('transparent_bg'):
             try:
@@ -6954,26 +7103,33 @@ class Widget:
                 pass
 
     # ── icon loader ───────────────────────────────────────────────────
+    def _matte_icon(self, path):
+        """Load an icon pre-blended ("matted") onto the chroma-key colour.
+
+        The old treatment hard-thresholded the alpha to binary, which kept
+        the keyed edges fringe-free but turned every anti-aliased curve into
+        a staircase. Since the key is ADAPTIVE (sampled from the real taskbar
+        pixels behind the widget — see _adapt_key_color), we can do better:
+        composite the icon over the key colour so edge pixels become opaque
+        but pre-blended toward what is actually behind them. Edges render
+        smooth, and any residual fringe is a few RGB units at most (the
+        sampling tolerance), invisible in practice. Fully-clear pixels keep
+        alpha 0 → they render as the label bg (the exact key) and key out."""
+        from PIL import Image, ImageTk
+        icon = Image.open(path).convert('RGBA')
+        key = self.bg if isinstance(getattr(self, 'bg', None), str) else ''
+        if not (key.startswith('#') and len(key) == 7):
+            return ImageTk.PhotoImage(icon)
+        kr, kg, kb = (int(key[i:i + 2], 16) for i in (1, 3, 5))
+        matte = Image.alpha_composite(
+            Image.new('RGBA', icon.size, (kr, kg, kb, 255)), icon)
+        matte.putalpha(icon.split()[3].point(lambda v: 255 if v >= 8 else 0))
+        return ImageTk.PhotoImage(matte)
+
     def _icon(self, name):
         path = os.path.join(ICON_DIR, name)
-        img = None
         try:
-            # Hard-threshold the alpha to binary: a pixel is either fully opaque
-            # (the icon) or fully transparent. Transparent pixels fall through to
-            # the Label's background colour, which is the chroma key and gets
-            # keyed out cleanly — so there is NO pale/white fringe around the
-            # icon (the old anti-aliased edges left semi-transparent pixels that
-            # blended toward the key but never matched it exactly).
-            from PIL import Image, ImageTk, ImageFilter
-            icon = Image.open(path).convert('RGBA')
-            r, g, b, a = icon.split()
-            # Low threshold, and no 1px erode any more: the icon files are
-            # produced with a premultiplied downscale so their edge colours
-            # are uncontaminated — rendering semi-covered pixels opaque adds
-            # no fringe, and thin details (sun rays…) stay intact.
-            a = a.point(lambda v: 255 if v >= 60 else 0)
-            icon = Image.merge('RGBA', (r, g, b, a))
-            img = ImageTk.PhotoImage(icon)
+            img = self._matte_icon(path)
         except Exception:
             img = None
         if img is None:
@@ -7062,18 +7218,12 @@ class Widget:
         text_mode = self.cfg.get('bar_labels') == 'text'
 
         def load_icon_img(name):
-            """Bar-icon PhotoImage with the chroma-key edge treatment:
-            binary-alpha + 1px erode so the keyed edges stay clean (no pale
-            fringe) — same treatment as the standalone _icon."""
-            key = self.bg if isinstance(self.bg, str) else ''
-            if key.startswith('#') and len(key) == 7:
-                from PIL import Image, ImageTk, ImageFilter
-                im = Image.open(os.path.join(ICON_DIR, name)).convert('RGBA')
-                r, g, b, a = im.split()
-                # low threshold, no erode — see the standalone _icon note
-                a = a.point(lambda v: 255 if v >= 60 else 0)
-                img = ImageTk.PhotoImage(Image.merge('RGBA', (r, g, b, a)))
-            else:
+            """Bar-icon PhotoImage, matted onto the adaptive chroma key for
+            smooth anti-aliased edges — same treatment as the standalone
+            _icon (see _matte_icon for why this beats binary alpha)."""
+            try:
+                img = self._matte_icon(os.path.join(ICON_DIR, name))
+            except Exception:
                 img = tk.PhotoImage(file=os.path.join(ICON_DIR, name))
             self._imgs.append(img)
             return img
@@ -7232,14 +7382,17 @@ class Widget:
                 self._tip_cells.append((fd, 'diskspace', drive))
         def b_batt():
             if not self._has_batt: return
-            f, self.lbl_batt, _ = stat('battery.png', sw if stacked else 5, stacked)
+            # battery shows just "%" (no second metric like CPU's GHz), so it
+            # gets no top line — a single centered row, unlike the two-row
+            # stat() cells, since there's nothing to put above it
+            f, self.lbl_batt, _ = stat('battery.png', sw if stacked else 5, False)
             self._tip_cells.append((f, 'batt', None))
         def b_power():
             f = new_cell()
             tk.Label(f, text='⚡', fg='#ffd64a', bg=self.bg,
                      font=('Segoe UI', big), padx=2).pack(side='left')
             if stacked:
-                col = tk.Frame(f, bg=self.bg); col.pack(side='left', padx=2)
+                col = tk.Frame(f, bg=self.bg); col.pack(side='left', padx=(0, 2))
                 # natural width — no extra transparent space showing the bar
                 # fixed width: "{watts} W" swings 3↔5 chars each tick → lock it
                 # (like the net cell) so the bar never resizes / flashes black
@@ -7376,6 +7529,41 @@ class Widget:
         if b >= 1024:          return f'{b/1024:.0f} K'
         return f'{b:.0f} B'
 
+    # ── taskbar docking & z-order ──────────────────────────────────────
+    def _bar_hwnd(self):
+        """Native HWND of the bar's top-level frame."""
+        u = ctypes.windll.user32
+        return u.GetParent(self.root.winfo_id()) or self.root.winfo_id()
+
+    def _bar_screen_xy(self):
+        """True on-screen (x, y) of the bar straight from Win32 — more
+        robust than Tk's winfo_x/y for anything that must match the real
+        pixels (tooltips, toasts, drag, the chroma-key sampler)."""
+        try:
+            r = RECT()
+            ctypes.windll.user32.GetWindowRect(self._bar_hwnd(), ctypes.byref(r))
+            return r.left, r.top
+        except Exception:
+            return self.root.winfo_x(), self.root.winfo_y()
+
+    def _set_bar_pos(self, x, y):
+        """Place the bar at SCREEN coords (x, y)."""
+        try:
+            self.root.geometry(f'+{x}+{y}')
+        except Exception:
+            pass
+
+    # NOTE (investigated 2026-07-23, do not retry blindly): reparenting the
+    # bar INTO Shell_TrayWnd (SetParent, the TrafficMonitor approach) was
+    # implemented and live-tested here in the hope of surviving the Start
+    # menu. The dock itself worked — but the moment Start opened, this
+    # Windows build (11 / 26200) actively EVICTED the foreign child: our
+    # window was silently reparented back to the desktop with its styles
+    # mangled. The shell owns its band; there is no supported way for a
+    # normal app to stay visible over Start/Search/Notification Center.
+    # The tray icon's live-CPU tooltip is the sanctioned workaround (the
+    # tray stays interactive while Start is open).
+
     # ── keep above games / fullscreen apps ─────────────────────────────
     def _keep_on_top(self):
         """Re-assert TOPMOST above every other window.
@@ -7390,7 +7578,7 @@ class Widget:
         there is no visible flicker."""
         try:
             u = ctypes.windll.user32
-            hwnd = u.GetParent(self.root.winfo_id()) or self.root.winfo_id()
+            hwnd = self._bar_hwnd()
             HWND_TOPMOST = -1; HWND_NOTOPMOST = -2
             f = 0x0001 | 0x0002 | 0x0010   # NOSIZE | NOMOVE | NOACTIVATE
             if self.cfg.get('on_taskbar'):
@@ -7413,43 +7601,41 @@ class Widget:
         self.root.after(interval, self._foreground_loop)
 
     def _is_fullscreen_foreground(self):
-        """True if a fullscreen app (game/video) is in front → taskbar is hidden.
-        Result is cached for 250 ms so Win32 API calls don't hit every tick."""
+        """True if the taskbar is currently COVERED by a fullscreen surface
+        (game / fullscreen video) → the bar should hide, like the clock.
+
+        Probed by asking what is visually on top at the clock corner
+        (WindowFromPoint respects the compositor's z-bands): if the taskbar
+        itself answers, it is showing and the bar stays; if the fullscreen
+        app answers, the taskbar is covered and the bar hides with it.
+
+        The old check guessed from the FOREGROUND window's geometry
+        ("fills its monitor exactly → fullscreen") — but borderless
+        desktop apps (Electron: Claude, Discord, …) legitimately have an
+        exact-monitor rect while the taskbar still floats above them, so
+        merely FOCUSING such an app hid the bar. Probing the taskbar's own
+        spot answers the actual question instead of inferring it.
+        Result is cached for 250 ms so Win32 calls don't hit every tick."""
         now = time.monotonic()
         if now - getattr(self, '_fs_ts', 0.0) < 0.25:
             return getattr(self, '_fs_cache', False)
         self._fs_ts = now
         try:
             u = ctypes.windll.user32
-            hwnd = u.GetForegroundWindow()
-            if not hwnd:
-                self._fs_cache = False; return False
-            buf = ctypes.create_unicode_buffer(256)
-            u.GetClassNameW(hwnd, buf, 256)
-            if buf.value in ('Shell_TrayWnd', 'Progman', 'WorkerW', 'Windows.UI.Core.CoreWindow', ''):
-                self._fs_cache = False; return False
-            r = RECT()
-            u.GetWindowRect(hwnd, ctypes.byref(r))
-            # Distinguish TRUE fullscreen (game / fullscreen video) from a merely
-            # MAXIMIZED window. Both can report IsZoomed=True (Chrome reports
-            # fullscreen video as zoomed!), so IsZoomed is useless here. Instead:
-            #   • fullscreen fills the monitor EXACTLY, flush to its corners
-            #     (e.g. 0,0 … 1536,864).
-            #   • maximized overhangs the monitor by the invisible resize border
-            #     (e.g. -7,-7 … 1543,823) and stops short of the taskbar edge.
-            # An exact (±2 px) match against the window's own monitor cleanly
-            # tells them apart, on any monitor and at any DPI scaling.
-            MONITOR_DEFAULTTONEAREST = 2
-            hmon = u.MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST)
-            mi = MONITORINFO(); mi.cbSize = ctypes.sizeof(MONITORINFO)
-            if hmon and u.GetMonitorInfoW(hmon, ctypes.byref(mi)):
-                m = mi.rcMonitor
-            else:
-                m = RECT(); m.left = 0; m.top = 0
-                m.right = u.GetSystemMetrics(0); m.bottom = u.GetSystemMetrics(1)
-            tol = 2
-            result = (abs(r.left - m.left) <= tol and abs(r.top - m.top) <= tol and
-                      abs(r.right - m.right) <= tol and abs(r.bottom - m.bottom) <= tol)
+            class _PT(ctypes.Structure):
+                _fields_ = [('x', ctypes.c_long), ('y', ctypes.c_long)]
+            u.WindowFromPoint.argtypes = [_PT]
+            u.WindowFromPoint.restype = ctypes.c_void_p
+            sw = u.GetSystemMetrics(0); sh = u.GetSystemMetrics(1)
+            h = u.WindowFromPoint(_PT(sw - 8, sh - 8))   # clock corner
+            GA_ROOT = 2
+            root = u.GetAncestor(ctypes.c_void_p(h), GA_ROOT) if h else None
+            buf = ctypes.create_unicode_buffer(64)
+            if root:
+                u.GetClassNameW(ctypes.c_void_p(root), buf, 64)
+            result = buf.value not in ('Shell_TrayWnd', 'Shell_SecondaryTrayWnd')
+            if root and root == self._bar_hwnd():
+                result = False   # probe hit our own bar → taskbar area is ours
             self._fs_cache = result
             return result
         except Exception:
@@ -7635,6 +7821,15 @@ class Widget:
                 if nk:
                     rows.append((tp('status'),
                                  '📶 Wi-Fi' if nk == 'wifi' else '🖧 Ethernet', BLUE))
+                if nk == 'wifi':
+                    sig = getattr(self._slow, 'wifi_signal', None)
+                    if sig is not None:
+                        rows.append((tp('signal'), f'{sig}%',
+                                     GREEN if sig >= 60 else (ORANGE if sig >= 30 else RED)))
+                ping = getattr(self._slow, 'ping_ms', None)
+                if ping is not None:
+                    rows.append((tp('ping'), f'{ping} ms',
+                                 GREEN if ping < 60 else (ORANGE if ping < 150 else RED)))
                 rows.append((tp('session') + ' ↑', self._hb(self._net_session['up']), BLUE))
                 rows.append((tp('session') + ' ↓', self._hb(self._net_session['dn']), GREEN))
                 io = psutil.net_io_counters()
@@ -7772,7 +7967,15 @@ class Widget:
         tip.update_idletasks()
         tw = tip.winfo_reqwidth(); th = tip.winfo_reqheight()
         sw = self.root.winfo_screenwidth()
-        fx, fy = frame.winfo_rootx(), frame.winfo_rooty()
+        # real screen coords of the hovered cell — every Tk widget has its
+        # own native HWND, so this stays correct while the bar is docked
+        # inside the taskbar (winfo_rootx would answer in stale coords)
+        try:
+            fr = RECT()
+            ctypes.windll.user32.GetWindowRect(frame.winfo_id(), ctypes.byref(fr))
+            fx, fy = fr.left, fr.top
+        except Exception:
+            fx, fy = frame.winfo_rootx(), frame.winfo_rooty()
         x = min(max(2, fx - 6), sw - tw - 4)
         y = fy - th - 6
         if y < 0: y = fy + frame.winfo_height() + 6
@@ -7818,6 +8021,10 @@ class Widget:
         except Exception:
             cpu = 0.0
         self._hist['cpu'].append(cpu)
+        self._update_tray_cpu(cpu)
+        self._perf_alert('cpu', cpu, 90, 80,
+                          PERF_ALERT_TITLE.get(self.lang, PERF_ALERT_TITLE['en'])['cpu'],
+                          f'{cpu:.0f}%')
         if self.lbl_cpu:
             ghz = self._cpufreq.read_ghz()
             if ghz is None:
@@ -7840,6 +8047,9 @@ class Widget:
             vm = psutil.virtual_memory()
             ram = vm.percent
             self._hist['ram'].append(ram)
+            self._perf_alert('ram', ram, 90, 80,
+                              PERF_ALERT_TITLE.get(self.lang, PERF_ALERT_TITLE['en'])['ram'],
+                              f'{ram:.0f}%')
             used_gb = vm.used / 1073741824
             if self.lbl_ram_top is not None:
                 self.lbl_ram_top.config(text=self._used_total(used_gb, vm.total / 1073741824))
@@ -7920,6 +8130,12 @@ class Widget:
                 col = '#f85149' if pct <= 15 else ('#ffa657' if pct <= 30 else self.theme['val'])
                 plug = '⚡' if b.power_plugged else ''
                 self.lbl_batt.config(text=f'{plug}{pct}%', fg=col)
+                if b.power_plugged:
+                    self._alert_fired['batt'] = False  # plugging in resolves it
+                else:
+                    self._perf_alert('batt', 100 - pct, 85, 75,
+                                      PERF_ALERT_TITLE.get(self.lang, PERF_ALERT_TITLE['en'])['batt'],
+                                      f'{pct}%')
         if self.lbl_gpu:
             g = self._gpu
             if (getattr(self, 'lbl_gpu_top', None) is None
@@ -7994,14 +8210,15 @@ class Widget:
             return   # no valid press on the bar → ignore orphan motion
         wa_bottom, taskbar_h, screen_w = get_taskbar_info()
         w = self.root.winfo_width(); h = self.root.winfo_height()
-        x = self.root.winfo_x() + e.x - self._dx
-        y = self.root.winfo_y() + e.y - self._dy
+        bx, by = self._bar_screen_xy()
+        x = bx + e.x - self._dx
+        y = by + e.y - self._dy
         # In 'above' mode never enter the taskbar dead zone; in 'on taskbar'
-        # mode the band is allowed (kept visible by the fast keep-on-top loop).
+        # mode the band is allowed (the bar is docked inside the taskbar).
         max_y = (wa_bottom + taskbar_h - h) if self.cfg.get('on_taskbar') else (wa_bottom - h - 1)
         x = min(max(0, x), max(0, screen_w - w))
         y = min(max(0, y), max(0, max_y))
-        self.root.geometry(f'+{x}+{y}')
+        self._set_bar_pos(x, y)
         self._dragging = True
 
     def _drag_end(self, e):
@@ -8012,9 +8229,10 @@ class Widget:
             wa_bottom, taskbar_h, screen_w = get_taskbar_info()
             w = self.root.winfo_width(); h = self.root.winfo_height()
             max_y = (wa_bottom + taskbar_h - h) if self.cfg.get('on_taskbar') else (wa_bottom - h - 1)
+            bx, by = self._bar_screen_xy()
             self.cfg['free_pos'] = True
-            self.cfg['pos_x'] = min(max(0, self.root.winfo_x()), max(0, screen_w - w))
-            self.cfg['pos_y'] = min(max(0, self.root.winfo_y()), max(0, max_y))
+            self.cfg['pos_x'] = min(max(0, bx), max(0, screen_w - w))
+            self.cfg['pos_y'] = min(max(0, by), max(0, max_y))
             save_config(self.cfg)
             # the background under the new position may differ — resample key
             self.root.after(300, self._adapt_key_color)
@@ -8296,7 +8514,8 @@ class Widget:
         tk.Label(win, text=msg, fg='white', bg='#161b22',
                  font=('Segoe UI', 10), padx=16, pady=10).pack()
         win.update_idletasks()
-        win.geometry(f'+{self.root.winfo_x()}+{max(0, self.root.winfo_y()-44)}')
+        bx, by = self._bar_screen_xy()
+        win.geometry(f'+{bx}+{max(0, by - 44)}')
         win.after(ms, win.destroy)
 
     def _toggle_startup(self):
@@ -8306,6 +8525,19 @@ class Widget:
 
     def run(self):
         self.root.mainloop()
+        # Watchdog: docked inside the taskbar, our window dies WITH the
+        # taskbar if Explorer crashes/restarts — the mainloop then ends
+        # without the user having quit. Relaunch ourselves so the bar
+        # reappears on the fresh taskbar (single-instance mutex is released
+        # when this process exits).
+        if not getattr(self, '_user_quit', False):
+            try:
+                if getattr(sys, 'frozen', False):
+                    subprocess.Popen([sys.executable])
+                else:
+                    subprocess.Popen([sys.executable, os.path.abspath(__file__)])
+            except Exception:
+                pass
 
 if __name__ == '__main__':
     if already_running():

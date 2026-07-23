@@ -61,13 +61,13 @@ PulseDeck is **free**. If it earns a spot on your taskbar, a Donate link in the 
 Made by Fokion Papanikolaou.
 
 ## What's new (release notes)
-**v2.8 — big toolkit update**
-• Live bottleneck analysis — which component is limiting your PC, in real time
-• Tools tab — 24 one-tap shortcuts to built-in Windows tools, with search & tiles
-• DNS Boost — benchmark 15 resolvers (IPv4 + IPv6), compare with your current DNS
-• Fresh new 3D icons; optional text labels on the bar
-• Live uptime & boot time; resizable settings window
-• Fixes: cleaner bar icons, faster menus, correct ASUS monitor & AMD VRAM
+**v2.10.1 — new icons & smarter alerts**
+• Brand-new icons for CPU, RAM, GPU, network and battery, with smooth (no more jagged) edges
+• Wi-Fi signal strength and network ping (latency) on hover
+• Live CPU% on the tray icon's hover tooltip — reachable even when the bar itself isn't showing
+• New optional alerts for sustained high CPU/RAM or low battery
+• New "Battery report" button (wear/usage history) on the System tab
+• Fixes: the bar no longer disappears while certain apps (e.g. Claude, Discord) have focus; correct battery/power cell alignment
 
 ## Search keywords (up to 7)
 system monitor · cpu gpu ram monitor · taskbar widget · dns benchmark · pc tools · network monitor · hardware monitor

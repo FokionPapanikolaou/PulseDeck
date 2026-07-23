@@ -20,6 +20,7 @@ config.json
 *_old.*
 *.bak
 app_preview.png
+widget_debug.log
 
 # OS / editors
 Thumbs.db
