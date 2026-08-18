@@ -3902,6 +3902,10 @@ class _SlowPoller(threading.Thread):
         self.nvidia_w     = None   # float | None  (GPU watts from nvidia-smi)
         self.nvidia_temp_c = None  # float | None  (GPU °C from nvidia-smi)
         self.lhm_gpu_temp_c = None # float | None  (AMD/Intel GPU °C, no nvidia-smi)
+        # The .NET runtime LibreHardwareMonitor needs costs ~35 MB, so it
+        # stays unloaded until some UI actually asks to show a GPU
+        # temperature (see request_gpu_temp).
+        self.lhm_wanted = False
         self.net_kind     = None   # 'wifi' | 'eth' | None (default-route interface)
         self.wifi_signal  = None   # int 0-100 | None (only polled while on Wi-Fi)
         self.ping_ms      = None   # int | None (round-trip to 1.1.1.1, every 3rd poll)
@@ -3933,7 +3937,7 @@ class _SlowPoller(threading.Thread):
             pass
         # AMD/Intel fallback — only once we're sure there's no NVIDIA GPU to
         # read from nvidia-smi (skips the .NET call entirely on NVIDIA rigs)
-        if _NVSMI_OK is False:
+        if _NVSMI_OK is False and self.lhm_wanted:
             try:
                 self.lhm_gpu_temp_c = _lhm_gpu_temp()
             except Exception:
@@ -3951,6 +3955,24 @@ class _SlowPoller(threading.Thread):
                 self.ping_ms = _ping_latency_ms()
             except Exception:
                 pass
+
+    def request_gpu_temp(self):
+        """Arm the AMD/Intel GPU-temperature reader (first caller wins).
+
+        Loading the .NET runtime costs ~35 MB of commit and a couple of
+        threads, so it is deliberately not paid at startup: whichever UI
+        first wants to display a GPU temperature calls this, and the value
+        then refreshes on every poll. A one-shot thread does the initial
+        (slow) CLR load so the first reading lands a beat later rather
+        than a whole poll interval later.
+        """
+        if self.lhm_wanted:
+            return
+        self.lhm_wanted = True
+        def _warm():
+            try: self.lhm_gpu_temp_c = _lhm_gpu_temp()
+            except Exception: pass
+        threading.Thread(target=_warm, daemon=True, name='LhmWarmup').start()
 
     def stop(self):
         self._stop = True
@@ -5306,6 +5328,9 @@ class CustomizeWindow:
                 kv(s, 'VRAM in use',
                    f"{gm:.1f} / {vt:.1f} GB  ({gm/vt*100:.0f}%)")
             _slow = getattr(self.w, '_slow', None)
+            # asks the poller to load the .NET reader on first need
+            try: _slow.request_gpu_temp()
+            except Exception: pass
             gt = getattr(_slow, 'nvidia_temp_c', None)
             if gt is None:
                 gt = getattr(_slow, 'lhm_gpu_temp_c', None)
@@ -5506,6 +5531,9 @@ class CustomizeWindow:
         if gpus:
             gv = ', '.join(g.get('name', '') for g in gpus if g.get('name'))
             _slow = getattr(self.w, '_slow', None)
+            # asks the poller to load the .NET reader on first need
+            try: _slow.request_gpu_temp()
+            except Exception: pass
             gt = getattr(_slow, 'nvidia_temp_c', None)
             if gt is None:
                 gt = getattr(_slow, 'lhm_gpu_temp_c', None)
@@ -7849,6 +7877,8 @@ class Widget:
                     rows.append((tp('vramused'), f'{self._gpu_mem:.1f} GB', GREEN))
                 elif self._vram_total:
                     rows.append(('VRAM', f'{self._vram_total:.1f} GB', GREEN))
+                try: self._slow.request_gpu_temp()
+                except Exception: pass
                 gt = self._slow.nvidia_temp_c
                 if gt is None:
                     gt = self._slow.lhm_gpu_temp_c
