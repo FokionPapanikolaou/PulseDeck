@@ -8,6 +8,40 @@ All notable changes to **PulseDeck** are documented here.
 
 ---
 
+## [2.11.0] — 2026-08-18 — *RAM got expensive, so we use less of it*
+
+RAM prices are going one way, so this release goes the other: PulseDeck now
+idles at roughly **16 MB instead of 128 MB** — about **87% less**. A system
+monitor that hogs the system it monitors was never a great look.
+
+### Changed
+- **Idle memory: ~128 MB → ~16 MB.** Profiling each start-up stage showed the
+  widget sat at a flat 128 MB, but almost all of it was *cold*: import-time
+  data, Tk/Tcl internals and .NET metadata that are read once and then never
+  touched again. The app now asks Windows to trim its working set once the UI
+  has settled, every 5 minutes after that, and right after the Settings window
+  closes (it builds hundreds of widgets plus the hardware scan). The hot set it
+  actually ticks on is only ~16–20 MB, and anything genuinely needed again is
+  faulted straight back. This lowers the physical RAM held — the number Task
+  Manager shows — rather than the process's committed size.
+- **The .NET GPU-temperature reader now loads on demand.** LibreHardwareMonitor's
+  runtime costs ~35 MB and a couple of threads, and it was being loaded at
+  start-up on every non-NVIDIA machine just in case a temperature got shown. It
+  now stays unloaded until something actually wants one — the System tab or the
+  GPU hover tooltip — and warms up on its own thread so the first reading lands
+  about a second later. NVIDIA cards were never affected (they use `nvidia-smi`).
+
+No features were removed to get here.
+
+### Build
+- Python 3.14 now ships Tcl/Tk **9** packed inside zip archives (Tcl zipfs)
+  rather than as a plain directory tree, and PyInstaller does not collect
+  them yet — its tkinter runtime hook aborts with `Tcl data directory ... not
+  found`. The documented build now unpacks `libtcl*/libtk*.zip` from the
+  Python install and feeds them in as `_tcl_data` / `_tk_data`.
+
+---
+
 ## [2.10.1] — 2026-07-24
 
 ### Added

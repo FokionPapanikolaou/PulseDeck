@@ -18,7 +18,7 @@ import random
 
 APP_NAME = 'PulseDeck'       # internal identity: config dir, mutex, registry, Store package
 DISPLAY_NAME = 'PulseDeck'   # user-visible product name (rebrand)
-VERSION  = '2.10.1'
+VERSION  = '2.11.0'
 
 # ── Crash logging (enabled when NETCPURAM_DEBUG=1) ─────────────────────
 def _debug_log_path():

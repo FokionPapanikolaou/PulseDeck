@@ -21,7 +21,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D6?logo=windows&logoColor=white" alt="Windows">
-  <img src="https://img.shields.io/badge/version-2.10.1-3fb950" alt="v2.10.1">
+  <img src="https://img.shields.io/badge/version-2.11.0-3fb950" alt="v2.11.0">
   <img src="https://img.shields.io/badge/price-Free-brightgreen" alt="Free">
   <img src="https://img.shields.io/badge/languages-8-blueviolet" alt="8 languages">
   <img src="https://img.shields.io/badge/themes-10-orange" alt="10 themes">
@@ -202,13 +202,19 @@ python make_menu_icons.py
 python make_app_icon.py
 python make_promo.py
 
-# 3) build the portable exe
+# 3) Python 3.14 ships Tcl/Tk 9 inside zip archives (Tcl zipfs), which
+#    PyInstaller does not yet collect - unpack them so the tkinter runtime
+#    hook finds the _tcl_data / _tk_data folders it expects.
+python -c "import zipfile,sys,os;st='build_tcl9';[zipfile.ZipFile(os.path.join(sys.prefix,'tcl',z)).extractall(st) for z in os.listdir(os.path.join(sys.prefix,'tcl')) if z.startswith(('libtcl','libtk')) and z.endswith('.zip')]"
+
+# 4) build the portable exe
 pyinstaller --noconfirm --onefile --windowed --name PulseDeck `
   --icon app.ico --add-data "icons;icons" --add-data "app.ico;." --add-data "lhm;lhm" `
+  --add-data "build_tcl9/tcl_library;_tcl_data" --add-data "build_tcl9/tk_library;_tk_data" `
   --hidden-import pystray._win32 --hidden-import clr_loader --hidden-import pythonnet `
   taskbar_widget.py
 
-# 4) (optional) build the installer — needs Inno Setup 6
+# 5) (optional) build the installer — needs Inno Setup 6
 ISCC installer.iss
 ```
 
