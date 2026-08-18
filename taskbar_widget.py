@@ -3858,6 +3858,34 @@ class CpuFreq:
             return None
 
 # ── Background slow-hardware poller ───────────────────────────────────
+# Typed once at import: GetCurrentProcess returns a 64-bit HANDLE, and
+# without argtypes ctypes truncates it to 32 bits, so the call silently
+# fails (returns 0) on 64-bit Windows.
+_k32 = ctypes.WinDLL('kernel32', use_last_error=True)
+_k32.GetCurrentProcess.restype = ctypes.c_void_p
+_k32.GetCurrentProcess.argtypes = []
+_k32.SetProcessWorkingSetSize.restype = ctypes.c_int
+_k32.SetProcessWorkingSetSize.argtypes = [ctypes.c_void_p,
+                                          ctypes.c_size_t, ctypes.c_size_t]
+
+def _trim_working_set():
+    """Ask Windows to trim this process's working set.
+
+    A taskbar widget touches only a small slice of its memory after
+    startup: import-time data, Tk/Tcl internals and (when loaded) the .NET
+    metadata are read once and then sit cold in RAM for the rest of the
+    session. Passing (-1, -1) to SetProcessWorkingSetSize tells the memory
+    manager those cold pages can be reclaimed; the hot ~20 MB the widget
+    actually ticks on stays resident, and anything genuinely needed again
+    is faulted straight back. This lowers the physical RAM held (what Task
+    Manager shows), not the process's committed size.
+    """
+    try:
+        _k32.SetProcessWorkingSetSize(_k32.GetCurrentProcess(),
+                                      ctypes.c_size_t(-1), ctypes.c_size_t(-1))
+    except Exception:
+        pass
+
 class _SlowPoller(threading.Thread):
     """Polls slow hardware reads (~1 s interval) off the main thread.
 
@@ -4251,6 +4279,10 @@ class CustomizeWindow:
         except Exception: pass
         self._win = None
         try: self.w._customize = None
+        except Exception: pass
+        # the settings window builds hundreds of widgets + the sysinfo
+        # scan; hand those pages back instead of holding them for good
+        try: self.w.root.after(500, _trim_working_set)
         except Exception: pass
 
     # ── tabs ──
@@ -6354,6 +6386,9 @@ class Widget:
         # a fast relaunch left a dark box behind the numbers).
         self.root.after(400, self._adapt_key_color)
         self.root.after(2000, self._adapt_key_color)
+        # release the cold start-up pages once the UI has settled, then
+        # keep doing it slowly (opening/closing Settings allocates a lot)
+        self.root.after(6000, self._trim_loop)
 
         # First launch: a Windows tray notification points to the settings icon.
         if self._first_run:
@@ -7589,6 +7624,12 @@ class Widget:
                 u.SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, f)
         except Exception:
             pass
+
+    def _trim_loop(self):
+        """Trim the working set now and every 5 minutes after."""
+        _trim_working_set()
+        try: self.root.after(300000, self._trim_loop)
+        except Exception: pass
 
     def _foreground_loop(self):
         """Keep the widget reliably above all other windows."""
