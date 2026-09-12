@@ -12,13 +12,15 @@ import webbrowser
 import urllib.request
 import urllib.parse
 import traceback
+import re
+from ctypes import wintypes
 import faulthandler
 import socket
 import random
 
 APP_NAME = 'PulseDeck'       # internal identity: config dir, mutex, registry, Store package
 DISPLAY_NAME = 'PulseDeck'   # user-visible product name (rebrand)
-VERSION  = '2.12.0'
+VERSION  = '2.13.0'
 
 # ── Crash logging (enabled when NETCPURAM_DEBUG=1) ─────────────────────
 def _debug_log_path():
@@ -1468,6 +1470,129 @@ for _lng in list(CUST_LABELS):
         if _dv:
             CUST_LABELS[_lng]['desc__' + _k] = _dv
 
+
+for _lng, _v in {'en': 'Handy tools', 'el': 'Χρήσιμα εργαλεία', 'es': 'Utilidades', 'de': 'Praktische Tools', 'fr': 'Outils pratiques', 'it': 'Strumenti utili', 'pt': 'Ferramentas úteis', 'ru': 'Полезные инструменты'}.items():
+    CUST_LABELS.setdefault(_lng, {})['cat_utils'] = _v
+
+# ── Color picker / Always on top / Bulk rename labels (v2.13) ─────────
+TOOLS213_I18N = {
+ 'en':{'t_colorpicker':'Colour picker','desc__t_colorpicker':'Magnify any pixel on screen and copy its colour as HEX. Click to copy, Esc to cancel.',
+       't_alwaysontop':'Always on top','desc__t_alwaysontop':'Pin the window you are using above all others. Press again to unpin.',
+       't_rename':'Bulk rename','desc__t_rename':'Rename many files at once with find & replace or a regular expression, with a preview before anything changes.',
+       'cp_copied':'copied','cp_hint':'Click to copy · Esc to cancel',
+       'aot_pinned':'Pinned on top','aot_unpinned':'No longer on top',
+       'aot_denied':'That window cannot be pinned (it runs as administrator)',
+       'hk_lbl':'Global hotkeys','hk_hint':'Shortcuts that work anywhere in Windows. Turn off if they clash with another app.',
+       'hk_taken':'in use by another app',
+       'rn_title':'Bulk rename','rn_folder':'Folder','rn_choose':'Choose folder…',
+       'rn_find':'Find','rn_replace':'Replace with','rn_regex':'Regular expression',
+       'rn_case':'Match case','rn_ext':'Include file extension',
+       'rn_apply':'Rename','rn_confirm':'Rename {n} file(s)?','rn_done':'{n} file(s) renamed',
+       'rn_nofiles':'No files in this folder.','rn_invalid':'invalid name','rn_dup':'name already used',
+       'rn_changed':'{n} of {t} will change','rn_nothing':'Nothing to rename yet — type something to find.'},
+ 'el':{'t_colorpicker':'Επιλογή χρώματος','desc__t_colorpicker':'Μεγέθυνε οποιοδήποτε pixel της οθόνης και αντίγραψε το χρώμα του σε HEX. Κλικ για αντιγραφή, Esc για ακύρωση.',
+       't_alwaysontop':'Πάντα επάνω','desc__t_alwaysontop':'Καρφίτσωσε το παράθυρο που χρησιμοποιείς πάνω από όλα. Πάτησε ξανά για ξεκαρφίτσωμα.',
+       't_rename':'Μαζική μετονομασία','desc__t_rename':'Μετονόμασε πολλά αρχεία μαζί με εύρεση & αντικατάσταση ή κανονική έκφραση, με προεπισκόπηση πριν αλλάξει οτιδήποτε.',
+       'cp_copied':'αντιγράφηκε','cp_hint':'Κλικ για αντιγραφή · Esc για ακύρωση',
+       'aot_pinned':'Καρφιτσώθηκε επάνω','aot_unpinned':'Δεν είναι πια επάνω',
+       'aot_denied':'Αυτό το παράθυρο δεν καρφιτσώνεται (τρέχει ως διαχειριστής)',
+       'hk_lbl':'Καθολικές συντομεύσεις','hk_hint':'Συντομεύσεις που δουλεύουν παντού στα Windows. Κλείσ’ τες αν συγκρούονται με άλλη εφαρμογή.',
+       'hk_taken':'σε χρήση από άλλη εφαρμογή',
+       'rn_title':'Μαζική μετονομασία','rn_folder':'Φάκελος','rn_choose':'Επιλογή φακέλου…',
+       'rn_find':'Εύρεση','rn_replace':'Αντικατάσταση με','rn_regex':'Κανονική έκφραση',
+       'rn_case':'Διάκριση πεζών/κεφαλαίων','rn_ext':'Να περιλαμβάνεται η κατάληξη',
+       'rn_apply':'Μετονομασία','rn_confirm':'Μετονομασία {n} αρχείων;','rn_done':'Μετονομάστηκαν {n} αρχεία',
+       'rn_nofiles':'Δεν υπάρχουν αρχεία σε αυτόν τον φάκελο.','rn_invalid':'μη έγκυρο όνομα','rn_dup':'το όνομα χρησιμοποιείται ήδη',
+       'rn_changed':'{n} από {t} θα αλλάξουν','rn_nothing':'Τίποτα προς μετονομασία ακόμα — γράψε κάτι στην εύρεση.'},
+ 'es':{'t_colorpicker':'Selector de color','desc__t_colorpicker':'Amplía cualquier píxel de la pantalla y copia su color en HEX. Clic para copiar, Esc para cancelar.',
+       't_alwaysontop':'Siempre visible','desc__t_alwaysontop':'Fija la ventana que estás usando por encima de las demás. Púlsalo otra vez para soltarla.',
+       't_rename':'Renombrado masivo','desc__t_rename':'Renombra muchos archivos a la vez con buscar y reemplazar o una expresión regular, con vista previa antes de cambiar nada.',
+       'cp_copied':'copiado','cp_hint':'Clic para copiar · Esc para cancelar',
+       'aot_pinned':'Fijada encima','aot_unpinned':'Ya no está encima',
+       'aot_denied':'Esa ventana no se puede fijar (se ejecuta como administrador)',
+       'hk_lbl':'Atajos globales','hk_hint':'Atajos que funcionan en todo Windows. Desactívalos si chocan con otra aplicación.',
+       'hk_taken':'en uso por otra aplicación',
+       'rn_title':'Renombrado masivo','rn_folder':'Carpeta','rn_choose':'Elegir carpeta…',
+       'rn_find':'Buscar','rn_replace':'Reemplazar por','rn_regex':'Expresión regular',
+       'rn_case':'Distinguir mayúsculas','rn_ext':'Incluir la extensión',
+       'rn_apply':'Renombrar','rn_confirm':'¿Renombrar {n} archivo(s)?','rn_done':'{n} archivo(s) renombrados',
+       'rn_nofiles':'No hay archivos en esta carpeta.','rn_invalid':'nombre no válido','rn_dup':'nombre ya usado',
+       'rn_changed':'{n} de {t} cambiarán','rn_nothing':'Nada que renombrar todavía: escribe algo en Buscar.'},
+ 'de':{'t_colorpicker':'Farbwähler','desc__t_colorpicker':'Beliebiges Pixel auf dem Bildschirm vergrößern und die Farbe als HEX kopieren. Klick zum Kopieren, Esc zum Abbrechen.',
+       't_alwaysontop':'Immer im Vordergrund','desc__t_alwaysontop':'Heftet das gerade benutzte Fenster über alle anderen. Nochmal drücken zum Lösen.',
+       't_rename':'Sammel-Umbenennen','desc__t_rename':'Viele Dateien auf einmal umbenennen – per Suchen & Ersetzen oder regulärem Ausdruck, mit Vorschau bevor sich etwas ändert.',
+       'cp_copied':'kopiert','cp_hint':'Klick zum Kopieren · Esc zum Abbrechen',
+       'aot_pinned':'Im Vordergrund fixiert','aot_unpinned':'Nicht mehr im Vordergrund',
+       'aot_denied':'Dieses Fenster lässt sich nicht fixieren (läuft als Administrator)',
+       'hk_lbl':'Globale Tastenkürzel','hk_hint':'Kürzel, die überall in Windows funktionieren. Abschalten, wenn sie mit einer anderen App kollidieren.',
+       'hk_taken':'von einer anderen App belegt',
+       'rn_title':'Sammel-Umbenennen','rn_folder':'Ordner','rn_choose':'Ordner wählen…',
+       'rn_find':'Suchen','rn_replace':'Ersetzen durch','rn_regex':'Regulärer Ausdruck',
+       'rn_case':'Groß-/Kleinschreibung beachten','rn_ext':'Dateiendung einbeziehen',
+       'rn_apply':'Umbenennen','rn_confirm':'{n} Datei(en) umbenennen?','rn_done':'{n} Datei(en) umbenannt',
+       'rn_nofiles':'Keine Dateien in diesem Ordner.','rn_invalid':'ungültiger Name','rn_dup':'Name bereits vergeben',
+       'rn_changed':'{n} von {t} werden geändert','rn_nothing':'Noch nichts umzubenennen – gib etwas zum Suchen ein.'},
+ 'fr':{'t_colorpicker':'Pipette à couleurs','desc__t_colorpicker':'Agrandissez n’importe quel pixel de l’écran et copiez sa couleur en HEX. Clic pour copier, Échap pour annuler.',
+       't_alwaysontop':'Toujours au premier plan','desc__t_alwaysontop':'Épingle la fenêtre utilisée au-dessus de toutes les autres. Appuyez de nouveau pour la détacher.',
+       't_rename':'Renommage par lot','desc__t_rename':'Renommez plusieurs fichiers d’un coup avec rechercher-remplacer ou une expression régulière, avec aperçu avant toute modification.',
+       'cp_copied':'copié','cp_hint':'Clic pour copier · Échap pour annuler',
+       'aot_pinned':'Épinglée au premier plan','aot_unpinned':'N’est plus au premier plan',
+       'aot_denied':'Cette fenêtre ne peut pas être épinglée (elle s’exécute en administrateur)',
+       'hk_lbl':'Raccourcis globaux','hk_hint':'Raccourcis actifs partout dans Windows. Désactivez-les s’ils entrent en conflit avec une autre application.',
+       'hk_taken':'déjà utilisé par une autre application',
+       'rn_title':'Renommage par lot','rn_folder':'Dossier','rn_choose':'Choisir un dossier…',
+       'rn_find':'Rechercher','rn_replace':'Remplacer par','rn_regex':'Expression régulière',
+       'rn_case':'Respecter la casse','rn_ext':'Inclure l’extension',
+       'rn_apply':'Renommer','rn_confirm':'Renommer {n} fichier(s) ?','rn_done':'{n} fichier(s) renommé(s)',
+       'rn_nofiles':'Aucun fichier dans ce dossier.','rn_invalid':'nom non valide','rn_dup':'nom déjà utilisé',
+       'rn_changed':'{n} sur {t} seront modifiés','rn_nothing':'Rien à renommer pour l’instant — saisissez un texte à rechercher.'},
+ 'it':{'t_colorpicker':'Selettore colore','desc__t_colorpicker':'Ingrandisci qualsiasi pixel sullo schermo e copia il suo colore in HEX. Clic per copiare, Esc per annullare.',
+       't_alwaysontop':'Sempre in primo piano','desc__t_alwaysontop':'Fissa la finestra che stai usando sopra tutte le altre. Premi di nuovo per sbloccarla.',
+       't_rename':'Rinomina in blocco','desc__t_rename':'Rinomina molti file insieme con trova e sostituisci o un’espressione regolare, con anteprima prima di cambiare qualcosa.',
+       'cp_copied':'copiato','cp_hint':'Clic per copiare · Esc per annullare',
+       'aot_pinned':'Fissata in primo piano','aot_unpinned':'Non più in primo piano',
+       'aot_denied':'Questa finestra non può essere fissata (è in esecuzione come amministratore)',
+       'hk_lbl':'Scorciatoie globali','hk_hint':'Scorciatoie che funzionano ovunque in Windows. Disattivale se vanno in conflitto con un’altra app.',
+       'hk_taken':'già usata da un’altra app',
+       'rn_title':'Rinomina in blocco','rn_folder':'Cartella','rn_choose':'Scegli cartella…',
+       'rn_find':'Trova','rn_replace':'Sostituisci con','rn_regex':'Espressione regolare',
+       'rn_case':'Maiuscole/minuscole','rn_ext':'Includi l’estensione',
+       'rn_apply':'Rinomina','rn_confirm':'Rinominare {n} file?','rn_done':'{n} file rinominati',
+       'rn_nofiles':'Nessun file in questa cartella.','rn_invalid':'nome non valido','rn_dup':'nome già usato',
+       'rn_changed':'{n} su {t} verranno modificati','rn_nothing':'Niente da rinominare — scrivi qualcosa da cercare.'},
+ 'pt':{'t_colorpicker':'Selecionador de cor','desc__t_colorpicker':'Amplie qualquer pixel do ecrã e copie a sua cor em HEX. Clique para copiar, Esc para cancelar.',
+       't_alwaysontop':'Sempre visível','desc__t_alwaysontop':'Fixa a janela que está a usar por cima de todas as outras. Prima novamente para soltar.',
+       't_rename':'Renomear em massa','desc__t_rename':'Renomeie muitos ficheiros de uma vez com localizar e substituir ou uma expressão regular, com pré-visualização antes de mudar seja o que for.',
+       'cp_copied':'copiado','cp_hint':'Clique para copiar · Esc para cancelar',
+       'aot_pinned':'Fixada por cima','aot_unpinned':'Já não está por cima',
+       'aot_denied':'Essa janela não pode ser fixada (corre como administrador)',
+       'hk_lbl':'Atalhos globais','hk_hint':'Atalhos que funcionam em todo o Windows. Desligue se entrarem em conflito com outra aplicação.',
+       'hk_taken':'em uso por outra aplicação',
+       'rn_title':'Renomear em massa','rn_folder':'Pasta','rn_choose':'Escolher pasta…',
+       'rn_find':'Localizar','rn_replace':'Substituir por','rn_regex':'Expressão regular',
+       'rn_case':'Diferenciar maiúsculas','rn_ext':'Incluir a extensão',
+       'rn_apply':'Renomear','rn_confirm':'Renomear {n} ficheiro(s)?','rn_done':'{n} ficheiro(s) renomeados',
+       'rn_nofiles':'Não há ficheiros nesta pasta.','rn_invalid':'nome inválido','rn_dup':'nome já utilizado',
+       'rn_changed':'{n} de {t} vão mudar','rn_nothing':'Nada para renomear ainda — escreva algo em Localizar.'},
+ 'ru':{'t_colorpicker':'Пипетка','desc__t_colorpicker':'Увеличьте любой пиксель на экране и скопируйте его цвет в HEX. Клик — скопировать, Esc — отмена.',
+       't_alwaysontop':'Поверх всех окон','desc__t_alwaysontop':'Закрепляет текущее окно поверх остальных. Нажмите ещё раз, чтобы открепить.',
+       't_rename':'Массовое переименование','desc__t_rename':'Переименуйте много файлов сразу — поиском и заменой или регулярным выражением, с предпросмотром до внесения изменений.',
+       'cp_copied':'скопировано','cp_hint':'Клик — скопировать · Esc — отмена',
+       'aot_pinned':'Закреплено поверх','aot_unpinned':'Больше не поверх всех',
+       'aot_denied':'Это окно нельзя закрепить (запущено от администратора)',
+       'hk_lbl':'Глобальные сочетания','hk_hint':'Сочетания клавиш работают везде в Windows. Отключите, если конфликтуют с другим приложением.',
+       'hk_taken':'занято другим приложением',
+       'rn_title':'Массовое переименование','rn_folder':'Папка','rn_choose':'Выбрать папку…',
+       'rn_find':'Найти','rn_replace':'Заменить на','rn_regex':'Регулярное выражение',
+       'rn_case':'Учитывать регистр','rn_ext':'Включая расширение',
+       'rn_apply':'Переименовать','rn_confirm':'Переименовать {n} файл(ов)?','rn_done':'Переименовано файлов: {n}',
+       'rn_nofiles':'В этой папке нет файлов.','rn_invalid':'недопустимое имя','rn_dup':'имя уже занято',
+       'rn_changed':'Изменится {n} из {t}','rn_nothing':'Пока нечего переименовывать — введите текст для поиска.'},
+}
+for _lng, _d in TOOLS213_I18N.items():
+    CUST_LABELS.setdefault(_lng, {}).update(_d)
+
+
 # ── PowerToys-inspired tools (v2.10): Keep Awake, Light Switch, Env Vars ──
 POWERTOOLS_I18N = {
  'en':{'t_awake':'Keep awake','desc__t_awake':'Prevent sleep & screen-off while enabled (click again to turn off)',
@@ -2556,6 +2681,8 @@ CONFIG_DIR  = _resolve_config_dir()
 CONFIG_PATH = os.path.join(CONFIG_DIR, 'config.json')
 
 DEFAULTS = {
+    'rename_folder': '',  # last folder used by Bulk rename
+    'hotkeys_on': True,   # global shortcuts for the colour picker / always-on-top
     'data_cap_gb': 0,     # monthly data limit in GB (0 = no limit / no warning)
     'hist_range':  '24h', # last selected History range: 1h | 24h | 7d
 
@@ -3191,6 +3318,11 @@ TOOLS_CATALOG = [
         ('t_graphics',    '🖥', ('settings', 'ms-settings:display-advancedgraphics')),
         ('t_explorer',    '🔄', ('action', 'restart_explorer')),
         ('t_hibernate',   '🛌', ('action', 'hibernate')),
+    ]),
+    ('cat_utils', '🧩', [
+        ('t_colorpicker', '🎨', ('action', 'color_picker')),
+        ('t_alwaysontop', '📌', ('action', 'always_on_top')),
+        ('t_rename',      '✏', ('action', 'bulk_rename')),
     ]),
     ('cat_net', '🌐', [
         ('t_dnsboost',    '🚀', ('action', 'dns_boost')),
@@ -4004,6 +4136,348 @@ class CpuFreq:
             return (self.base_mhz * val.doubleValue / 100.0) / 1000.0
         except Exception:
             return None
+
+# ── Global hotkeys + PowerToys-style utilities (v2.13) ────────────────
+# RegisterHotKey(hWnd=None) posts WM_HOTKEY to the *calling thread's* queue, so
+# the hotkeys live on their own thread with a plain GetMessage pump and never
+# touch the Tk main loop. Callbacks are marshalled back with root.after().
+
+_u32 = ctypes.WinDLL('user32', use_last_error=True)
+MOD_ALT, MOD_CONTROL, MOD_SHIFT, MOD_WIN, MOD_NOREPEAT = 1, 2, 4, 8, 0x4000
+_WM_HOTKEY, _WM_QUIT = 0x0312, 0x0012
+
+# Same chords PowerToys uses, so muscle memory carries over. If PowerToys (or
+# anything else) already owns one, RegisterHotKey fails and we simply report
+# the hotkey as unavailable — the tool still runs from the Tools tab.
+HOTKEYS = {
+    'colorpicker': (MOD_WIN | MOD_SHIFT, ord('C'), 'Win+Shift+C'),
+    'alwaysontop': (MOD_WIN | MOD_CONTROL, ord('T'), 'Win+Ctrl+T'),
+}
+
+
+class _HotkeyManager(threading.Thread):
+    """Owns the global hotkeys on a dedicated message-pump thread."""
+
+    def __init__(self, root):
+        super().__init__(daemon=True, name='Hotkeys')
+        self.root = root
+        self._actions = {}        # id -> callable
+        self._names = {}          # name -> id
+        self.active = {}          # name -> bool (did registration succeed?)
+        self._tid = None
+        self._pending = []        # [(name, callback)] queued before the thread ran
+        self._stop = False
+
+    def bind(self, name, callback):
+        self._pending.append((name, callback))
+
+    def _register_all(self):
+        for i, (name, cb) in enumerate(self._pending, start=0xB000):
+            spec = HOTKEYS.get(name)
+            if not spec:
+                continue
+            mods, vk, _label = spec
+            ok = bool(_u32.RegisterHotKey(None, i, mods | MOD_NOREPEAT, vk))
+            self.active[name] = ok
+            if ok:
+                self._actions[i] = cb
+                self._names[name] = i
+
+    def run(self):
+        self._tid = ctypes.windll.kernel32.GetCurrentThreadId()
+        try:
+            self._register_all()
+        except Exception:
+            return
+        msg = wintypes.MSG()
+        while not self._stop:
+            r = _u32.GetMessageW(ctypes.byref(msg), None, 0, 0)
+            if r <= 0:
+                break
+            if msg.message == _WM_HOTKEY:
+                cb = self._actions.get(msg.wParam)
+                if cb:
+                    # hop to the UI thread; Tk is not thread-safe
+                    try:
+                        self.root.after(0, cb)
+                    except Exception:
+                        pass
+        for i in self._actions:
+            try: _u32.UnregisterHotKey(None, i)
+            except Exception: pass
+
+    def stop(self):
+        self._stop = True
+        if self._tid:
+            try: _u32.PostThreadMessageW(self._tid, _WM_QUIT, 0, 0)
+            except Exception: pass
+
+
+# ── Always on top ──────────────────────────────────────────────────────
+GWL_EXSTYLE   = -20
+WS_EX_TOPMOST = 0x00000008
+HWND_TOPMOST, HWND_NOTOPMOST = -1, -2
+_SWP_KEEP = 0x0001 | 0x0002 | 0x0010          # NOSIZE | NOMOVE | NOACTIVATE
+
+
+def toggle_always_on_top(skip_hwnds=()):
+    """Pin/unpin the foreground window. Returns (title, pinned) or None.
+
+    Windows owned by an elevated process cannot be restyled by a normal-rights
+    app, so the call is verified by reading the style back instead of trusting
+    the return value.
+    """
+    try:
+        _u32.GetForegroundWindow.restype = wintypes.HWND
+        _u32.GetWindowLongW.restype = ctypes.c_long
+        hwnd = _u32.GetForegroundWindow()
+        if not hwnd or hwnd in skip_hwnds:
+            return None
+        # never pin the desktop or the shell
+        cls = ctypes.create_unicode_buffer(256)
+        _u32.GetClassNameW(hwnd, cls, 256)
+        if cls.value in ('Progman', 'WorkerW', 'Shell_TrayWnd'):
+            return None
+        n = _u32.GetWindowTextLengthW(hwnd)
+        buf = ctypes.create_unicode_buffer(n + 1)
+        _u32.GetWindowTextW(hwnd, buf, n + 1)
+        was = bool(_u32.GetWindowLongW(hwnd, GWL_EXSTYLE) & WS_EX_TOPMOST)
+        target = HWND_NOTOPMOST if was else HWND_TOPMOST
+        _u32.SetWindowPos(hwnd, wintypes.HWND(target), 0, 0, 0, 0, _SWP_KEEP)
+        now = bool(_u32.GetWindowLongW(hwnd, GWL_EXSTYLE) & WS_EX_TOPMOST)
+        if now == was:
+            return (buf.value, None)          # refused (elevated window)
+        return (buf.value, now)
+    except Exception:
+        return None
+
+
+# ── Colour picker ──────────────────────────────────────────────────────
+class ColorPicker:
+    """Screen colour picker.
+
+    The screen is captured once on activation and every reading comes from that
+    bitmap, so the magnifier shows exact pixels and nothing samples our own
+    overlay. A full-screen, almost-invisible window sits on top purely to
+    swallow the click — otherwise the click that picks a colour would also land
+    on whatever is underneath.
+    """
+    ZOOM = 11          # magnifier pixels across
+    CELL = 13          # screen px per magnified pixel
+
+    def __init__(self, widget):
+        self.w = widget
+        self.shot = None
+        self.scrim = None
+        self.panel = None
+        self._job = None
+        self._hex = '#000000'
+
+    def open(self):
+        if self.scrim is not None:
+            return
+        try:
+            from PIL import ImageGrab
+            self.vx = _u32.GetSystemMetrics(76); self.vy = _u32.GetSystemMetrics(77)
+            self.vw = _u32.GetSystemMetrics(78); self.vh = _u32.GetSystemMetrics(79)
+            self.shot = ImageGrab.grab(
+                bbox=(self.vx, self.vy, self.vx + self.vw, self.vy + self.vh),
+                all_screens=True).convert('RGB')
+        except Exception:
+            return
+        root = self.w.root
+        # click catcher: invisible, but a real window, so the pick-click is eaten
+        self.scrim = tk.Toplevel(root)
+        self.scrim.overrideredirect(True)
+        self.scrim.geometry(f'{self.vw}x{self.vh}+{self.vx}+{self.vy}')
+        self.scrim.configure(bg='black')
+        self.scrim.attributes('-alpha', 0.01)
+        self.scrim.attributes('-topmost', True)
+        self.scrim.config(cursor='crosshair')
+        self.scrim.bind('<Button-1>', lambda e: self.take())
+        self.scrim.bind('<Button-3>', lambda e: self.close())
+        self.scrim.bind('<Escape>',   lambda e: self.close())
+        self.scrim.focus_force()
+
+        T = CUST_THEME
+        self.panel = tk.Toplevel(root)
+        self.panel.overrideredirect(True)
+        self.panel.attributes('-topmost', True)
+        self.panel.configure(bg=T['line'])
+        inner = tk.Frame(self.panel, bg=T['panel']); inner.pack(padx=1, pady=1)
+        self.cv = tk.Canvas(inner, width=self.ZOOM * self.CELL, height=self.ZOOM * self.CELL,
+                            highlightthickness=0, bd=0, bg=T['panel'])
+        self.cv.pack(padx=6, pady=(6, 4))
+        row = tk.Frame(inner, bg=T['panel']); row.pack(fill='x', padx=6, pady=(0, 6))
+        self.sw = tk.Frame(row, width=22, height=22, bg='#000000',
+                           highlightthickness=1, highlightbackground=T['line'])
+        self.sw.pack(side='left'); self.sw.pack_propagate(False)
+        self.lbl = tk.Label(row, text='#000000', fg=T['text'], bg=T['panel'],
+                            font=('Consolas', 11, 'bold'))
+        self.lbl.pack(side='left', padx=8)
+        self.rgb = tk.Label(inner, text='', fg=T['muted'], bg=T['panel'],
+                            font=('Segoe UI', 8))
+        self.rgb.pack(padx=6, pady=(0, 6))
+        self._tick()
+
+    def _pixel(self, x, y):
+        px = min(max(x - self.vx, 0), self.vw - 1)
+        py = min(max(y - self.vy, 0), self.vh - 1)
+        return self.shot.getpixel((px, py))
+
+    def _tick(self):
+        if self.scrim is None:
+            return
+        try:
+            pt = wintypes.POINT(); _u32.GetCursorPos(ctypes.byref(pt))
+            r, g, b = self._pixel(pt.x, pt.y)
+            self._hex = f'#{r:02X}{g:02X}{b:02X}'
+            self.lbl.config(text=self._hex)
+            self.sw.config(bg=self._hex)
+            self.rgb.config(text=f'RGB {r}, {g}, {b}')
+            # magnifier
+            self.cv.delete('all')
+            half = self.ZOOM // 2
+            for iy in range(self.ZOOM):
+                for ix in range(self.ZOOM):
+                    cr, cg, cb = self._pixel(pt.x + ix - half, pt.y + iy - half)
+                    self.cv.create_rectangle(ix * self.CELL, iy * self.CELL,
+                                             (ix + 1) * self.CELL, (iy + 1) * self.CELL,
+                                             fill=f'#{cr:02X}{cg:02X}{cb:02X}', width=0)
+            c = half * self.CELL
+            self.cv.create_rectangle(c, c, c + self.CELL, c + self.CELL,
+                                     outline='#ffffff', width=2)
+            # keep the panel near the cursor but on-screen
+            pw, ph = 170, 200
+            x = pt.x + 24 if pt.x + 24 + pw < self.vx + self.vw else pt.x - pw - 24
+            y = pt.y + 24 if pt.y + 24 + ph < self.vy + self.vh else pt.y - ph - 24
+            self.panel.geometry(f'+{x}+{y}')
+            self.panel.lift()
+            if _u32.GetAsyncKeyState(0x1B) & 0x8000:      # Esc, even without focus
+                self.close(); return
+        except Exception:
+            self.close(); return
+        self._job = self.w.root.after(40, self._tick)
+
+    def take(self):
+        val = self._hex
+        self.close()
+        try:
+            self.w.root.clipboard_clear()
+            self.w.root.clipboard_append(val)
+            self.w.root.update()
+        except Exception:
+            pass
+        try:
+            self.w._toast(val + '  ' + _TOOLS_T(self.w.lang, 'cp_copied'))
+        except Exception:
+            pass
+
+    def close(self):
+        if self._job:
+            try: self.w.root.after_cancel(self._job)
+            except Exception: pass
+            self._job = None
+        for attr in ('panel', 'scrim'):
+            win = getattr(self, attr, None)
+            if win is not None:
+                try: win.destroy()
+                except Exception: pass
+                setattr(self, attr, None)
+        self.shot = None          # ~19 MB of screenshot — let it go straight away
+        try: _trim_working_set()
+        except Exception: pass
+
+
+def _TOOLS_T(lang, key):
+    return CUST_LABELS.get(lang, CUST_LABELS['en']).get(key, key)
+
+
+# ── Bulk rename ────────────────────────────────────────────────────────
+_BAD_NAME_CHARS = set('<>:"/\\|?*')
+
+
+def plan_rename(names, find, replace, use_regex=False, match_case=False,
+                include_ext=False):
+    """Work out the new name for each file. Pure function so it is testable.
+
+    Returns [(old, new, problem)] where problem is None, 'invalid', 'duplicate'
+    or 'exists'. Nothing is renamed here — the UI previews this first.
+    """
+    out = []
+    if not find:
+        return [(n, n, None) for n in names]
+    if use_regex:
+        try:
+            rx = re.compile(find, 0 if match_case else re.IGNORECASE)
+        except re.error:
+            return [(n, n, 'invalid') for n in names]
+
+    def apply(text):
+        if use_regex:
+            try:
+                return rx.sub(replace, text)
+            except re.error:
+                return text
+        if match_case:
+            return text.replace(find, replace)
+        # case-insensitive literal replace
+        low, needle, res, i = text.lower(), find.lower(), [], 0
+        while True:
+            j = low.find(needle, i)
+            if j < 0:
+                res.append(text[i:]); break
+            res.append(text[i:j]); res.append(replace); i = j + len(needle)
+        return ''.join(res)
+
+    seen = {}
+    for name in names:
+        stem, ext = (name, '') if include_ext else os.path.splitext(name)
+        new = apply(stem) + ext
+        problem = None
+        if not new or new in ('.', '..') or set(new) & _BAD_NAME_CHARS:
+            problem = 'invalid'
+        elif new.lower() in seen and new.lower() != name.lower():
+            problem = 'duplicate'
+        seen.setdefault(new.lower(), name)
+        out.append((name, new, problem))
+    return out
+
+
+def apply_rename(folder, plan):
+    """Rename per a plan. Two passes through temporary names so swaps and
+    shifted sequences (a->b, b->c) don't collide. Returns (done, errors)."""
+    todo = [(o, n) for o, n, p in plan if p is None and n != o]
+    if not todo:
+        return 0, []
+    errors = []
+    staged = []                      # (tmp_path, new_name, original_name)
+    for old, new in todo:
+        src = os.path.join(folder, old)
+        tmp = os.path.join(folder, f'.pdrename_{os.getpid()}_{len(staged)}.tmp')
+        try:
+            os.rename(src, tmp)
+            staged.append((tmp, new, old))
+        except OSError as e:
+            errors.append(f'{old}: {e.strerror or e}')
+    done = 0
+    for tmp, new, old in staged:
+        dst = os.path.join(folder, new)
+        try:
+            if os.path.exists(dst):
+                raise OSError(None, 'target already exists')
+            os.rename(tmp, dst)
+            done += 1
+        except OSError as e:
+            errors.append(f'{new}: {e.strerror or e}')
+            # put the file back under its ORIGINAL name — leaving it parked as
+            # a .pdrename_*.tmp would look to the user like a deleted file
+            try:
+                os.rename(tmp, os.path.join(folder, old))
+            except OSError:
+                errors.append(f'{old}: could not be restored (left as {os.path.basename(tmp)})')
+    return done, errors
+
 
 # ── History & data-usage stores ────────────────────────────────────────
 # Both are fed from one place (_HistoryStore's sampler thread) so the network
@@ -4886,6 +5360,21 @@ class CustomizeWindow:
         self._check_row(body, L.get('hide_fs', 'Hide when an app goes fullscreen'),
                         'follow_taskbar')
         self._check_row(body, '🔔  Performance alerts (CPU/RAM/battery)', 'perf_alerts_on')
+        self._check_row(body, '⌨  ' + L.get('hk_lbl', 'Global hotkeys'), 'hotkeys_on')
+        # show each chord and whether it actually registered — another app
+        # (PowerToys itself, most likely) may already own it
+        hk = getattr(self.w, '_hotkeys', None)
+        for _name, _key in (('colorpicker', 't_colorpicker'), ('alwaysontop', 't_alwaysontop')):
+            chord = HOTKEYS[_name][2]
+            taken = hk is not None and hk.active.get(_name) is False
+            txt = '        ' + chord + '  ·  ' + L.get(_key, _name)
+            if taken:
+                txt += '   (' + L.get('hk_taken', 'in use by another app') + ')'
+            tk.Label(body, text=txt, fg=(T['orange'] if taken else T['muted']),
+                     bg=T['bg'], font=('Segoe UI', 8)).pack(anchor='w', padx=24)
+        tk.Label(body, text='        ' + L.get('hk_hint', ''), fg=T['muted'],
+                 bg=T['bg'], font=('Segoe UI', 8), wraplength=500,
+                 justify='left').pack(anchor='w', padx=24, pady=(0, 4))
         self._check_row(body, L['check_upd'], 'check_updates')
         # startup row: a button that opens Settings (MSIX) or toggles (Win32)
         srow = tk.Frame(body, bg=T['bg']); srow.pack(fill='x', padx=24, pady=10)
@@ -5222,6 +5711,188 @@ class CustomizeWindow:
         loc_btn.bind('<Button-1>', _open_loc)
         loc_btn.bind('<Enter>', lambda e: loc_btn.config(bg=T['bg2']))
         loc_btn.bind('<Leave>', lambda e: loc_btn.config(bg=T['panel']))
+
+    # ── Bulk rename tab (v2.13) ──
+    def _tab_rename(self):
+        T = self.T; L = self.L
+        f = tk.Frame(self._content, bg=T['bg'])
+        f.pack(side='top', fill='x', padx=24, pady=(14, 2))
+        tk.Label(f, text='✏  ' + L.get('rn_title', 'Bulk rename'), fg=T['text'], bg=T['bg'],
+                 font=('Segoe UI', 12, 'bold')).pack(side='left')
+        back = tk.Label(f, text='←  ' + L.get('tools', 'Tools'), fg=T['cyan'], bg=T['bg'],
+                        font=('Segoe UI', 9), cursor='hand2')
+        back.pack(side='right')
+        back.bind('<Button-1>', lambda e: self.show_tab('tools'))
+        tk.Label(self._content, text='   ' + L.get('desc__t_rename', ''), fg=T['muted'],
+                 bg=T['bg'], font=('Segoe UI', 9), wraplength=520, justify='left').pack(
+                     side='top', anchor='w', padx=24)
+        tk.Frame(self._content, bg=T['line'], height=1).pack(
+            side='top', fill='x', padx=24, pady=(6, 0))
+
+        state = {'folder': self.w.cfg.get('rename_folder') or '', 'files': []}
+
+        # ── folder row ──
+        fr = tk.Frame(self._content, bg=T['bg'])
+        fr.pack(side='top', fill='x', padx=24, pady=(10, 2))
+        tk.Label(fr, text=L.get('rn_folder', 'Folder'), fg=T['muted'], bg=T['bg'],
+                 font=('Segoe UI', 9), width=14, anchor='w').pack(side='left')
+        path_lbl = tk.Label(fr, text='—', fg=T['text'], bg=T['bg'], font=('Segoe UI', 9),
+                            anchor='w')
+        path_lbl.pack(side='left', fill='x', expand=True)
+        pick = tk.Label(fr, text='📂  ' + L.get('rn_choose', 'Choose folder…'), fg=T['cyan'],
+                        bg=T['bg2'], font=('Segoe UI', 9), padx=10, pady=4, cursor='hand2')
+        pick.pack(side='right')
+
+        # ── find / replace ──
+        def field(label):
+            # A StringVar trace, not <KeyRelease>: the preview then also updates
+            # on a right-click paste or any programmatic change, not just typing.
+            row = tk.Frame(self._content, bg=T['bg'])
+            row.pack(side='top', fill='x', padx=24, pady=2)
+            tk.Label(row, text=label, fg=T['muted'], bg=T['bg'], font=('Segoe UI', 9),
+                     width=14, anchor='w').pack(side='left')
+            var = tk.StringVar()
+            e = tk.Entry(row, textvariable=var, bg=T['bg2'], fg=T['text'],
+                         insertbackground=T['text'], relief='flat', font=('Consolas', 10))
+            e.pack(side='left', fill='x', expand=True, ipady=4)
+            var.trace_add('write', lambda *_a: refresh())
+            return var
+        v_find = field(L.get('rn_find', 'Find'))
+        v_repl = field(L.get('rn_replace', 'Replace with'))
+
+        opts = tk.Frame(self._content, bg=T['bg'])
+        opts.pack(side='top', fill='x', padx=24, pady=(6, 2))
+        v_regex = tk.BooleanVar(value=False)
+        v_case  = tk.BooleanVar(value=False)
+        v_ext   = tk.BooleanVar(value=False)
+        for var, text in ((v_regex, L.get('rn_regex', 'Regular expression')),
+                          (v_case,  L.get('rn_case', 'Match case')),
+                          (v_ext,   L.get('rn_ext', 'Include file extension'))):
+            tk.Checkbutton(opts, text=' ' + text, variable=var, fg=T['text'], bg=T['bg'],
+                           selectcolor=T['bg2'], activebackground=T['bg'],
+                           activeforeground=T['text'], font=('Segoe UI', 9),
+                           bd=0, highlightthickness=0,
+                           command=lambda: refresh()).pack(side='left', padx=(0, 16))
+
+        # ── summary + apply ──
+        ar = tk.Frame(self._content, bg=T['bg'])
+        ar.pack(side='top', fill='x', padx=24, pady=(8, 4))
+        count_lbl = tk.Label(ar, text='', fg=T['muted'], bg=T['bg'], font=('Segoe UI', 9))
+        count_lbl.pack(side='left')
+        apply_btn = tk.Label(ar, text='✏  ' + L.get('rn_apply', 'Rename'), fg=T['muted'],
+                             bg=T['bg2'], font=('Segoe UI', 9, 'bold'),
+                             padx=14, pady=5)
+        apply_btn.pack(side='right')
+
+        # ── preview list ──
+        outer = tk.Frame(self._content, bg=T['bg'])
+        outer.pack(fill='both', expand=True, padx=20, pady=4)
+        canvas = tk.Canvas(outer, bg=T['bg'], highlightthickness=0, bd=0)
+        sb = tk.Scrollbar(outer, orient='vertical', command=canvas.yview,
+                          bg=T['panel'], troughcolor=T['bg2'], activebackground=T['cyan'],
+                          bd=0, highlightthickness=0, width=10)
+        canvas.configure(yscrollcommand=sb.set)
+        sb.pack(side='right', fill='y'); canvas.pack(side='left', fill='both', expand=True)
+        body = tk.Frame(canvas, bg=T['bg'])
+        body_window = canvas.create_window((0, 0), window=body, anchor='nw')
+        canvas.bind('<Configure>', lambda e: canvas.itemconfig(body_window, width=e.width))
+        body.bind('<Configure>', lambda e: canvas.configure(scrollregion=canvas.bbox('all')))
+        canvas.bind_all('<MouseWheel>', lambda e: _safe_wheel(canvas, e))
+
+        def load_files():
+            folder = state['folder']
+            state['files'] = []
+            if folder and os.path.isdir(folder):
+                try:
+                    state['files'] = sorted(
+                        n for n in os.listdir(folder)
+                        if os.path.isfile(os.path.join(folder, n)))
+                except OSError:
+                    state['files'] = []
+            path_lbl.config(text=folder or '—')
+
+        def refresh(_e=None):
+            for ch in body.winfo_children():
+                ch.destroy()
+            files = state['files']
+            if not files:
+                tk.Label(body, text=L.get('rn_nofiles', 'No files in this folder.'),
+                         fg=T['muted'], bg=T['bg'], font=('Segoe UI', 9)).pack(
+                             anchor='w', padx=6, pady=6)
+                count_lbl.config(text='')
+                set_apply(0)
+                return
+            plan = plan_rename(files, v_find.get(), v_repl.get(),
+                               use_regex=v_regex.get(), match_case=v_case.get(),
+                               include_ext=v_ext.get())
+            changed = 0
+            for old, new, problem in plan:
+                if problem is None and new != old:
+                    changed += 1
+                row = tk.Frame(body, bg=T['panel'] if problem else T['bg'])
+                row.pack(fill='x', pady=1)
+                tk.Label(row, text=old, fg=T['muted'], bg=row['bg'], font=('Consolas', 9),
+                         anchor='w', width=34).pack(side='left', padx=(6, 0))
+                if problem:
+                    note = L.get('rn_invalid' if problem == 'invalid' else 'rn_dup', problem)
+                    tk.Label(row, text='⚠  ' + note, fg=T['orange'], bg=row['bg'],
+                             font=('Segoe UI', 9), anchor='w').pack(side='left', padx=8)
+                elif new == old:
+                    tk.Label(row, text='=', fg=T['line'], bg=row['bg'],
+                             font=('Segoe UI', 9)).pack(side='left', padx=8)
+                else:
+                    tk.Label(row, text='→', fg=T['cyan'], bg=row['bg'],
+                             font=('Segoe UI', 9)).pack(side='left', padx=6)
+                    tk.Label(row, text=new, fg=T['green'], bg=row['bg'],
+                             font=('Consolas', 9), anchor='w').pack(side='left')
+            count_lbl.config(
+                text=(L.get('rn_changed', '{n} of {t} will change')
+                      .replace('{n}', str(changed)).replace('{t}', str(len(files))))
+                if v_find.get() else L.get('rn_nothing', ''))
+            state['plan'] = plan
+            set_apply(changed)
+
+        def set_apply(n):
+            if n > 0:
+                apply_btn.config(fg=T['cyan'], bg=T['panel'], cursor='hand2')
+            else:
+                apply_btn.config(fg=T['line'], bg=T['bg2'], cursor='')
+
+        def do_apply(_e=None):
+            plan = state.get('plan') or []
+            n = sum(1 for o, nw, p in plan if p is None and nw != o)
+            if not n:
+                return
+            msg = L.get('rn_confirm', 'Rename {n} file(s)?').replace('{n}', str(n))
+            self._confirm(msg, lambda: run_apply(plan))
+
+        def run_apply(plan):
+            done, errors = apply_rename(state['folder'], plan)
+            load_files()
+            refresh()
+            if errors:
+                self.w._toast('⚠  ' + errors[0][:80])
+            else:
+                self._tool_toast(L.get('rn_done', '{n} file(s) renamed')
+                                 .replace('{n}', str(done)))
+
+        def choose(_e=None):
+            try:
+                from tkinter import filedialog
+                d = filedialog.askdirectory(parent=self._win,
+                                            initialdir=state['folder'] or None)
+            except Exception:
+                d = None
+            if d:
+                state['folder'] = os.path.normpath(d)
+                self.w._set('rename_folder', state['folder'])
+                load_files(); refresh()
+
+        pick.bind('<Button-1>', choose)
+        apply_btn.bind('<Button-1>', do_apply)
+        load_files()
+        refresh()
+
 
     # ── History tab (v2.12) ──
     HIST_RANGES = (('1h', 3600), ('24h', 86400), ('7d', 604800))
@@ -6499,6 +7170,15 @@ class CustomizeWindow:
         if target == 'dns_boost':
             self.show_tab('dns')          # full DNS Boost panel, returns via its Back link
             return
+        if target == 'bulk_rename':
+            self.show_tab('rename')
+            return
+        if target == 'color_picker':
+            self.w.open_color_picker()
+            return
+        if target == 'always_on_top':
+            self.w.do_always_on_top()
+            return
         if target == 'startup_list':
             self.show_tab('startup')      # Startup Manager panel, returns via its Back link
             return
@@ -7050,6 +7730,19 @@ class Widget:
         self._history = _HistoryStore(os.path.join(CONFIG_DIR, 'history.csv'),
                                       self._usage, self._history_sample)
         self._history.start()
+        # global hotkeys (v2.13) — the picker and always-on-top also have
+        # Tools-tab buttons, so a chord already taken by another app just
+        # shows as unavailable instead of breaking the feature
+        self._picker = None
+        self._hotkeys = None
+        if self.cfg.get('hotkeys_on', True):
+            try:
+                self._hotkeys = _HotkeyManager(self.root)
+                self._hotkeys.bind('colorpicker', self.open_color_picker)
+                self._hotkeys.bind('alwaysontop', self.do_always_on_top)
+                self._hotkeys.start()
+            except Exception:
+                self._hotkeys = None
         # customize window (v2.6)
         self._customize = None
         # rolling history for sparklines
@@ -7198,6 +7891,34 @@ class Widget:
     def _act_weather_unit(self, unit):
         self._set('weather_unit', unit)
         self._weather_dirty = True          # trigger a fast refetch
+
+    def open_color_picker(self):
+        """Show the screen colour picker (hotkey or Tools tab)."""
+        try:
+            if getattr(self, '_picker', None) is None:
+                self._picker = ColorPicker(self)
+            self._picker.open()
+        except Exception:
+            pass
+
+    def do_always_on_top(self):
+        """Pin/unpin whatever window is in front."""
+        L = CUST_LABELS.get(self.lang, CUST_LABELS['en'])
+        try:
+            mine = (self.root.winfo_id(),)
+        except Exception:
+            mine = ()
+        res = toggle_always_on_top(skip_hwnds=mine)
+        if res is None:
+            return
+        title, pinned = res
+        if pinned is None:
+            self._toast(L.get('aot_denied', 'That window cannot be pinned'))
+            return
+        msg = L.get('aot_pinned' if pinned else 'aot_unpinned', '')
+        if title:
+            msg += '  —  ' + title[:44]
+        self._toast(('📌  ' if pinned else '') + msg)
 
     def _act_set_data_cap(self, parent=None):
         """Ask for a monthly data limit in GB (0 = off).
@@ -7375,6 +8096,11 @@ class Widget:
         self._user_quit = True   # deliberate exit — see run()'s watchdog
         try:
             self._history.stop()
+        except Exception:
+            pass
+        try:
+            if self._hotkeys:
+                self._hotkeys.stop()
         except Exception:
             pass
         try:

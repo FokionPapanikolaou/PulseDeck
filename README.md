@@ -21,7 +21,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D6?logo=windows&logoColor=white" alt="Windows">
-  <img src="https://img.shields.io/badge/version-2.12.0-3fb950" alt="v2.12.0">
+  <img src="https://img.shields.io/badge/version-2.13.0-3fb950" alt="v2.13.0">
   <img src="https://img.shields.io/badge/price-Free-brightgreen" alt="Free">
   <img src="https://img.shields.io/badge/languages-8-blueviolet" alt="8 languages">
   <img src="https://img.shields.io/badge/themes-10-orange" alt="10 themes">
@@ -65,6 +65,12 @@ Point at any metric for a popup panel:
   plus an optional **monthly limit** that warns at 80% and 100%.
 - **Drive health** — SMART status per physical disk (temperature and wear too,
   where Windows allows reading them).
+
+### 🆕 Handy tools (v2.13)
+- **Colour picker** (`Win+Shift+C`) — magnify any pixel and copy its HEX.
+- **Always on top** (`Win+Ctrl+T`) — pin the window you're using above the rest.
+- **Bulk rename** — find & replace or regex across many files, with a full
+  preview and collision checks before anything is renamed.
 
 ### Layout
 - **Horizontal** (on the taskbar) or **Vertical** (stacked panel above the taskbar)

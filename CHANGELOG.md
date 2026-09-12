@@ -8,6 +8,37 @@ All notable changes to **PulseDeck** are documented here.
 
 ---
 
+## [2.13.0] — 2026-09-12 — *Three from the PowerToys shelf*
+
+PulseDeck already borrowed Keep Awake, the dark/light switch and Environment
+Variables from Microsoft PowerToys. Three more, written natively — no PowerToys
+install needed, and they work the same whether or not you have it.
+
+### Added
+- **Colour picker** (Tools → Handy tools, or **Win+Shift+C**) — magnifies the
+  pixels under the cursor and copies the colour as HEX. The screen is captured
+  once when it opens and every reading comes from that bitmap, so the magnifier
+  shows exact pixels and never samples PulseDeck's own overlay. A full-screen,
+  invisible window swallows the click, so picking a colour doesn't also click
+  whatever was underneath. Esc cancels.
+- **Always on top** (Tools → Handy tools, or **Win+Ctrl+T**) — pins the window
+  you're using above all others; press again to unpin. Windows owned by an
+  elevated process can't be restyled by a normal-rights app, so the result is
+  verified by reading the style back and you get told when one refuses.
+- **Bulk rename** (Tools → Handy tools) — rename many files at once with find &
+  replace or a regular expression. Nothing happens until you've seen the full
+  preview: names that would become invalid or collide are flagged and skipped,
+  and the rename runs through temporary names in two passes so swaps (a→b, b→a)
+  and shifted sequences (1→2, 2→3) work instead of colliding. It will not
+  overwrite a file that isn't part of the rename.
+- **Global hotkeys** live on their own message-pump thread and are listed in
+  General settings. The chords match PowerToys' own so muscle memory carries
+  over — and if PowerToys (or anything else) already owns one, the settings
+  page says so in orange and the tool still runs from its button. One switch
+  turns all of them off.
+
+---
+
 ## [2.12.0] — 2026-09-12 — *Now it remembers*
 
 Task Manager forgets everything older than about a minute. PulseDeck now keeps
