@@ -18,7 +18,7 @@ import random
 
 APP_NAME = 'PulseDeck'       # internal identity: config dir, mutex, registry, Store package
 DISPLAY_NAME = 'PulseDeck'   # user-visible product name (rebrand)
-VERSION  = '2.11.0'
+VERSION  = '2.12.0'
 
 # ── Crash logging (enabled when NETCPURAM_DEBUG=1) ─────────────────────
 def _debug_log_path():
@@ -1071,6 +1071,116 @@ WEATHER_I18N = {
 for _lng, _d in WEATHER_I18N.items():
     CUST_LABELS.setdefault(_lng, {}).update(_d)
 
+# ── History / data usage / drive health labels (v2.12) ────────────────
+HISTORY_I18N = {
+ 'en':{'history':'History','hist_1h':'1 hour','hist_24h':'24 hours','hist_7d':'7 days',
+       'hist_collecting':'Collecting… one point is recorded every minute, so the graph fills in as PulseDeck runs.',
+       'hist_cpu':'CPU','hist_ram':'RAM','hist_gpu':'GPU','hist_net':'Network',
+       'hist_avg':'avg','hist_peak':'peak','hist_gpu_off':'GPU metric is switched off',
+       'hist_gap_note':'Gaps are times PulseDeck was not running.',
+       'usage_lbl':'Data usage','usage_today':'Today','usage_month':'This month',
+       'usage_last30':'Last 30 days','usage_up':'Up','usage_down':'Down','usage_total':'Total',
+       'usage_cap':'Monthly limit','usage_cap_off':'Off','usage_cap_set':'Set limit…',
+       'usage_cap_hint':'Warn me when I get close to a monthly data limit. 0 = off.',
+       'usage_cap_ask':'Monthly limit in GB (0 = off):',
+       'usage_alert_t':'Data limit','usage_alert_b':'{pct}% of your {cap} GB monthly limit used',
+       'sys_health':'Drive health','health_temp':'Temperature','health_wear':'Wear',
+       'health_hours':'Powered on','health_admin':'Temperature and wear need administrator rights'},
+ 'el':{'history':'Ιστορικό','hist_1h':'1 ώρα','hist_24h':'24 ώρες','hist_7d':'7 ημέρες',
+       'hist_collecting':'Συλλογή δεδομένων… καταγράφεται ένα σημείο ανά λεπτό, οπότε το γράφημα γεμίζει όσο τρέχει το PulseDeck.',
+       'hist_cpu':'CPU','hist_ram':'RAM','hist_gpu':'GPU','hist_net':'Δίκτυο',
+       'hist_avg':'μέσος','hist_peak':'κορυφή','hist_gpu_off':'Η μέτρηση GPU είναι κλειστή',
+       'hist_gap_note':'Τα κενά είναι ώρες που το PulseDeck δεν έτρεχε.',
+       'usage_lbl':'Όγκος δεδομένων','usage_today':'Σήμερα','usage_month':'Αυτόν τον μήνα',
+       'usage_last30':'Τελευταίες 30 ημέρες','usage_up':'Ανέβασμα','usage_down':'Κατέβασμα','usage_total':'Σύνολο',
+       'usage_cap':'Μηνιαίο όριο','usage_cap_off':'Ανενεργό','usage_cap_set':'Ορισμός ορίου…',
+       'usage_cap_hint':'Ειδοποίησέ με όταν πλησιάζω ένα μηνιαίο όριο δεδομένων. 0 = ανενεργό.',
+       'usage_cap_ask':'Μηνιαίο όριο σε GB (0 = ανενεργό):',
+       'usage_alert_t':'Όριο δεδομένων','usage_alert_b':'Χρησιμοποιήθηκε {pct}% από το μηνιαίο όριο των {cap} GB',
+       'sys_health':'Υγεία δίσκων','health_temp':'Θερμοκρασία','health_wear':'Φθορά',
+       'health_hours':'Ώρες λειτουργίας','health_admin':'Η θερμοκρασία και η φθορά θέλουν δικαιώματα διαχειριστή'},
+ 'es':{'history':'Historial','hist_1h':'1 hora','hist_24h':'24 horas','hist_7d':'7 días',
+       'hist_collecting':'Recopilando… se registra un punto por minuto, así que el gráfico se llena mientras PulseDeck funciona.',
+       'hist_cpu':'CPU','hist_ram':'RAM','hist_gpu':'GPU','hist_net':'Red',
+       'hist_avg':'media','hist_peak':'pico','hist_gpu_off':'La métrica de GPU está desactivada',
+       'hist_gap_note':'Los huecos son periodos en los que PulseDeck no estaba en marcha.',
+       'usage_lbl':'Uso de datos','usage_today':'Hoy','usage_month':'Este mes',
+       'usage_last30':'Últimos 30 días','usage_up':'Subida','usage_down':'Bajada','usage_total':'Total',
+       'usage_cap':'Límite mensual','usage_cap_off':'Desactivado','usage_cap_set':'Definir límite…',
+       'usage_cap_hint':'Avísame cuando me acerque a un límite mensual de datos. 0 = desactivado.',
+       'usage_cap_ask':'Límite mensual en GB (0 = desactivado):',
+       'usage_alert_t':'Límite de datos','usage_alert_b':'Usado el {pct}% de tu límite mensual de {cap} GB',
+       'sys_health':'Estado de las unidades','health_temp':'Temperatura','health_wear':'Desgaste',
+       'health_hours':'Horas encendido','health_admin':'La temperatura y el desgaste requieren permisos de administrador'},
+ 'de':{'history':'Verlauf','hist_1h':'1 Stunde','hist_24h':'24 Stunden','hist_7d':'7 Tage',
+       'hist_collecting':'Sammelt Daten… jede Minute wird ein Punkt gespeichert, das Diagramm füllt sich also im Laufe der Zeit.',
+       'hist_cpu':'CPU','hist_ram':'RAM','hist_gpu':'GPU','hist_net':'Netzwerk',
+       'hist_avg':'Ø','hist_peak':'Spitze','hist_gpu_off':'GPU-Messung ist ausgeschaltet',
+       'hist_gap_note':'Lücken sind Zeiten, in denen PulseDeck nicht lief.',
+       'usage_lbl':'Datenverbrauch','usage_today':'Heute','usage_month':'Diesen Monat',
+       'usage_last30':'Letzte 30 Tage','usage_up':'Upload','usage_down':'Download','usage_total':'Gesamt',
+       'usage_cap':'Monatslimit','usage_cap_off':'Aus','usage_cap_set':'Limit festlegen…',
+       'usage_cap_hint':'Warnen, wenn ich einem monatlichen Datenlimit nahekomme. 0 = aus.',
+       'usage_cap_ask':'Monatslimit in GB (0 = aus):',
+       'usage_alert_t':'Datenlimit','usage_alert_b':'{pct}% deines Monatslimits von {cap} GB verbraucht',
+       'sys_health':'Laufwerkszustand','health_temp':'Temperatur','health_wear':'Verschleiß',
+       'health_hours':'Betriebsstunden','health_admin':'Temperatur und Verschleiß erfordern Administratorrechte'},
+ 'fr':{'history':'Historique','hist_1h':'1 heure','hist_24h':'24 heures','hist_7d':'7 jours',
+       'hist_collecting':'Collecte en cours… un point est enregistré chaque minute, le graphique se remplit donc au fil du temps.',
+       'hist_cpu':'CPU','hist_ram':'RAM','hist_gpu':'GPU','hist_net':'Réseau',
+       'hist_avg':'moy.','hist_peak':'pic','hist_gpu_off':'La mesure GPU est désactivée',
+       'hist_gap_note':'Les trous correspondent aux périodes où PulseDeck ne tournait pas.',
+       'usage_lbl':'Consommation de données','usage_today':'Aujourd’hui','usage_month':'Ce mois-ci',
+       'usage_last30':'30 derniers jours','usage_up':'Envoi','usage_down':'Réception','usage_total':'Total',
+       'usage_cap':'Limite mensuelle','usage_cap_off':'Désactivée','usage_cap_set':'Définir la limite…',
+       'usage_cap_hint':'M’avertir quand j’approche d’une limite mensuelle de données. 0 = désactivé.',
+       'usage_cap_ask':'Limite mensuelle en Go (0 = désactivée) :',
+       'usage_alert_t':'Limite de données','usage_alert_b':'{pct}% de votre limite mensuelle de {cap} Go utilisés',
+       'sys_health':'État des disques','health_temp':'Température','health_wear':'Usure',
+       'health_hours':'Heures de fonctionnement','health_admin':'La température et l’usure nécessitent des droits administrateur'},
+ 'it':{'history':'Cronologia','hist_1h':'1 ora','hist_24h':'24 ore','hist_7d':'7 giorni',
+       'hist_collecting':'Raccolta dati… viene registrato un punto al minuto, quindi il grafico si riempie mentre PulseDeck è in funzione.',
+       'hist_cpu':'CPU','hist_ram':'RAM','hist_gpu':'GPU','hist_net':'Rete',
+       'hist_avg':'media','hist_peak':'picco','hist_gpu_off':'La misurazione GPU è disattivata',
+       'hist_gap_note':'Gli spazi vuoti sono periodi in cui PulseDeck non era in esecuzione.',
+       'usage_lbl':'Consumo dati','usage_today':'Oggi','usage_month':'Questo mese',
+       'usage_last30':'Ultimi 30 giorni','usage_up':'Upload','usage_down':'Download','usage_total':'Totale',
+       'usage_cap':'Limite mensile','usage_cap_off':'Disattivato','usage_cap_set':'Imposta limite…',
+       'usage_cap_hint':'Avvisami quando mi avvicino a un limite mensile di dati. 0 = disattivato.',
+       'usage_cap_ask':'Limite mensile in GB (0 = disattivato):',
+       'usage_alert_t':'Limite dati','usage_alert_b':'Usato il {pct}% del limite mensile di {cap} GB',
+       'sys_health':'Salute dei dischi','health_temp':'Temperatura','health_wear':'Usura',
+       'health_hours':'Ore di accensione','health_admin':'Temperatura e usura richiedono i diritti di amministratore'},
+ 'pt':{'history':'Histórico','hist_1h':'1 hora','hist_24h':'24 horas','hist_7d':'7 dias',
+       'hist_collecting':'A recolher dados… é gravado um ponto por minuto, por isso o gráfico enche-se enquanto o PulseDeck corre.',
+       'hist_cpu':'CPU','hist_ram':'RAM','hist_gpu':'GPU','hist_net':'Rede',
+       'hist_avg':'média','hist_peak':'pico','hist_gpu_off':'A métrica de GPU está desligada',
+       'hist_gap_note':'As falhas são períodos em que o PulseDeck não estava a correr.',
+       'usage_lbl':'Consumo de dados','usage_today':'Hoje','usage_month':'Este mês',
+       'usage_last30':'Últimos 30 dias','usage_up':'Envio','usage_down':'Receção','usage_total':'Total',
+       'usage_cap':'Limite mensal','usage_cap_off':'Desligado','usage_cap_set':'Definir limite…',
+       'usage_cap_hint':'Avisar quando estiver perto de um limite mensal de dados. 0 = desligado.',
+       'usage_cap_ask':'Limite mensal em GB (0 = desligado):',
+       'usage_alert_t':'Limite de dados','usage_alert_b':'{pct}% do seu limite mensal de {cap} GB usado',
+       'sys_health':'Estado dos discos','health_temp':'Temperatura','health_wear':'Desgaste',
+       'health_hours':'Horas ligado','health_admin':'A temperatura e o desgaste requerem direitos de administrador'},
+ 'ru':{'history':'История','hist_1h':'1 час','hist_24h':'24 часа','hist_7d':'7 дней',
+       'hist_collecting':'Сбор данных… точка записывается раз в минуту, поэтому график заполняется по мере работы PulseDeck.',
+       'hist_cpu':'ЦП','hist_ram':'ОЗУ','hist_gpu':'GPU','hist_net':'Сеть',
+       'hist_avg':'сред.','hist_peak':'пик','hist_gpu_off':'Метрика GPU отключена',
+       'hist_gap_note':'Пропуски — это время, когда PulseDeck не был запущен.',
+       'usage_lbl':'Расход трафика','usage_today':'Сегодня','usage_month':'В этом месяце',
+       'usage_last30':'Последние 30 дней','usage_up':'Отдано','usage_down':'Принято','usage_total':'Всего',
+       'usage_cap':'Месячный лимит','usage_cap_off':'Выкл.','usage_cap_set':'Задать лимит…',
+       'usage_cap_hint':'Предупреждать при приближении к месячному лимиту трафика. 0 = выключено.',
+       'usage_cap_ask':'Месячный лимит в ГБ (0 = выключено):',
+       'usage_alert_t':'Лимит трафика','usage_alert_b':'Израсходовано {pct}% месячного лимита в {cap} ГБ',
+       'sys_health':'Состояние дисков','health_temp':'Температура','health_wear':'Износ',
+       'health_hours':'Наработка','health_admin':'Температура и износ требуют прав администратора'},
+}
+for _lng, _d in HISTORY_I18N.items():
+    CUST_LABELS.setdefault(_lng, {}).update(_d)
+
 # ── Diagnostics labels (v2.8.2) ───────────────────────────────────────
 DIAG_I18N = {
  'en':{'run_diag':'Run diagnostics','diag_done':'{ok}/{n} OK · copied to clipboard',
@@ -1892,7 +2002,7 @@ def _wmi_batch():
     """
     keys = ('cpu', 'mem', 'gpu', 'os', 'cs', 'mobo', 'bios',
             'audio', 'optical', 'battery', 'monitors', 'drives', 'tpm',
-            'memarray', 'activation', 'tpmpnp')
+            'memarray', 'activation', 'tpmpnp', 'phys')
     empty = {k: [] for k in keys}
     ps = (
         "$ErrorActionPreference='SilentlyContinue';$o=[ordered]@{};"
@@ -1909,6 +2019,10 @@ def _wmi_batch():
         "$o['optical']=@(Get-CimInstance Win32_CDROMDrive|Select-Object Name,Manufacturer,MediaType,Drive);"
         "$o['battery']=@(Get-CimInstance Win32_Battery|Select-Object Name,Chemistry,DesignVoltage);"
         "$o['drives']=@(Get-CimInstance Win32_DiskDrive|Select-Object Model,Size,InterfaceType,MediaType,Partitions,Status);"
+        # Physical-disk health. HealthStatus/MediaType/BusType need no rights;
+        # Temperature/Wear/PowerOnHours come back null unless elevated, which
+        # the UI reports rather than hiding. Costs ~1.2 s on a 4-drive machine.
+        "$o['phys']=@(Get-PhysicalDisk|ForEach-Object{$r=$_|Get-StorageReliabilityCounter;[PSCustomObject]@{Name=$_.FriendlyName;Media=$_.MediaType;Bus=$_.BusType;Health=$_.HealthStatus;Oper=$_.OperationalStatus;Size=$_.Size;Temp=$r.Temperature;Wear=$r.Wear;Hours=$r.PowerOnHours}});"
         "$o['tpm']=@(Get-CimInstance -Namespace root/cimv2/Security/MicrosoftTpm -ClassName Win32_Tpm|Select-Object IsEnabled_InitialValue,IsActivated_InitialValue,SpecVersion,ManufacturerIdTxt);"
         "$o['tpmpnp']=@(Get-CimInstance Win32_PnPEntity -Filter \"Name LIKE 'Trusted Platform Module%'\"|Select-Object Name);"
         "$o['monitors']=@(Get-CimInstance -Namespace root/wmi -ClassName WmiMonitorID|Select-Object ManufacturerName,UserFriendlyName,ProductCodeID,YearOfManufacture);"
@@ -2062,6 +2176,37 @@ def collect_system_info():
                 'model': model, 'size': size, 'bus': bus, 'kind': kind,
                 'status': str(d.get('Status', '') or '').strip(),
             })
+    except Exception: pass
+    # Fold in Get-PhysicalDisk: Windows knows SSD vs HDD and the real bus
+    # (Win32_DiskDrive reports NVMe drives as 'SCSI'), and carries SMART
+    # health. Matched on the model string, which both classes spell the
+    # same way; unmatched entries simply keep what they had.
+    try:
+        by_name = {}
+        for ph in W.get('phys') or []:
+            n = str(ph.get('Name', '') or '').strip().lower()
+            if n:
+                by_name[n] = ph
+        for drv in out['drives']:
+            ph = by_name.get(drv['model'].lower())
+            if not ph:
+                continue
+            media = str(ph.get('Media', '') or '').strip()
+            if media and media.lower() != 'unspecified':
+                drv['kind'] = media
+            elif not drv['kind']:
+                drv['kind'] = 'HDD'
+            if ph.get('Bus'):
+                drv['bus'] = str(ph['Bus']).strip()
+            if ph.get('Health'):
+                drv['health'] = str(ph['Health']).strip()
+            for src, dst in (('Temp', 'temp'), ('Wear', 'wear'), ('Hours', 'hours')):
+                v = ph.get(src)
+                if v not in (None, ''):
+                    try:
+                        drv[dst] = float(v)
+                    except (TypeError, ValueError):
+                        pass
     except Exception: pass
     try:
         cpu = W['cpu']
@@ -2411,6 +2556,9 @@ CONFIG_DIR  = _resolve_config_dir()
 CONFIG_PATH = os.path.join(CONFIG_DIR, 'config.json')
 
 DEFAULTS = {
+    'data_cap_gb': 0,     # monthly data limit in GB (0 = no limit / no warning)
+    'hist_range':  '24h', # last selected History range: 1h | 24h | 7d
+
     'opacity':   0.6,     # 0.4 – 1.0  (lower = more see-through)
     'align':     'left',  # left | center | right
     'free_pos':  False,   # True after dragging — remembers a custom position
@@ -3857,6 +4005,246 @@ class CpuFreq:
         except Exception:
             return None
 
+# ── History & data-usage stores ────────────────────────────────────────
+# Both are fed from one place (_HistoryStore's sampler thread) so the network
+# counter is read exactly once per minute and the same delta feeds the graph
+# and the usage totals — no double counting and no drift between them.
+
+def _atomic_write(path, text):
+    """Write text to path without leaving a truncated file behind if we die
+    mid-write (the history file is rewritten on every compaction)."""
+    tmp = path + '.tmp'
+    try:
+        with open(tmp, 'w', encoding='utf-8', newline='') as f:
+            f.write(text)
+        os.replace(tmp, path)
+        return True
+    except OSError:
+        try: os.remove(tmp)
+        except OSError: pass
+        return False
+
+
+class _UsageStore:
+    """Per-day network totals, for the data-usage counter and the cap warning.
+
+    Kept separate from the history graph because it must survive far longer
+    (a monthly cap needs whole months) while the graph only keeps a week.
+    """
+    KEEP_DAYS = 400
+
+    def __init__(self, path):
+        self.path = path
+        self.days = {}          # {'YYYY-MM-DD': [up_bytes, dn_bytes]}
+        self._dirty = False
+        self._load()
+
+    def _load(self):
+        try:
+            with open(self.path, 'r', encoding='utf-8-sig') as f:
+                data = json.load(f)
+            days = data.get('days') or {}
+            if isinstance(days, dict):
+                for k, v in days.items():
+                    if isinstance(v, list) and len(v) == 2:
+                        self.days[k] = [int(v[0]), int(v[1])]
+        except (OSError, ValueError):
+            pass
+        self._trim()
+
+    def _trim(self):
+        if len(self.days) <= self.KEEP_DAYS:
+            return
+        for k in sorted(self.days)[:-self.KEEP_DAYS]:
+            self.days.pop(k, None)
+
+    def add(self, up, dn):
+        """Add bytes to today's bucket. Called once a minute."""
+        if up <= 0 and dn <= 0:
+            return
+        key = time.strftime('%Y-%m-%d')
+        cur = self.days.setdefault(key, [0, 0])
+        cur[0] += int(up)
+        cur[1] += int(dn)
+        self._dirty = True
+
+    def save(self, force=False):
+        if not (self._dirty or force):
+            return
+        self._trim()
+        if _atomic_write(self.path, json.dumps({'days': self.days})):
+            self._dirty = False
+
+    # ── queries ──
+    def today(self):
+        return tuple(self.days.get(time.strftime('%Y-%m-%d'), (0, 0)))
+
+    def month(self):
+        pre = time.strftime('%Y-%m-')
+        up = dn = 0
+        for k, v in self.days.items():
+            if k.startswith(pre):
+                up += v[0]; dn += v[1]
+        return up, dn
+
+    def recent_days(self, n):
+        """[(date_str, up, dn)] for the last n calendar days, oldest first,
+        including days with no traffic so a bar chart keeps its spacing."""
+        out = []
+        now = time.time()
+        for i in range(n - 1, -1, -1):
+            k = time.strftime('%Y-%m-%d', time.localtime(now - i * 86400))
+            up, dn = self.days.get(k, (0, 0))
+            out.append((k, up, dn))
+        return out
+
+
+class _HistoryStore(threading.Thread):
+    """Rolling system history at one row per minute, persisted across restarts.
+
+    Task Manager only remembers the last 60 seconds; this keeps a week, so
+    "what was the PC doing while I was away?" is actually answerable. Rows are
+    appended one line at a time (cheap) and the file is compacted on startup.
+    """
+    SAMPLE_SEC = 5          # live sampling cadence
+    INTERVAL   = 60         # seconds per stored row
+    KEEP_DAYS  = 7
+
+    def __init__(self, path, usage, sample_fn):
+        super().__init__(daemon=True, name='HistoryStore')
+        self.path = path
+        self.usage = usage
+        self._sample_fn = sample_fn     # () -> (cpu, ram, gpu)  (gpu may be None)
+        self.rows = []                  # [(ts, cpu, cpu_max, ram, gpu, up, dn)]
+        self._stop = False
+        self._acc = []                  # samples inside the current minute
+        self._net_prev = None
+        self._bucket = None             # epoch of the minute we're filling
+        self._load()
+
+    # ── persistence ──
+    def _load(self):
+        cutoff = time.time() - self.KEEP_DAYS * 86400
+        rows = []
+        try:
+            with open(self.path, 'r', encoding='utf-8-sig') as f:
+                for line in f:
+                    p = line.strip().split(',')
+                    if len(p) != 7:
+                        continue
+                    try:
+                        ts = int(p[0])
+                    except ValueError:
+                        continue
+                    if ts < cutoff:
+                        continue
+                    try:
+                        rows.append((ts, int(p[1]), int(p[2]), int(p[3]),
+                                     int(p[4]), int(p[5]), int(p[6])))
+                    except ValueError:
+                        continue
+        except OSError:
+            pass
+        rows.sort()
+        self.rows = rows
+        # compact: the file may still hold weeks of rows we just dropped
+        self._rewrite()
+
+    def _rewrite(self):
+        _atomic_write(self.path,
+                      ''.join(','.join(str(v) for v in r) + '\n' for r in self.rows))
+
+    def _append(self, row):
+        self.rows.append(row)
+        cutoff = time.time() - self.KEEP_DAYS * 86400
+        if self.rows[0][0] < cutoff:
+            self.rows = [r for r in self.rows if r[0] >= cutoff]
+            self._rewrite()
+            return
+        try:
+            with open(self.path, 'a', encoding='utf-8', newline='') as f:
+                f.write(','.join(str(v) for v in row) + '\n')
+        except OSError:
+            pass
+
+    # ── sampling ──
+    def _net_delta(self):
+        """Bytes since the previous read, plus whether that covered roughly one
+        minute. A counter that went backwards means a reboot or an adapter
+        reset, so the current value IS the delta."""
+        try:
+            c = psutil.net_io_counters()
+            cur = (c.bytes_sent, c.bytes_recv)
+        except Exception:
+            return 0, 0, False
+        prev, self._net_prev = self._net_prev, cur
+        if prev is None:
+            return 0, 0, False
+        up = cur[0] - prev[0]
+        dn = cur[1] - prev[1]
+        if up < 0 or dn < 0:            # counters reset
+            up, dn = max(cur[0], 0), max(cur[1], 0)
+        return up, dn, True
+
+    def _flush(self, bucket_ts):
+        acc, self._acc = self._acc, []
+        up, dn, ok = self._net_delta()
+        # Totals are credited even when the app was closed for a while (that
+        # traffic really did happen); the graph is not, because drawing hours
+        # of accumulated bytes as one minute would be a fake spike.
+        if ok:
+            self.usage.add(up, dn)
+        gap = ok and (time.time() - bucket_ts) < self.INTERVAL * 3
+        if not gap:
+            up = dn = 0
+        if not acc:
+            return
+        cpus = [a[0] for a in acc if a[0] is not None]
+        rams = [a[1] for a in acc if a[1] is not None]
+        gpus = [a[2] for a in acc if a[2] is not None]
+        row = (int(bucket_ts),
+               int(round(sum(cpus) / len(cpus))) if cpus else 0,
+               int(round(max(cpus))) if cpus else 0,
+               int(round(sum(rams) / len(rams))) if rams else 0,
+               int(round(sum(gpus) / len(gpus))) if gpus else -1,
+               int(up), int(dn))
+        self._append(row)
+        self.usage.save()
+
+    def run(self):
+        self._net_delta()               # prime the counter baseline
+        self._bucket = int(time.time() // self.INTERVAL) * self.INTERVAL
+        while not self._stop:
+            try:
+                self._acc.append(self._sample_fn())
+            except Exception:
+                pass
+            now = time.time()
+            b = int(now // self.INTERVAL) * self.INTERVAL
+            if b != self._bucket:
+                try:
+                    self._flush(self._bucket)
+                except Exception:
+                    pass
+                self._bucket = b
+            for _ in range(self.SAMPLE_SEC * 4):
+                if self._stop:
+                    return
+                time.sleep(0.25)
+
+    def stop(self):
+        self._stop = True
+        try:
+            self.usage.save(force=True)
+        except Exception:
+            pass
+
+    # ── queries ──
+    def since(self, seconds):
+        cutoff = time.time() - seconds
+        return [r for r in self.rows if r[0] >= cutoff]
+
+
 # ── Background slow-hardware poller ───────────────────────────────────
 # Typed once at import: GetCurrentProcess returns a 64-bit HANDLE, and
 # without argtypes ctypes truncates it to 32 bits, so the call silently
@@ -4152,6 +4540,7 @@ class CustomizeWindow:
             ('metrics',    'metrics',    '📊'),
             ('appearance', 'appearance', '🎨'),
             ('weather',    'weather_lbl','🌤'),
+            ('history',    'history',    '📈'),
             ('system',     'system',     '💻'),
             ('tools',      'tools',      '🧰'),
             ('about',      'about',      'ℹ'),
@@ -4834,6 +5223,265 @@ class CustomizeWindow:
         loc_btn.bind('<Enter>', lambda e: loc_btn.config(bg=T['bg2']))
         loc_btn.bind('<Leave>', lambda e: loc_btn.config(bg=T['panel']))
 
+    # ── History tab (v2.12) ──
+    HIST_RANGES = (('1h', 3600), ('24h', 86400), ('7d', 604800))
+
+    def _hist_columns(self, rows, t0, t1, width, idx):
+        """Bucket rows into one column per pixel.
+
+        Returns {x: (avg, peak)} with x only present where data exists, so a
+        stretch when PulseDeck was not running simply has no columns and reads
+        as a gap instead of a straight line drawn across it.
+        """
+        if width < 2 or t1 <= t0:
+            return {}
+        acc = {}
+        span = float(t1 - t0)
+        for r in rows:
+            v = r[idx]
+            if v is None or v < 0:
+                continue
+            x = int((r[0] - t0) / span * (width - 1))
+            if x < 0 or x >= width:
+                continue
+            a = acc.get(x)
+            if a is None:
+                acc[x] = [v, 1, v]
+            else:
+                a[0] += v; a[1] += 1
+                if v > a[2]: a[2] = v
+        return {x: (a[0] / a[1], a[2]) for x, a in acc.items()}
+
+    def _hist_draw(self, cv, rows, t0, t1, idx, color, peak_color,
+                   scale=None, idx2=None, color2=None):
+        """Draw one chart. scale=None auto-scales (network), otherwise 0-100."""
+        T = self.T
+        cv.delete('all')
+        w = cv.winfo_width(); h = cv.winfo_height()
+        if w < 4 or h < 4:
+            return
+        for f in (0.25, 0.5, 0.75):
+            y = h - h * f
+            cv.create_line(0, y, w, y, fill=T['line'])
+        cols = self._hist_columns(rows, t0, t1, w, idx)
+        cols2 = self._hist_columns(rows, t0, t1, w, idx2) if idx2 is not None else {}
+        top = scale
+        if top is None:
+            peaks = [c[1] for c in cols.values()] + [c[1] for c in cols2.values()]
+            top = max(peaks) if peaks else 0
+            top = top or 1
+        for x, (avg, peak) in sorted(cols.items()):
+            ay = h - min(1.0, avg / top) * h
+            py = h - min(1.0, peak / top) * h
+            if py < ay - 1:
+                cv.create_line(x, py, x, ay, fill=peak_color)
+            cv.create_line(x, ay, x, h, fill=color)
+        for x, (avg, _pk) in sorted(cols2.items()):
+            ay = h - min(1.0, avg / top) * h
+            cv.create_line(x, ay, x, min(h, ay + 2), fill=color2)
+        return top
+
+    def _tab_history(self):
+        T = self.T; L = self.L
+        self._section('📈  ' + L.get('history', 'History'))
+        hist = getattr(self.w, '_history', None)
+        usage = getattr(self.w, '_usage', None)
+
+        # ── range selector ──
+        bar = tk.Frame(self._content, bg=T['bg'])
+        bar.pack(fill='x', padx=24, pady=(10, 2))
+        cur = self.w.cfg.get('hist_range', '24h')
+        if cur not in [r[0] for r in self.HIST_RANGES]:
+            cur = '24h'
+        btns = {}
+
+        def pick(code):
+            self.w._set('hist_range', code)
+            for c, b in btns.items():
+                on = (c == code)
+                b.config(bg=T['panel'] if on else T['bg2'],
+                         fg=T['cyan'] if on else T['muted'])
+            redraw()
+
+        for code, _secs in self.HIST_RANGES:
+            on = (code == cur)
+            b = tk.Label(bar, text=' ' + L.get('hist_' + code, code) + ' ',
+                         fg=T['cyan'] if on else T['muted'],
+                         bg=T['panel'] if on else T['bg2'],
+                         font=('Segoe UI', 9), padx=12, pady=5, cursor='hand2')
+            b.pack(side='left', padx=(0, 6))
+            b.bind('<Button-1>', lambda e, c=code: pick(c))
+            btns[code] = b
+
+        note = tk.Label(self._content, text=L.get('hist_gap_note', ''), fg=T['muted'],
+                        bg=T['bg'], font=('Segoe UI', 8))
+        note.pack(anchor='w', padx=24)
+
+        # ── scrollable body ──
+        outer = tk.Frame(self._content, bg=T['bg'])
+        outer.pack(fill='both', expand=True, padx=20, pady=6)
+        canvas = tk.Canvas(outer, bg=T['bg'], highlightthickness=0, bd=0)
+        sb = tk.Scrollbar(outer, orient='vertical', command=canvas.yview,
+                          bg=T['panel'], troughcolor=T['bg2'], activebackground=T['cyan'],
+                          bd=0, highlightthickness=0, width=10)
+        canvas.configure(yscrollcommand=sb.set)
+        sb.pack(side='right', fill='y'); canvas.pack(side='left', fill='both', expand=True)
+        body = tk.Frame(canvas, bg=T['bg'])
+        body_window = canvas.create_window((0, 0), window=body, anchor='nw')
+        canvas.bind('<Configure>', lambda e: canvas.itemconfig(body_window, width=e.width))
+        body.bind('<Configure>', lambda e: canvas.configure(scrollregion=canvas.bbox('all')))
+        canvas.bind_all('<MouseWheel>', lambda e: _safe_wheel(canvas, e))
+
+        empty = tk.Label(body, text=L.get('hist_collecting', ''), fg=T['muted'],
+                         bg=T['bg'], font=('Segoe UI', 9), wraplength=520,
+                         justify='left')
+
+        charts = []      # [(canvas, idx, color, peak, scale, stat_label, idx2, color2)]
+
+        def chart(title, color, peak_color, idx, scale=100, idx2=None, color2=None):
+            card = tk.Frame(body, bg=T['panel'])
+            card.pack(fill='x', pady=(0, 10))
+            head = tk.Frame(card, bg=T['panel']); head.pack(fill='x', padx=12, pady=(8, 2))
+            tk.Label(head, text=title, fg=color, bg=T['panel'],
+                     font=('Segoe UI', 10, 'bold')).pack(side='left')
+            stat = tk.Label(head, text='', fg=T['muted'], bg=T['panel'],
+                            font=('Segoe UI', 9))
+            stat.pack(side='right')
+            cv = tk.Canvas(card, bg=T['panel'], height=78, highlightthickness=0, bd=0)
+            cv.pack(fill='x', padx=12, pady=(0, 10))
+            charts.append((cv, idx, color, peak_color, scale, stat, idx2, color2))
+            cv.bind('<Configure>', lambda e: redraw())
+            return cv
+
+        chart(L.get('hist_cpu', 'CPU'), T['orange'], '#7a4a1e', 1)
+        chart(L.get('hist_ram', 'RAM'), T['green'],  '#1e5a2a', 3)
+        gpu_cv = chart(L.get('hist_gpu', 'GPU'), T['magenta'], '#5a2a7a', 4)
+        chart(L.get('hist_net', 'Network'), T['cyan'], '#1e5a6e', 6,
+              scale=None, idx2=5, color2=T['blue'])
+
+        # ── data usage ──
+        self._usage_section(body, usage)
+
+        def redraw():
+            if hist is None:
+                return
+            secs = dict(self.HIST_RANGES)[self.w.cfg.get('hist_range', '24h')]
+            rows = hist.since(secs)
+            if not rows:
+                empty.pack(anchor='w', padx=4, pady=(4, 10), before=charts[0][0].master)
+            else:
+                empty.pack_forget()
+            t1 = time.time(); t0 = t1 - secs
+            for cv, idx, color, peak, scale, stat, idx2, color2 in charts:
+                top = self._hist_draw(cv, rows, t0, t1, idx, color, peak,
+                                      scale=scale, idx2=idx2, color2=color2)
+                vals = [r[idx] for r in rows if r[idx] is not None and r[idx] >= 0]
+                if not vals:
+                    stat.config(text=L.get('hist_gpu_off', '') if idx == 4 else '—')
+                elif scale is None:
+                    dn = sum(r[6] for r in rows); up = sum(r[5] for r in rows)
+                    stat.config(text=f"↓ {_human_bytes(dn)}   ↑ {_human_bytes(up)}")
+                else:
+                    pk = max(r[idx + 1] for r in rows) if idx == 1 else max(vals)
+                    stat.config(text=f"{L.get('hist_avg','avg')} {sum(vals)/len(vals):.0f}%"
+                                     f"   {L.get('hist_peak','peak')} {pk:.0f}%")
+
+        self._win.after(60, redraw)
+
+    # ── Data usage (v2.12) ──
+    def _usage_section(self, body, usage):
+        T = self.T; L = self.L
+        if usage is None:
+            return
+        card = tk.Frame(body, bg=T['panel']); card.pack(fill='x', pady=(0, 12))
+        tk.Label(card, text='💾  ' + L.get('usage_lbl', 'Data usage'), fg=T['cyan'],
+                 bg=T['panel'], font=('Segoe UI', 10, 'bold')).pack(
+                     anchor='w', padx=12, pady=(8, 4))
+
+        def line(label, up, dn):
+            r = tk.Frame(card, bg=T['panel']); r.pack(fill='x', padx=12, pady=1)
+            tk.Label(r, text=label, fg=T['muted'], bg=T['panel'], font=('Segoe UI', 9),
+                     width=18, anchor='w').pack(side='left')
+            tk.Label(r, text=_human_bytes(up + dn), fg=T['text'], bg=T['panel'],
+                     font=('Segoe UI', 9, 'bold'), width=10, anchor='w').pack(side='left')
+            tk.Label(r, text=f"↓ {_human_bytes(dn)}", fg=T['cyan'], bg=T['panel'],
+                     font=('Segoe UI', 9), width=12, anchor='w').pack(side='left')
+            tk.Label(r, text=f"↑ {_human_bytes(up)}", fg=T['blue'], bg=T['panel'],
+                     font=('Segoe UI', 9), anchor='w').pack(side='left')
+
+        t_up, t_dn = usage.today()
+        m_up, m_dn = usage.month()
+        last30 = usage.recent_days(30)
+        d_up = sum(d[1] for d in last30); d_dn = sum(d[2] for d in last30)
+        line(L.get('usage_today', 'Today'), t_up, t_dn)
+        line(L.get('usage_month', 'This month'), m_up, m_dn)
+        line(L.get('usage_last30', 'Last 30 days'), d_up, d_dn)
+
+        # 30-day bars
+        cv = tk.Canvas(card, bg=T['panel'], height=48, highlightthickness=0, bd=0)
+        cv.pack(fill='x', padx=12, pady=(8, 4))
+
+        def draw_bars(_e=None):
+            cv.delete('all')
+            w = cv.winfo_width(); h = cv.winfo_height()
+            if w < 10:
+                return
+            totals = [d[1] + d[2] for d in last30]
+            top = max(totals) or 1
+            n = len(totals)
+            slot = w / float(n)
+            bw = max(2, int(slot) - 2)
+            for i, v in enumerate(totals):
+                x = int(i * slot)
+                bh = int((v / top) * (h - 10))
+                col = T['cyan'] if i < n - 1 else T['green']   # today stands out
+                cv.create_rectangle(x, h - bh - 1, x + bw, h - 1,
+                                    fill=col if v else T['line'], width=0)
+            cv.create_text(2, 4, anchor='nw', text=_human_bytes(top),
+                           fill=T['muted'], font=('Segoe UI', 7))
+        cv.bind('<Configure>', draw_bars)
+
+        # monthly cap
+        caprow = tk.Frame(card, bg=T['panel']); caprow.pack(fill='x', padx=12, pady=(6, 4))
+        tk.Label(caprow, text=L.get('usage_cap', 'Monthly limit'), fg=T['muted'],
+                 bg=T['panel'], font=('Segoe UI', 9), width=18, anchor='w').pack(side='left')
+        cap_val = tk.Label(caprow, text='', fg=T['text'], bg=T['panel'],
+                           font=('Segoe UI', 9), width=14, anchor='w')
+        cap_val.pack(side='left')
+        btn = tk.Label(caprow, text='✏  ' + L.get('usage_cap_set', 'Set limit…'),
+                       fg=T['cyan'], bg=T['bg2'], font=('Segoe UI', 9),
+                       padx=10, pady=4, cursor='hand2')
+        btn.pack(side='left')
+
+        barwrap = tk.Frame(card, bg=T['bg2'], height=8)
+        fill = tk.Frame(barwrap, bg=T['green'], height=8)
+
+        def refresh_cap():
+            gb = float(self.w.cfg.get('data_cap_gb') or 0)
+            used = (m_up + m_dn) / (1024.0 ** 3)
+            if gb <= 0:
+                cap_val.config(text=L.get('usage_cap_off', 'Off'), fg=T['muted'])
+                barwrap.pack_forget()
+                return
+            pct = min(100.0, used / gb * 100.0)
+            colour = T['red'] if pct >= 100 else (T['orange'] if pct >= 80 else T['green'])
+            cap_val.config(text=f'{used:.1f} / {gb:g} GB  ({pct:.0f}%)', fg=colour)
+            barwrap.pack(fill='x', padx=12, pady=(2, 10))
+            fill.config(bg=colour)
+            barwrap.update_idletasks()
+            fill.place(x=0, y=0, relwidth=pct / 100.0, height=8)
+
+        def set_cap(_e=None):
+            if self.w._act_set_data_cap(parent=self._win) is not None:
+                refresh_cap()
+        btn.bind('<Button-1>', set_cap)
+        refresh_cap()
+
+        tk.Label(card, text=L.get('usage_cap_hint', ''), fg=T['muted'], bg=T['panel'],
+                 font=('Segoe UI', 8), wraplength=520, justify='left').pack(
+                     anchor='w', padx=12, pady=(0, 10))
+
+
     # ── Weather tab ──
     def _tab_weather(self):
         T = self.T; L = self.L
@@ -5430,10 +6078,22 @@ class CustomizeWindow:
                 kv(s, d.get('kind') or 'Drive', d['model'])
                 if bits:
                     kv(s, '', '  ·  '.join(bits))
-                if d.get('status'):
-                    ok = d['status'].lower() == 'ok'
-                    kv(s, '', ('✓ ' if ok else '⚠ ') + ('Healthy' if ok else d['status']),
+                health = d.get('health') or d.get('status')
+                if health:
+                    ok = health.lower() in ('ok', 'healthy')
+                    kv(s, '', ('✓ ' if ok else '⚠ ') + ('Healthy' if ok else health),
                        T['green'] if ok else T['orange'])
+                smart = []
+                if d.get('temp') is not None:
+                    smart.append(f"{L.get('health_temp','Temperature')} {d['temp']:.0f}°C")
+                if d.get('wear') is not None:
+                    smart.append(f"{L.get('health_wear','Wear')} {d['wear']:.0f}%")
+                if d.get('hours') is not None:
+                    smart.append(f"{L.get('health_hours','Powered on')} {d['hours']:,.0f} h")
+                if smart:
+                    kv(s, '', '  ·  '.join(smart))
+            if not any(d.get('temp') is not None for d in drives):
+                kv(s, '', L.get('health_admin', ''), T['muted'])
             tk.Frame(s, bg=T['panel'], height=8).pack()
 
         # ── Disks ──
@@ -6381,6 +7041,15 @@ class Widget:
         # slow-hardware poller (keeps _update_tick non-blocking)
         self._slow = _SlowPoller()
         self._slow.start()
+        # history + data usage (v2.12)
+        try:
+            os.makedirs(CONFIG_DIR, exist_ok=True)
+        except OSError:
+            pass
+        self._usage = _UsageStore(os.path.join(CONFIG_DIR, 'netusage.json'))
+        self._history = _HistoryStore(os.path.join(CONFIG_DIR, 'history.csv'),
+                                      self._usage, self._history_sample)
+        self._history.start()
         # customize window (v2.6)
         self._customize = None
         # rolling history for sparklines
@@ -6389,7 +7058,7 @@ class Widget:
         # armed/fired state per metric, for the perf-alert toasts below —
         # hysteresis (fire-threshold vs a lower clear-threshold) so one
         # sustained spike sends exactly one toast instead of one per tick
-        self._alert_fired = {'cpu': False, 'ram': False, 'batt': False}
+        self._alert_fired = {'cpu': False, 'ram': False, 'batt': False, 'data': False}
         self._pending_rebuild = False
         self._rgb_targets = []
         self._sep_labels = []
@@ -6529,6 +7198,33 @@ class Widget:
     def _act_weather_unit(self, unit):
         self._set('weather_unit', unit)
         self._weather_dirty = True          # trigger a fast refetch
+
+    def _act_set_data_cap(self, parent=None):
+        """Ask for a monthly data limit in GB (0 = off).
+
+        Returns the new value on change, else None so the caller knows
+        whether to redraw.
+        """
+        try:
+            from tkinter import simpledialog
+            L = CUST_LABELS.get(self.lang, CUST_LABELS['en'])
+            cur = self.cfg.get('data_cap_gb') or 0
+            v = simpledialog.askstring(L.get('usage_cap', 'Monthly limit'),
+                                       L.get('usage_cap_ask', 'Monthly limit in GB (0 = off):'),
+                                       initialvalue=str(cur),
+                                       parent=parent or self.root)
+            if v is None:
+                return None
+            gb = float(str(v).strip().replace(',', '.') or 0)
+            if gb < 0:
+                gb = 0
+            self._set('data_cap_gb', gb)
+            self._alert_fired['data'] = False   # a new limit re-arms the warning
+            return gb
+        except (ValueError, TypeError):
+            return None
+        except Exception:
+            return None
 
     def _act_set_city(self, parent=None, title=None, prompt=None):
         """Prompt for a weather city (empty = auto-locate by IP). Returns the
@@ -6678,6 +7374,10 @@ class Widget:
     def _act_quit(self):
         self._user_quit = True   # deliberate exit — see run()'s watchdog
         try:
+            self._history.stop()
+        except Exception:
+            pass
+        try:
             if getattr(self, '_tray', None):
                 self._tray.stop()
         except Exception:
@@ -6723,6 +7423,38 @@ class Widget:
             self._tray.title = f'{DISPLAY_NAME} — CPU {v}%'
         except Exception:
             pass
+
+    def _check_data_cap(self):
+        """Warn once at 80% and again at 100% of the monthly data limit.
+
+        Deliberately NOT gated behind the general performance-alerts
+        toggle: setting a limit is itself the opt-in, and someone who
+        typed a cap expects to hear about it.
+        """
+        cap = float(self.cfg.get('data_cap_gb') or 0)
+        if cap <= 0:
+            return
+        try:
+            up, dn = self._usage.month()
+        except Exception:
+            return
+        pct = (up + dn) / (1024.0 ** 3) / cap * 100.0
+        lvl = self._alert_fired.get('data') or 0
+        if pct < 70:                      # re-arm (also covers a new month)
+            self._alert_fired['data'] = 0
+            return
+        for th in (100, 80):
+            if pct >= th > lvl:
+                self._alert_fired['data'] = th
+                L = CUST_LABELS.get(self.lang, CUST_LABELS['en'])
+                body = L.get('usage_alert_b', '{pct}% of your {cap} GB monthly limit used')
+                body = body.replace('{pct}', f'{pct:.0f}').replace('{cap}', f'{cap:g}')
+                if getattr(self, '_tray', None):
+                    try:
+                        self._tray.notify(body, L.get('usage_alert_t', 'Data limit'))
+                    except Exception:
+                        pass
+                break
 
     def _perf_alert(self, key, above, fire_at, clear_at, title, body):
         """Fire a Windows toast once when `above` crosses `fire_at`, then
@@ -6870,6 +7602,21 @@ class Widget:
                 self._gpu, self._gpu_mem = None, None
             time.sleep(1)
         self._gpu_running = False
+
+    def _history_sample(self):
+        """(cpu, ram, gpu) for the history sampler.
+
+        CPU is reused from the update tick's own reading rather than
+        sampled again here: two callers of psutil.cpu_percent(interval=None)
+        share one global baseline, so each would get the load since the
+        OTHER one asked — both wrong.
+        """
+        cpu = self._hist['cpu'][-1] if self._hist['cpu'] else None
+        try:
+            ram = psutil.virtual_memory().percent
+        except Exception:
+            ram = None
+        return (cpu, ram, self._gpu)
 
     # ── Weather background polling ─────────────────────────────────────
     def _ensure_weather_thread(self):
@@ -8093,6 +8840,14 @@ class Widget:
             cpu = 0.0
         self._hist['cpu'].append(cpu)
         self._update_tray_cpu(cpu)
+        # once a minute: summing the month walks the whole day map
+        _now = time.time()
+        if _now - getattr(self, '_cap_checked', 0) >= 60:
+            self._cap_checked = _now
+            try:
+                self._check_data_cap()
+            except Exception:
+                pass
         self._perf_alert('cpu', cpu, 90, 80,
                           PERF_ALERT_TITLE.get(self.lang, PERF_ALERT_TITLE['en'])['cpu'],
                           f'{cpu:.0f}%')

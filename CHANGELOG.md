@@ -8,6 +8,40 @@ All notable changes to **PulseDeck** are documented here.
 
 ---
 
+## [2.12.0] — 2026-09-12 — *Now it remembers*
+
+Task Manager forgets everything older than about a minute. PulseDeck now keeps
+a week — so "why was the PC pinned at 3am?" and "how much data did I actually
+use this month?" finally have answers.
+
+### Added
+- **History tab** — CPU, RAM, GPU and network charted over the **last hour, 24
+  hours or 7 days**, kept across restarts. One point is recorded per minute
+  (average plus the peak inside that minute, so short spikes don't average
+  away). Stretches when PulseDeck wasn't running are drawn as **gaps** rather
+  than a line connected straight across them — the graph never invents data it
+  doesn't have. Costs about 400 KB of disk for a full week.
+- **Data usage counter** — upload/download totals for **today, this month and
+  the last 30 days**, with a 30-day bar chart. Set an optional **monthly limit**
+  and PulseDeck warns once at 80% and again at 100%; the warning is tied to
+  having set a limit rather than to the general alerts toggle, since typing a
+  limit is itself the opt-in. Counter resets from a reboot or an adapter reset
+  are detected instead of being logged as a huge negative jump.
+- **Drive health (SMART)** in System → Drives — each physical disk now shows its
+  Windows health status, and **temperature / wear / power-on hours when they are
+  readable** (those three need administrator rights, which the tab says outright
+  instead of quietly showing nothing).
+
+### Fixed
+- **Drive type and bus are now correct.** They came from `Win32_DiskDrive`,
+  which reports every NVMe SSD as "SCSI" and leaves MediaType blank, so the
+  app had been guessing SSD-vs-HDD from the model name. Both now come from
+  `Get-PhysicalDisk`, which Windows fills in properly — NVMe drives read as
+  **NVMe**, and an old spinning disk is correctly labelled **HDD** instead of
+  being left blank.
+
+---
+
 ## [2.11.0] — 2026-08-18 — *RAM got expensive, so we use less of it*
 
 RAM prices are going one way, so this release goes the other: PulseDeck now

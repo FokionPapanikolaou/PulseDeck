@@ -21,7 +21,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D6?logo=windows&logoColor=white" alt="Windows">
-  <img src="https://img.shields.io/badge/version-2.11.0-3fb950" alt="v2.11.0">
+  <img src="https://img.shields.io/badge/version-2.12.0-3fb950" alt="v2.12.0">
   <img src="https://img.shields.io/badge/price-Free-brightgreen" alt="Free">
   <img src="https://img.shields.io/badge/languages-8-blueviolet" alt="8 languages">
   <img src="https://img.shields.io/badge/themes-10-orange" alt="10 themes">
@@ -56,6 +56,15 @@ Point at any metric for a popup panel:
 - **GPU** → VRAM used / total · **Network** → session ↑↓ totals
 - **Disk** → read/write **per physical disk** · **Drives** → used / free / total
 - Toggle it on/off from the menu (**Hover details**)
+
+### 🆕 History & data usage (v2.12)
+- **A week of history** — CPU, RAM, GPU and network charted over the last
+  **hour / 24 hours / 7 days**, kept across restarts. Times PulseDeck wasn't
+  running show as gaps, never as invented data.
+- **Data usage** — up/down totals for today, this month and the last 30 days,
+  plus an optional **monthly limit** that warns at 80% and 100%.
+- **Drive health** — SMART status per physical disk (temperature and wear too,
+  where Windows allows reading them).
 
 ### Layout
 - **Horizontal** (on the taskbar) or **Vertical** (stacked panel above the taskbar)
