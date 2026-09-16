@@ -24,8 +24,11 @@ See your **CPU, GPU, RAM, Network** speed and even the **weather** at a glance, 
 ### 🩺 Live bottleneck analysis  *(new)*
 See at a glance which component is holding your PC back — **CPU, GPU, RAM, VRAM or Disk** — with a colour-coded "limiting factor" that updates in real time. A per-core check even catches single-thread loads that hide behind a low average.
 
-### 🧰 Tools — 24 Windows shortcuts in one place  *(new)*
-One tap to Disk Cleanup, Memory check, Task Manager, Resource Monitor, Power options, Startup apps, Windows Update, Device Manager and more — organised in categories, with search and a list-or-tiles view. Plus safe one-click actions: clear Temp, empty Recycle Bin, flush DNS.
+### 🧰 Tools — 50 shortcuts and utilities in one place
+One tap to Disk Cleanup, Memory check, Task Manager, Resource Monitor, Power options, Startup apps, Windows Update, Device Manager and more — organised in categories, with search and a list-or-tiles view. Plus safe one-click actions: clear Temp, empty Recycle Bin, flush DNS, and a **Startup Manager** that lists everything launching at boot and flags entries whose target no longer exists.
+
+### 🎨 Handy tools  *(new)*
+A **colour picker** (Win+Shift+C) that magnifies any pixel and copies its colour as HEX, **Always on top** (Win+Ctrl+T) to pin the window you're using above the rest, and a **bulk rename** with find & replace or regex — showing a full preview, with collision checks, before anything is renamed.
 
 ### 🚀 DNS Boost — find your fastest DNS  *(new)*
 Benchmarks 15 popular resolvers (Cloudflare, Google, Quad9, OpenDNS, AdGuard, Mullvad…) over **IPv4 and IPv6**, ranks them by latency, and shows **your current DNS** for comparison. Copy the winner and apply it in Windows' own network settings.
@@ -33,8 +36,11 @@ Benchmarks 15 popular resolvers (Cloudflare, Google, Quad9, OpenDNS, AdGuard, Mu
 ### 🖥️ Full System report
 Detailed read-only snapshot of your machine: CPU, RAM (per-module speed/vendor), GPU, **motherboard + BIOS**, monitors, audio, storage and network — each with a brand logo. One-tap "Copy all" for support tickets.
 
-### 🌍 Earthquake alerts & power draw
-Optional felt-intensity earthquake alerts (EMSC + USGS) for your area, and an estimated CPU + GPU power-draw cell.
+### 📈 History — a week, not 60 seconds  *(new)*
+Task Manager forgets everything older than about a minute. PulseDeck charts **CPU, RAM, GPU and network over the last hour, 24 hours or 7 days**, kept across restarts — so "why was the PC pinned at 3am?" finally has an answer. Times PulseDeck wasn't running show as gaps, never as invented data.
+
+### 📊 Data usage & drive health  *(new)*
+Upload/download totals for **today, this month and the last 30 days**, with an optional **monthly limit** that warns at 80% and 100% — useful on tethering or metered broadband. Plus **SMART health** for every physical disk, and an estimated CPU + GPU power-draw cell.
 
 ### 👁️ Hover for details
 Point at any metric for a clean popup: top processes, per-core bars, VRAM used/total, network session totals, per-disk I/O, full weather.
@@ -51,7 +57,7 @@ English · Ελληνικά · Español · Deutsch · Français · Italiano · P
 
 ### ⚡ Designed to disappear
 • Hides with the taskbar in fullscreen games and videos — back on Alt-Tab, like the clock
-• Single instance, lightweight (~15 MB RAM, tiny CPU)
+• Single instance, lightweight (about 30 MB RAM, tiny CPU)
 • Optional start with Windows
 
 ### 💜 Free, forever — no ads, no tracking
@@ -61,13 +67,14 @@ PulseDeck is **free**. If it earns a spot on your taskbar, a Donate link in the 
 Made by Fokion Papanikolaou.
 
 ## What's new (release notes)
-**v2.10.1 — new icons & smarter alerts**
-• Brand-new icons for CPU, RAM, GPU, network and battery, with smooth (no more jagged) edges
-• Wi-Fi signal strength and network ping (latency) on hover
-• Live CPU% on the tray icon's hover tooltip — reachable even when the bar itself isn't showing
-• New optional alerts for sustained high CPU/RAM or low battery
-• New "Battery report" button (wear/usage history) on the System tab
-• Fixes: the bar no longer disappears while certain apps (e.g. Claude, Discord) have focus; correct battery/power cell alignment
+**v2.13.0 — history, data usage and three new tools**
+• **History** — CPU, RAM, GPU and network charted over the last hour, 24 hours or 7 days, kept across restarts. Periods when PulseDeck wasn't running show as gaps rather than invented data
+• **Data usage** — up/down totals for today, this month and the last 30 days, with an optional monthly limit that warns at 80% and 100%
+• **Drive health** — SMART status for every physical disk, plus temperature and wear where Windows allows reading them
+• **Colour picker** (Win+Shift+C) — magnify any pixel on screen and copy its colour as HEX
+• **Always on top** (Win+Ctrl+T) — pin the window you're using above all others
+• **Bulk rename** — find & replace or a regular expression across many files, with a full preview before anything changes
+• Fixes: NVMe drives are no longer listed as "SCSI", and SSD vs HDD now comes from Windows instead of being guessed from the model name
 
 ## Search keywords (up to 7)
 system monitor · cpu gpu ram monitor · taskbar widget · dns benchmark · pc tools · network monitor · hardware monitor
@@ -75,18 +82,21 @@ system monitor · cpu gpu ram monitor · taskbar widget · dns benchmark · pc t
 ## Features (short bullets, up to 20)
 • Live CPU, GPU, RAM, Network & Weather on the taskbar
 • Live bottleneck check — CPU/GPU/RAM/VRAM/Disk limiting factor
-• Tools: 24 one-tap shortcuts to built-in Windows utilities
+• Tools: 50 one-tap shortcuts and utilities in one drawer
 • DNS Boost: benchmark 15 resolvers (IPv4 + IPv6) vs your current DNS
 • Full System report with brand logos and Copy-all
 • Show icons or text labels on the bar
 • Hover any metric for top processes, per-core load and details
 • GPU usage + VRAM used / total via Windows counters
 • Per-drive space (C:, D: …) and per-disk I/O on hover
-• Earthquake alerts (EMSC + USGS) and power-draw estimate
+• History: CPU/RAM/GPU/network over the last hour, 24 h or 7 days
+• Data usage totals with an optional monthly limit and warnings
+• Colour picker, Always on top, bulk rename and drive health (SMART)
+• CPU + GPU power-draw estimate
 • Sits ON the taskbar or floats just above it
 • 10 themes including animated RGB
 • 8 languages with auto-detect
-• Tiny footprint (~15 MB RAM)
+• Light on memory — about 30 MB, down from ~130 MB before v2.11
 • Hides in fullscreen games and videos
 • Optional start with Windows
 • Free — no ads, no tracking
