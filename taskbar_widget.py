@@ -1474,6 +1474,15 @@ for _lng in list(CUST_LABELS):
 for _lng, _v in {'en': 'Handy tools', 'el': 'Χρήσιμα εργαλεία', 'es': 'Utilidades', 'de': 'Praktische Tools', 'fr': 'Outils pratiques', 'it': 'Strumenti utili', 'pt': 'Ferramentas úteis', 'ru': 'Полезные инструменты'}.items():
     CUST_LABELS.setdefault(_lng, {})['cat_utils'] = _v
 
+
+for _lng, _v in {'en': 'Performance alerts (CPU/RAM/battery)', 'el': 'Ειδοποιήσεις επιδόσεων (CPU/RAM/μπαταρία)', 'es': 'Alertas de rendimiento (CPU/RAM/batería)', 'de': 'Leistungswarnungen (CPU/RAM/Akku)', 'fr': 'Alertes de performance (CPU/RAM/batterie)', 'it': 'Avvisi prestazioni (CPU/RAM/batteria)', 'pt': 'Alertas de desempenho (CPU/RAM/bateria)', 'ru': 'Оповещения о нагрузке (ЦП/ОЗУ/батарея)'}.items():
+    CUST_LABELS.setdefault(_lng, {})['perf_alerts'] = _v
+
+
+for _lng, (_a, _b) in {'en': ('Free space per drive', 'Adds a small "C: 62%" cell to the bar for each drive you tick.'), 'el': ('Ελεύθερος χώρος ανά δίσκο', 'Προσθέτει ένα μικρό κελί «C: 62%» στη μπάρα για κάθε δίσκο που επιλέγεις.'), 'es': ('Espacio libre por unidad', 'Añade una pequeña celda «C: 62%» a la barra por cada unidad que marques.'), 'de': ('Freier Speicher je Laufwerk', 'Fügt der Leiste für jedes angehakte Laufwerk eine kleine "C: 62%"-Zelle hinzu.'), 'fr': ('Espace libre par disque', 'Ajoute une petite cellule « C: 62% » à la barre pour chaque disque coché.'), 'it': ('Spazio libero per disco', 'Aggiunge alla barra una piccola cella "C: 62%" per ogni disco selezionato.'), 'pt': ('Espaço livre por unidade', 'Adiciona à barra uma pequena célula "C: 62%" por cada unidade marcada.'), 'ru': ('Свободное место по дискам', 'Добавляет на панель небольшую ячейку «C: 62%» для каждого отмеченного диска.')}.items():
+    CUST_LABELS.setdefault(_lng, {})['drive_space'] = _a
+    CUST_LABELS.setdefault(_lng, {})['drive_space_hint'] = _b
+
 # ── Color picker / Always on top / Bulk rename labels (v2.13) ─────────
 TOOLS213_I18N = {
  'en':{'t_colorpicker':'Colour picker','desc__t_colorpicker':'Magnify any pixel on screen and copy its colour as HEX. Click to copy, Esc to cancel.',
@@ -2778,18 +2787,29 @@ def load_config():
     try:
         # utf-8-sig tolerates a BOM if the file was saved with one
         with open(CONFIG_PATH, 'r', encoding='utf-8-sig') as f:
-            cfg.update(json.load(f))
-    except (FileNotFoundError, ValueError):
+            data = json.load(f)
+        # A half-written or hand-edited file can still be *valid* JSON that
+        # isn't an object ("null", a list, a number). cfg.update() would raise
+        # on those and the app would refuse to start, so fall back to defaults.
+        if isinstance(data, dict):
+            cfg.update(data)
+    except (OSError, ValueError):
         pass
     return cfg
 
 def save_config(cfg):
+    # Written via a temp file + os.replace: settings are the one thing the user
+    # would really miss, and an in-place write interrupted by a crash or power
+    # cut leaves a truncated file that silently resets everything to defaults.
     try:
         os.makedirs(CONFIG_DIR, exist_ok=True)
-        with open(CONFIG_PATH, 'w', encoding='utf-8') as f:
+        tmp = CONFIG_PATH + '.tmp'
+        with open(tmp, 'w', encoding='utf-8') as f:
             json.dump(cfg, f, indent=2)
+        os.replace(tmp, CONFIG_PATH)
     except OSError:
-        pass
+        try: os.remove(CONFIG_PATH + '.tmp')
+        except OSError: pass
 
 # ── Startup (registry Run key) ─────────────────────────────────────────
 REG_KEY  = r'Software\Microsoft\Windows\CurrentVersion\Run'
@@ -4435,7 +4455,10 @@ def plan_rename(names, find, replace, use_regex=False, match_case=False,
         stem, ext = (name, '') if include_ext else os.path.splitext(name)
         new = apply(stem) + ext
         problem = None
-        if not new or new in ('.', '..') or set(new) & _BAD_NAME_CHARS:
+        # 255 is the per-component limit on NTFS; without this the preview shows
+        # a green "will rename" that then fails when it is actually applied
+        if (not new or new in ('.', '..') or set(new) & _BAD_NAME_CHARS
+                or len(new) > 255):
             problem = 'invalid'
         elif new.lower() in seen and new.lower() != name.lower():
             problem = 'duplicate'
@@ -4517,6 +4540,8 @@ class _UsageStore:
         try:
             with open(self.path, 'r', encoding='utf-8-sig') as f:
                 data = json.load(f)
+            if not isinstance(data, dict):
+                raise ValueError('not an object')
             days = data.get('days') or {}
             if isinstance(days, dict):
                 for k, v in days.items():
@@ -5359,7 +5384,8 @@ class CustomizeWindow:
         self._check_row(body, L['tooltips'], 'tooltips')
         self._check_row(body, L.get('hide_fs', 'Hide when an app goes fullscreen'),
                         'follow_taskbar')
-        self._check_row(body, '🔔  Performance alerts (CPU/RAM/battery)', 'perf_alerts_on')
+        self._check_row(body, '🔔  ' + L.get('perf_alerts', 'Performance alerts (CPU/RAM/battery)'),
+                        'perf_alerts_on')
         self._check_row(body, '⌨  ' + L.get('hk_lbl', 'Global hotkeys'), 'hotkeys_on')
         # show each chord and whether it actually registered — another app
         # (PowerToys itself, most likely) may already own it
@@ -5412,24 +5438,77 @@ class CustomizeWindow:
     def _tab_metrics(self):
         T = self.T; L = self.L
         self._section('📊  ' + L['show_hide'])
-        hint = tk.Label(self._content, text='  ' + L['drag_hint'], fg=T['muted'],
+        # Scrollable: eight metric rows plus the per-drive picker overflow a
+        # 600-px window. Drag-to-reorder still works inside the canvas because
+        # _row_drag compares absolute screen coords (winfo_rooty vs e.y_root),
+        # which scrolling keeps consistent on both sides.
+        outer = tk.Frame(self._content, bg=T['bg'])
+        outer.pack(fill='both', expand=True, padx=20, pady=(4, 0))
+        mcanvas = tk.Canvas(outer, bg=T['bg'], highlightthickness=0, bd=0)
+        msb = tk.Scrollbar(outer, orient='vertical', command=mcanvas.yview,
+                           bg=T['panel'], troughcolor=T['bg2'],
+                           activebackground=T['cyan'], bd=0,
+                           highlightthickness=0, width=10)
+        mcanvas.configure(yscrollcommand=msb.set)
+        msb.pack(side='right', fill='y')
+        mcanvas.pack(side='left', fill='both', expand=True)
+        holder = tk.Frame(mcanvas, bg=T['bg'])
+        hwin = mcanvas.create_window((0, 0), window=holder, anchor='nw')
+        mcanvas.bind('<Configure>', lambda e: mcanvas.itemconfig(hwin, width=e.width))
+        holder.bind('<Configure>',
+                    lambda e: mcanvas.configure(scrollregion=mcanvas.bbox('all')))
+        mcanvas.bind_all('<MouseWheel>', lambda e: _safe_wheel(mcanvas, e))
+
+        hint = tk.Label(holder, text='  ' + L['drag_hint'], fg=T['muted'],
                         bg=T['bg'], font=('Segoe UI', 9))
-        hint.pack(anchor='w', padx=24)
-        # rows container (no canvas needed — fits 9 rows easily)
-        wrap = tk.Frame(self._content, bg=T['bg'])
-        wrap.pack(fill='both', expand=True, padx=20, pady=8)
+        hint.pack(anchor='w', padx=4)
+        wrap = tk.Frame(holder, bg=T['bg'])
+        wrap.pack(fill='both', expand=True, pady=8)
         self._row_widgets = []
         order = self._get_order()
         for cid in order:
             self._build_metric_row(wrap, cid)
+        # Per-drive space cells. Their only picker used to be a tray submenu
+        # that is no longer shown, which left a feature the README and the
+        # Store listing both advertise with no UI at all — this restores it.
+        drives = list_drives()
+        if drives:
+            tk.Frame(holder, bg=T['line'], height=1).pack(
+                fill='x', padx=4, pady=(8, 6))
+            tk.Label(holder, text=L.get('drive_space', 'Free space per drive'),
+                     fg=T['text'], bg=T['bg'], font=('Segoe UI', 10, 'bold')).pack(
+                         anchor='w', padx=4)
+            tk.Label(holder, text=L.get('drive_space_hint', ''),
+                     fg=T['muted'], bg=T['bg'], font=('Segoe UI', 8),
+                     wraplength=500, justify='left').pack(anchor='w', padx=4)
+            drow = tk.Frame(holder, bg=T['bg'])
+            drow.pack(fill='x', padx=4, pady=(4, 0))
+
+            def _toggle_drive(letter, var):
+                ds = [d for d in self.w.cfg.get('disks', []) if d != letter]
+                if var.get():
+                    ds.append(letter)
+                self.w.cfg['disks'] = sorted(ds)
+                save_config(self.w.cfg)
+                self.w._rebuild()
+
+            for letter in drives:
+                v = tk.BooleanVar(value=letter in (self.w.cfg.get('disks') or []))
+                tk.Checkbutton(drow, text=' ' + letter, variable=v,
+                               fg=T['text'], bg=T['bg'], selectcolor=T['bg2'],
+                               activebackground=T['bg'], activeforeground=T['text'],
+                               font=('Segoe UI', 9), bd=0, highlightthickness=0,
+                               command=lambda l=letter, var=v: _toggle_drive(l, var)
+                               ).pack(side='left', padx=(0, 14))
+
         # reset button bottom
-        rb = tk.Button(self._content, text='⤺  ' + L['reset'],
+        rb = tk.Button(holder, text='⤺  ' + L['reset'],
                        command=self._reset_order,
                        bg=T['panel'], fg=T['text'], bd=0,
                        font=('Segoe UI', 10), padx=14, pady=6,
                        activebackground=T['bg2'], activeforeground=T['cyan'],
                        cursor='hand2')
-        rb.pack(side='top', anchor='w', padx=24, pady=8)
+        rb.pack(side='top', anchor='w', padx=4, pady=10)
 
     def _build_metric_row(self, parent, cid):
         T = self.T
@@ -6026,7 +6105,7 @@ class CustomizeWindow:
 
         chart(L.get('hist_cpu', 'CPU'), T['orange'], '#7a4a1e', 1)
         chart(L.get('hist_ram', 'RAM'), T['green'],  '#1e5a2a', 3)
-        gpu_cv = chart(L.get('hist_gpu', 'GPU'), T['magenta'], '#5a2a7a', 4)
+        chart(L.get('hist_gpu', 'GPU'), T['magenta'], '#5a2a7a', 4)
         chart(L.get('hist_net', 'Network'), T['cyan'], '#1e5a6e', 6,
               scale=None, idx2=5, color2=T['blue'])
 
@@ -6044,8 +6123,8 @@ class CustomizeWindow:
                 empty.pack_forget()
             t1 = time.time(); t0 = t1 - secs
             for cv, idx, color, peak, scale, stat, idx2, color2 in charts:
-                top = self._hist_draw(cv, rows, t0, t1, idx, color, peak,
-                                      scale=scale, idx2=idx2, color2=color2)
+                self._hist_draw(cv, rows, t0, t1, idx, color, peak,
+                                scale=scale, idx2=idx2, color2=color2)
                 vals = [r[idx] for r in rows if r[idx] is not None and r[idx] >= 0]
                 if not vals:
                     stat.config(text=L.get('hist_gpu_off', '') if idx == 4 else '—')
@@ -8201,78 +8280,10 @@ class Widget:
             self._alert_fired[key] = False
 
     def _tray_menu(self):
+        # Only the hybrid menu below is shown; the per-setting submenus that
+        # used to live here moved into the Customize window.
         from pystray import Menu, MenuItem as MI
-        ps = self._pystray
-        t = self.t; c = self.cfg
-
-        def metric(key, label):
-            return MI(label, lambda i, it: self._ui(lambda: self._act_metric(key)),
-                      checked=lambda it, k=key: bool(self.cfg.get(k)))
-
-        def radio(key, val, label):
-            return MI(label, lambda i, it: self._ui(lambda: self._act_set_rebuild(key, val)),
-                      checked=lambda it, k=key, v=val: self.cfg.get(k) == v, radio=True)
-
-        def toggle(key, label):
-            return MI(label, lambda i, it: self._ui(lambda: self._act_toggle(key)),
-                      checked=lambda it, k=key: bool(self.cfg.get(k)))
-
-        metrics = Menu(
-            metric('show_cpu', t('cpu')), metric('show_ram', t('ram')),
-            metric('show_gpu', t('gpu')), metric('show_net', t('net')),
-            metric('show_disk', t('disk')),
-            *([metric('show_batt', t('batt'))] if self._has_batt else []),
-            metric('show_power', '⚡ ' + POWER_LABEL.get(self.lang, POWER_LABEL['en'])),
-            metric('show_weather', t('weather')),
-        )
-        layout = Menu(
-            radio('orientation', 'horizontal', t('horizontal')),
-            radio('orientation', 'vertical', t('vertical')),
-            Menu.SEPARATOR, toggle('stacked', t('stacked')),
-        )
-        size = Menu(radio('font_scale','small',t('small')), radio('font_scale','normal',t('normal')),
-                    radio('font_scale','large',t('large')))
-        def bg_op_item(v):
-            return MI(f'{int(v*100)}%',
-                      lambda i, it: self._ui(lambda: self._act_bg(False, v)),
-                      checked=lambda it: (not self.cfg.get('transparent_bg')
-                                          and abs(self.cfg.get('opacity', 1) - v) < 0.01),
-                      radio=True)
-        def iv_item(v, lab):
-            return MI(lab, lambda i, it: self._ui(lambda: self._act_interval(v)),
-                      checked=lambda it: self.cfg.get('interval') == v, radio=True)
-        def th_item(n):
-            return MI(n.capitalize(),
-                      lambda i, it: self._ui(lambda: self._act_set_rebuild('theme', n)),
-                      checked=lambda it: self.cfg.get('theme', 'default') == n, radio=True)
-        def lng_item(code):
-            return MI(LANG_NAMES[code],
-                      lambda i, it: self._ui(lambda: self._act_language(code)),
-                      checked=lambda it: self.lang == code, radio=True)
-
-        background = Menu(
-            MI(BG_TRANSP.get(self.lang, BG_TRANSP['en']),
-               lambda i, it: self._ui(lambda: self._act_bg(True)),
-               checked=lambda it: bool(self.cfg.get('transparent_bg')), radio=True),
-            Menu.SEPARATOR,
-            *[bg_op_item(v) for v in (0.5, 0.7, 0.85, 1.0)],
-        )
-        refresh = Menu(*[iv_item(v, lab) for v, lab in
-                         ((500,'0.5s'),(1000,'1s'),(2000,'2s'),(5000,'5s'))])
-        netunit = Menu(radio('net_unit','bytes',t('net_bytes')), radio('net_unit','bits',t('net_bits')))
-        theme = Menu(*[th_item(n) for n in THEMES])
-        language = Menu(*[lng_item(code) for code in LANGS])
-
-        def disk_toggle(drive):
-            def act():
-                ds = list(self.cfg.get('disks', []))
-                if drive in ds: ds.remove(drive)
-                else: ds.append(drive)
-                self.cfg['disks'] = ds; save_config(self.cfg)
-                self._rebuild()
-            return MI(drive, lambda i, it: self._ui(act),
-                      checked=lambda it, d=drive: d in self.cfg.get('disks', []))
-        disks_menu = Menu(*[disk_toggle(d) for d in list_drives()])
+        t = self.t
 
         # ── Hybrid tray menu: Customize… + quick toggles + system items ──
         L = CUST_LABELS.get(self.lang, CUST_LABELS['en'])

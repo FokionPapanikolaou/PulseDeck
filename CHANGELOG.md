@@ -6,6 +6,31 @@ All notable changes to **PulseDeck** are documented here.
 
 ## [Unreleased]
 
+### Fixed
+- **A corrupt settings file could stop the app from starting.** `load_config`
+  only guarded against *invalid* JSON; a file holding valid JSON that isn't an
+  object (`null`, a list, a number — what a half-finished write or a sync tool
+  can leave behind) raised a TypeError before the window ever opened. Same
+  crash in the new data-usage store. Both now fall back to defaults.
+- **Settings are written atomically** (temp file + rename). An in-place write
+  interrupted by a crash or power cut left a truncated config.json, which then
+  silently reset every preference — the history files already did this.
+- **The per-drive space cells had no UI.** Their only picker was a tray submenu
+  that stopped being shown when the tray menu was simplified, so a feature both
+  the README and the Store listing advertise could only be enabled by hand
+  editing config.json. There is now a drive picker in the Metrics tab, which is
+  scrollable so the rows and the picker both fit.
+- **Bulk rename** now flags a result longer than the 255-character filename
+  limit as invalid, instead of previewing it in green and failing on apply.
+- The performance-alerts checkbox was the one hardcoded English string left in
+  the settings window; it is translated in all 8 languages now.
+
+### Changed
+- Removed ~70 lines of dead code from the tray menu: nine submenus were still
+  being constructed on every menu build — including one that enumerated the
+  drives — and then thrown away, since the menu was simplified to the hybrid
+  form some releases ago.
+
 ---
 
 ## [2.13.0] — 2026-09-12 — *Three from the PowerToys shelf*
