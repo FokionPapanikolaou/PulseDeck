@@ -6,15 +6,75 @@ All notable changes to **PulseDeck** are documented here.
 
 ## [Unreleased]
 
+---
+
+## [2.14.0] — 2026-09-30 — *Who did that?*
+
+The History tab could already show that the PC was pinned at 3 am; now it can
+tell you which program did it. Plus an internet speed test, a leaner and
+quicker app underneath, and a way to find out what went wrong when something
+does.
+
+### Added
+- **"Who caused it?"** — during a CPU or RAM spike PulseDeck notes which
+  process was responsible, and the History tab shows it when you hover the
+  graph: *"20:47 · avg 85% · peak 93% · ⚠ MsMpEng.exe 81%"*. Minutes with a
+  named culprit get a small marker so you can see where to look. Hovering any
+  point shows that exact minute's values. The process scan costs ~0.4 s with a
+  few hundred processes, so it only runs while the machine is already busy (CPU
+  ≥ 70% or RAM ≥ 85%) — an idle PC never pays for it. A process is only named
+  if it carries at least a fifth of the load; with many cores an absolute
+  threshold would hide the culprit, since one maxed-out core is ~3% of a
+  32-thread CPU.
+- **Speed test** (Tools → Network) — download, upload, ping and jitter against
+  Cloudflare's network, with live readings, a Cancel button and your last five
+  results. It says up front how much data it can use (up to ~290 MB) and warns
+  first if you are near a monthly data limit you set. Built around what the
+  endpoint actually does: it refuses Python's default User-Agent, refuses very
+  large single requests, and rate-limits in tiers after heavy use — so the test
+  starts with 25 MB pieces and drops to 5 MB ones if the big pieces are
+  refused, instead of failing. The result also names the Cloudflare site that
+  answered (e.g. ATH).
+- **Diagnostics log** (`pulsedeck.log`, next to your settings; *About →
+  Diagnostics log* opens it). A healthy session writes nothing at all. It
+  records a background task stopping, an uncaught error, and the first
+  occurrence of each distinct error the app used to swallow silently — 243
+  such places now leave a trace — each one once per session, never on every
+  refresh. Capped at 256 KB with one rotated copy. It caught a real bug on its
+  very first run (below).
+
+### Changed
+- **About twice as fast to start and ~4× lighter on every refresh.** The
+  network counters were read on the UI thread every refresh; that one OS call
+  walks every adapter (VPN tunnels, virtual switches…) and was 80% of the work
+  per refresh. It now runs on its own thread. The CPU-frequency counter took
+  ~350 ms to set up on the main thread at start-up; it now loads in the
+  background. Measured in back-to-back runs: start-up ~600 → ~305 ms, each
+  refresh ~7.8 → ~2.0 ms.
+- **The network speed on the bar is divided by the time that really passed**,
+  not the nominal refresh interval, so a late refresh no longer inflates it.
+- **Latency is measured only when you look at it.** The ping to 1.1.1.1 for
+  the Network tooltip used to run every 3 seconds whether or not anyone was
+  looking — about 28,800 `ping.exe` launches a day. It now runs when the
+  tooltip opens (at most every 10 s) and fills in a moment later.
+- Removed the leftovers of the earthquake alerts (dropped in 2.8.5): ~490 lines
+  of code that could no longer run. Old settings files are still cleaned up.
+- Seven copies of the same scrollable-panel code are now one helper.
+- The privacy policy now lists everything that touches the network — including
+  DNS Boost and the latency check, which it had missed — and every file the
+  app keeps on your PC.
+
 ### Fixed
+- The History sampler's first readings after start-up were lost: its thread
+  started before the data it reads existed. (Found by the new diagnostics log.)
 - **A corrupt settings file could stop the app from starting.** `load_config`
   only guarded against *invalid* JSON; a file holding valid JSON that isn't an
   object (`null`, a list, a number — what a half-finished write or a sync tool
   can leave behind) raised a TypeError before the window ever opened. Same
-  crash in the new data-usage store. Both now fall back to defaults.
+  crash in the data-usage store. Both now fall back to defaults.
 - **Settings are written atomically** (temp file + rename). An in-place write
   interrupted by a crash or power cut left a truncated config.json, which then
-  silently reset every preference — the history files already did this.
+  silently reset every preference.
 - **The per-drive space cells had no UI.** Their only picker was a tray submenu
   that stopped being shown when the tray menu was simplified, so a feature both
   the README and the Store listing advertise could only be enabled by hand
@@ -24,12 +84,8 @@ All notable changes to **PulseDeck** are documented here.
   limit as invalid, instead of previewing it in green and failing on apply.
 - The performance-alerts checkbox was the one hardcoded English string left in
   the settings window; it is translated in all 8 languages now.
-
-### Changed
-- Removed ~70 lines of dead code from the tray menu: nine submenus were still
-  being constructed on every menu build — including one that enumerated the
-  drives — and then thrown away, since the menu was simplified to the hybrid
-  form some releases ago.
+- Removed ~70 lines of dead tray-menu code that rebuilt nine discarded
+  submenus on every menu open, one of which enumerated the drives.
 
 ---
 

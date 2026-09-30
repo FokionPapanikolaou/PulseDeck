@@ -21,7 +21,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D6?logo=windows&logoColor=white" alt="Windows">
-  <img src="https://img.shields.io/badge/version-2.13.0-3fb950" alt="v2.13.0">
+  <img src="https://img.shields.io/badge/version-2.14.0-3fb950" alt="v2.14.0">
   <img src="https://img.shields.io/badge/price-Free-brightgreen" alt="Free">
   <img src="https://img.shields.io/badge/languages-8-blueviolet" alt="8 languages">
   <img src="https://img.shields.io/badge/themes-10-orange" alt="10 themes">
@@ -65,6 +65,14 @@ Point at any metric for a popup panel:
   plus an optional **monthly limit** that warns at 80% and 100%.
 - **Drive health** — SMART status per physical disk (temperature and wear too,
   where Windows allows reading them).
+
+### 🆕 Who did that? · Speed test (v2.14)
+- **Spike culprits** — during a CPU or RAM spike the History tab records which
+  process caused it; hover the graph to see e.g. `⚠ MsMpEng.exe 81%`.
+- **Speed test** — download, upload, ping and jitter against Cloudflare, with
+  your recent results (uses up to ~290 MB; says so first).
+- **Faster and lighter** — about twice as quick to start, ~4× less work per
+  refresh.
 
 ### 🆕 Handy tools (v2.13)
 - **Colour picker** (`Win+Shift+C`) — magnify any pixel and copy its HEX.
@@ -181,7 +189,7 @@ Thank you! 🙏
 ## ❓ FAQ
 
 **Does it slow down my PC?**
-No — tiny CPU usage and ~15 MB RAM.
+No — tiny CPU usage and about 30 MB of RAM (it hands idle memory back to Windows).
 
 **Where does the GPU usage come from?**
 Windows performance counters (the same source as Task Manager). No external tools

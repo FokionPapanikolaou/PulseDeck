@@ -11,6 +11,7 @@ import time
 import webbrowser
 import urllib.request
 import urllib.parse
+import http.client
 import traceback
 import re
 from ctypes import wintypes
@@ -20,33 +21,120 @@ import random
 
 APP_NAME = 'PulseDeck'       # internal identity: config dir, mutex, registry, Store package
 DISPLAY_NAME = 'PulseDeck'   # user-visible product name (rebrand)
-VERSION  = '2.13.0'
+VERSION  = '2.14.0'
 
-# ── Crash logging (enabled when NETCPURAM_DEBUG=1) ─────────────────────
+# ── Diagnostics log ────────────────────────────────────────────────────
+# Always on, but quiet: a healthy session writes nothing at all. What does
+# get written is a background thread dying, an uncaught error, a Tk callback
+# error, or the first occurrence of each distinct swallowed exception (see
+# _note). The file lives next to config.json and is capped at 256 KB with
+# one rotated copy, so it can never grow without bound. NETCPURAM_DEBUG=1
+# additionally enables verbose tracing and faulthandler for native crashes.
+_DEBUG = os.environ.get('NETCPURAM_DEBUG') == '1'
+_LOG_MAX = 256 * 1024
+_log_seen = set()
+_log_buf = []                # lines logged before CONFIG_DIR exists
+_log_lock = threading.Lock()
+_log_header_done = False
+
 def _debug_log_path():
     base = os.path.dirname(os.path.abspath(sys.executable if getattr(sys, 'frozen', False) else __file__))
     return os.path.join(base, 'widget_debug.log')
 
-if os.environ.get('NETCPURAM_DEBUG') == '1':
+def _log_path():
+    d = globals().get('CONFIG_DIR')
+    return os.path.join(d, 'pulsedeck.log') if d else None
+
+def _log(msg):
+    """Append a timestamped line to the diagnostics log. Never raises."""
+    try:
+        line = time.strftime('%Y-%m-%d %H:%M:%S ') + str(msg).rstrip() + '\n'
+        with _log_lock:
+            p = _log_path()
+            if p is None:
+                if len(_log_buf) < 200:
+                    _log_buf.append(line)
+                return
+            try:
+                if os.path.getsize(p) > _LOG_MAX:
+                    os.replace(p, p + '.1')
+            except OSError:
+                pass
+            global _log_header_done
+            with open(p, 'a', encoding='utf-8') as f:
+                if not _log_header_done:
+                    # context for a bug report: which build on which Windows
+                    _log_header_done = True
+                    try:
+                        wb = sys.getwindowsversion().build
+                    except Exception:
+                        wb = '?'
+                    kind = ('store' if globals().get('_is_msix') and _is_msix()
+                            else 'frozen' if getattr(sys, 'frozen', False) else 'script')
+                    f.write(time.strftime('%Y-%m-%d %H:%M:%S ')
+                            + f'=== {globals().get("DISPLAY_NAME", "PulseDeck")} '
+                            f'{globals().get("VERSION", "?")} ({kind}) on Windows '
+                            f'build {wb}, Python {sys.version.split()[0]} ===\n')
+                if _log_buf:
+                    f.writelines(_log_buf)
+                    _log_buf.clear()
+                f.write(line)
+    except Exception:
+        pass
+
+def _trace(msg):
+    """Verbose tracing - only with NETCPURAM_DEBUG=1."""
+    if _DEBUG:
+        _log(msg)
+
+def _note(where, exc, tb=False):
+    """Record a swallowed exception once per distinct bug per session.
+
+    `where` names the function; the key also includes the frame the error was
+    raised in, so two different bugs in one function are both recorded while
+    the same bug firing on every refresh is written only once. Processes that
+    vanish or refuse access are routine and never logged.
+    """
+    try:
+        if isinstance(exc, (psutil.NoSuchProcess, psutil.AccessDenied)):
+            return
+        t = exc.__traceback__
+        last = None
+        while t is not None:
+            last, t = t, t.tb_next
+        at = f'{last.tb_frame.f_code.co_name}:{last.tb_lineno}' if last else '?'
+        key = (where, type(exc).__name__, at)
+        if key in _log_seen or len(_log_seen) >= 500:
+            return
+        _log_seen.add(key)
+        msg = f'{where}: {type(exc).__name__}: {exc}  (at {at})'
+        if tb:
+            msg += '\n' + ''.join(traceback.format_exception(exc)).rstrip()
+        _log(msg)
+    except Exception:
+        pass
+
+def _excepthook(exc, val, tb):
+    _log('UNCAUGHT:\n' + ''.join(traceback.format_exception(exc, val, tb)).rstrip())
+sys.excepthook = _excepthook
+
+def _thread_excepthook(a):
+    # a background thread dying silently is the worst kind of bug: the value
+    # it maintained just stops updating, with no error anywhere
+    _log(f'THREAD {getattr(a.thread, "name", "?")} DIED:\n'
+         + ''.join(traceback.format_exception(a.exc_type, a.exc_value,
+                                              a.exc_traceback)).rstrip())
+try:
+    threading.excepthook = _thread_excepthook
+except Exception as _swallowed:
+    _note('<module>', _swallowed)
+
+if _DEBUG:
     try:
         _logf = open(_debug_log_path(), 'a', buffering=1, encoding='utf-8')
         faulthandler.enable(_logf)
-        def _log(msg):
-            _logf.write(msg + '\n'); _logf.flush()
-        def _excepthook(exc, val, tb):
-            _logf.write('UNCAUGHT:\n'); traceback.print_exception(exc, val, tb, file=_logf); _logf.flush()
-        sys.excepthook = _excepthook
-        try:
-            threading.excepthook = lambda a: (_logf.write('THREAD EXC:\n'),
-                                              traceback.print_exception(a.exc_type, a.exc_value, a.exc_traceback, file=_logf),
-                                              _logf.flush())
-        except Exception:
-            pass
-        _log('=== widget started ===')
-    except Exception:
-        def _log(msg): pass
-else:
-    def _log(msg): pass
+    except Exception as _swallowed:
+        _note('<module>', _swallowed)
 
 # ── Translations ───────────────────────────────────────────────────────
 LANGS = ['en', 'el', 'es', 'de', 'fr', 'it', 'pt', 'ru']   # order shown in menu
@@ -253,53 +341,6 @@ CHECKUPD_LABEL = {
  'en':'Check for updates','el':'Έλεγχος ενημερώσεων','es':'Buscar actualizaciones',
  'de':'Nach Updates suchen','fr':'Rechercher des mises à jour','it':'Cerca aggiornamenti',
  'pt':'Procurar atualizações','ru':'Проверять обновления',
-}
-# ── earthquakes (v2.6) ──
-QUAKES_LABEL = {
- 'en':'Earthquakes','el':'Σεισμοί','es':'Terremotos','de':'Erdbeben',
- 'fr':'Tremblements de terre','it':'Terremoti','pt':'Terramotos','ru':'Землетрясения',
-}
-QUAKES_FELT_LABEL = {
- 'en':'Felt level','el':'Επίπεδο αίσθησης','es':'Nivel de percepción',
- 'de':'Spürbarkeit','fr':'Niveau perçu','it':'Livello percepito',
- 'pt':'Nível percetível','ru':'Уровень восприятия',
-}
-QUAKES_LEVELS = {  # MMI thresholds shown in the menu
- 'en':[('Subtle (felt indoors)',3.0),('Noticeable (widely felt)',4.0),
-       ('Strong (objects move)',5.0),('Severe (damage)',6.0)],
- 'el':[('Διακριτικό (μέσα σε σπίτι)',3.0),('Αισθητό (ευρέως)',4.0),
-       ('Δυνατό (κουνιούνται αντικείμενα)',5.0),('Έντονο (ζημιές)',6.0)],
- 'es':[('Sutil (en interior)',3.0),('Notable (ampliamente sentido)',4.0),
-       ('Fuerte (mueve objetos)',5.0),('Severo (daños)',6.0)],
- 'de':[('Subtil (innen spürbar)',3.0),('Spürbar (weithin)',4.0),
-       ('Stark (Objekte bewegen sich)',5.0),('Schwer (Schäden)',6.0)],
- 'fr':[('Subtil (à l\'intérieur)',3.0),('Notable (largement ressenti)',4.0),
-       ('Fort (objets bougent)',5.0),('Sévère (dégâts)',6.0)],
- 'it':[('Sottile (al chiuso)',3.0),('Notevole (ampiamente)',4.0),
-       ('Forte (oggetti si muovono)',5.0),('Severo (danni)',6.0)],
- 'pt':[('Subtil (no interior)',3.0),('Notável (amplamente sentido)',4.0),
-       ('Forte (objetos movem-se)',5.0),('Severo (danos)',6.0)],
- 'ru':[('Слабое (в помещении)',3.0),('Заметное (повсеместно)',4.0),
-       ('Сильное (предметы двигаются)',5.0),('Тяжелое (разрушения)',6.0)],
-}
-QUAKES_TOAST_LABEL = {
- 'en':'Toast notifications','el':'Ειδοποιήσεις (toast)','es':'Notificaciones',
- 'de':'Toast-Benachrichtigungen','fr':'Notifications toast',
- 'it':'Notifiche toast','pt':'Notificações toast','ru':'Уведомления',
-}
-QUAKES_MUTE_LABEL = {
- 'en':'Mute all','el':'Σίγαση όλων','es':'Silenciar todo','de':'Alles stumm',
- 'fr':'Tout couper','it':'Silenzia tutto','pt':'Silenciar tudo','ru':'Отключить все',
-}
-QUAKES_RECENT_LABEL = {
- 'en':'Recent events…','el':'Πρόσφατα συμβάντα…','es':'Eventos recientes…',
- 'de':'Letzte Ereignisse…','fr':'Événements récents…','it':'Eventi recenti…',
- 'pt':'Eventos recentes…','ru':'Недавние события…',
-}
-QUAKES_TOAST_TITLE = {
- 'en':'Earthquake felt','el':'Αισθητός σεισμός','es':'Terremoto sentido',
- 'de':'Erdbeben gespürt','fr':'Tremblement de terre ressenti',
- 'it':'Terremoto avvertito','pt':'Terramoto sentido','ru':'Землетрясение',
 }
 PERF_ALERT_TITLE = {
  'en':{'cpu':'High CPU load','ram':'High RAM usage','batt':'Battery low'},
@@ -1483,6 +1524,21 @@ for _lng, (_a, _b) in {'en': ('Free space per drive', 'Adds a small "C: 62%" cel
     CUST_LABELS.setdefault(_lng, {})['drive_space'] = _a
     CUST_LABELS.setdefault(_lng, {})['drive_space_hint'] = _b
 
+
+for _lng, (_a, _b) in {'en': ('Diagnostics log', 'nothing logged'), 'el': ('Αρχείο διαγνωστικών', 'κανένα σφάλμα'), 'es': ('Registro de diagnóstico', 'sin registros'), 'de': ('Diagnoseprotokoll', 'nichts protokolliert'), 'fr': ('Journal de diagnostic', 'rien d’enregistré'), 'it': ('Registro diagnostico', 'nessuna voce'), 'pt': ('Registo de diagnóstico', 'nada registado'), 'ru': ('Журнал диагностики', 'записей нет')}.items():
+    CUST_LABELS.setdefault(_lng, {})['diag_open'] = _a
+    CUST_LABELS.setdefault(_lng, {})['diag_empty'] = _b
+
+
+for _lng, (_a, _b) in {'en': ('no data', 'Hover a graph for the exact minute; during a spike it also names the process behind it.'), 'el': ('χωρίς δεδομένα', 'Πέρασε το ποντίκι πάνω από ένα γράφημα για το ακριβές λεπτό· σε αιχμή δείχνει και ποια διεργασία την προκάλεσε.'), 'es': ('sin datos', 'Pasa el ratón por un gráfico para ver el minuto exacto; en un pico también nombra el proceso que lo causó.'), 'de': ('keine Daten', 'Mit der Maus über ein Diagramm fahren für die genaue Minute; bei einer Spitze wird auch der verursachende Prozess genannt.'), 'fr': ('aucune donnée', 'Survolez un graphique pour la minute exacte ; lors d’un pic, il nomme aussi le processus responsable.'), 'it': ('nessun dato', 'Passa il mouse su un grafico per il minuto esatto; in un picco indica anche il processo che l’ha causato.'), 'pt': ('sem dados', 'Passe o rato sobre um gráfico para ver o minuto exato; num pico também indica o processo responsável.'), 'ru': ('нет данных', 'Наведите на график, чтобы увидеть точную минуту; во время пика он также покажет процесс-виновник.')}.items():
+    CUST_LABELS.setdefault(_lng, {})['hist_nodata'] = _a
+    CUST_LABELS.setdefault(_lng, {})['hist_hover'] = _b
+
+
+SPEEDTEST_I18N = {'en': {'t_speedtest': 'Speed test', 'desc__t_speedtest': 'Measure your internet download, upload and latency.', 'st_sub': "Measures your connection against Cloudflare's network; nothing else is sent.", 'st_data': 'It uses up to about {mb} MB of data, which counts toward a metered plan.', 'st_cap_warn': "You've already used {pct}% of your monthly data limit.", 'st_ping': 'Ping', 'st_jitter': 'jitter', 'st_down': 'Download', 'st_up': 'Upload', 'st_start': 'Start test', 'st_cancel': 'Cancel', 'st_again': 'Run again', 'st_ph_ping': 'Measuring latency…', 'st_ph_down': 'Measuring download…', 'st_ph_up': 'Measuring upload…', 'st_done': 'Done: used {mb} MB of data.', 'st_err_busy': "Cloudflare's test server is limiting requests right now. Try again in a few minutes.", 'st_err_net': "Couldn't reach the test server. Check your connection.", 'st_cancelled': 'Cancelled.', 'st_recent': 'Recent results'}, 'el': {'t_speedtest': 'Τεστ ταχύτητας', 'desc__t_speedtest': 'Μέτρησε την ταχύτητα λήψης, αποστολής και την καθυστέρηση του internet σου.', 'st_sub': 'Μετράει τη σύνδεσή σου στο δίκτυο της Cloudflare· τίποτε άλλο δεν στέλνεται.', 'st_data': 'Χρησιμοποιεί έως περίπου {mb} MB δεδομένων, που μετράνε σε σύνδεση με όριο.', 'st_cap_warn': 'Έχεις ήδη χρησιμοποιήσει το {pct}% του μηνιαίου ορίου δεδομένων σου.', 'st_ping': 'Ping', 'st_jitter': 'jitter', 'st_down': 'Λήψη', 'st_up': 'Αποστολή', 'st_start': 'Έναρξη τεστ', 'st_cancel': 'Ακύρωση', 'st_again': 'Ξανά', 'st_ph_ping': 'Μέτρηση καθυστέρησης…', 'st_ph_down': 'Μέτρηση λήψης…', 'st_ph_up': 'Μέτρηση αποστολής…', 'st_done': 'Έτοιμο: χρησιμοποιήθηκαν {mb} MB δεδομένων.', 'st_err_busy': 'Ο server της Cloudflare περιορίζει τα αιτήματα αυτή τη στιγμή. Δοκίμασε ξανά σε λίγα λεπτά.', 'st_err_net': 'Δεν ήταν δυνατή η σύνδεση με τον server. Έλεγξε τη σύνδεσή σου.', 'st_cancelled': 'Ακυρώθηκε.', 'st_recent': 'Πρόσφατα αποτελέσματα'}, 'es': {'t_speedtest': 'Test de velocidad', 'desc__t_speedtest': 'Mide la descarga, la subida y la latencia de tu internet.', 'st_sub': 'Mide tu conexión contra la red de Cloudflare; no se envía nada más.', 'st_data': 'Usa hasta unos {mb} MB de datos, que cuentan en una tarifa limitada.', 'st_cap_warn': 'Ya has usado el {pct}% de tu límite mensual de datos.', 'st_ping': 'Ping', 'st_jitter': 'jitter', 'st_down': 'Descarga', 'st_up': 'Subida', 'st_start': 'Iniciar test', 'st_cancel': 'Cancelar', 'st_again': 'Repetir', 'st_ph_ping': 'Midiendo latencia…', 'st_ph_down': 'Midiendo descarga…', 'st_ph_up': 'Midiendo subida…', 'st_done': 'Listo: se usaron {mb} MB de datos.', 'st_err_busy': 'El servidor de Cloudflare está limitando las peticiones ahora. Inténtalo en unos minutos.', 'st_err_net': 'No se pudo contactar con el servidor. Revisa tu conexión.', 'st_cancelled': 'Cancelado.', 'st_recent': 'Resultados recientes'}, 'de': {'t_speedtest': 'Speedtest', 'desc__t_speedtest': 'Download, Upload und Latenz deiner Internetverbindung messen.', 'st_sub': 'Misst deine Verbindung gegen das Cloudflare-Netz; sonst wird nichts gesendet.', 'st_data': 'Verbraucht bis zu etwa {mb} MB Daten, die bei einem Volumentarif zählen.', 'st_cap_warn': 'Du hast bereits {pct}% deines monatlichen Datenlimits verbraucht.', 'st_ping': 'Ping', 'st_jitter': 'Jitter', 'st_down': 'Download', 'st_up': 'Upload', 'st_start': 'Test starten', 'st_cancel': 'Abbrechen', 'st_again': 'Erneut', 'st_ph_ping': 'Latenz wird gemessen…', 'st_ph_down': 'Download wird gemessen…', 'st_ph_up': 'Upload wird gemessen…', 'st_done': 'Fertig: {mb} MB Daten verbraucht.', 'st_err_busy': 'Der Cloudflare-Testserver begrenzt gerade Anfragen. Versuch es in ein paar Minuten erneut.', 'st_err_net': 'Testserver nicht erreichbar. Prüfe deine Verbindung.', 'st_cancelled': 'Abgebrochen.', 'st_recent': 'Letzte Ergebnisse'}, 'fr': {'t_speedtest': 'Test de débit', 'desc__t_speedtest': 'Mesurez le débit descendant, montant et la latence de votre connexion.', 'st_sub': 'Mesure votre connexion vers le réseau Cloudflare ; rien d’autre n’est envoyé.', 'st_data': 'Utilise jusqu’à environ {mb} Mo de données, comptés sur un forfait limité.', 'st_cap_warn': 'Vous avez déjà utilisé {pct}% de votre limite mensuelle de données.', 'st_ping': 'Ping', 'st_jitter': 'gigue', 'st_down': 'Descendant', 'st_up': 'Montant', 'st_start': 'Lancer le test', 'st_cancel': 'Annuler', 'st_again': 'Relancer', 'st_ph_ping': 'Mesure de la latence…', 'st_ph_down': 'Mesure du débit descendant…', 'st_ph_up': 'Mesure du débit montant…', 'st_done': 'Terminé : {mb} Mo de données utilisés.', 'st_err_busy': 'Le serveur de test de Cloudflare limite les requêtes pour l’instant. Réessayez dans quelques minutes.', 'st_err_net': 'Impossible de joindre le serveur de test. Vérifiez votre connexion.', 'st_cancelled': 'Annulé.', 'st_recent': 'Résultats récents'}, 'it': {'t_speedtest': 'Test di velocità', 'desc__t_speedtest': 'Misura download, upload e latenza della tua connessione.', 'st_sub': 'Misura la connessione verso la rete di Cloudflare; non viene inviato altro.', 'st_data': 'Usa fino a circa {mb} MB di dati, conteggiati su un piano a consumo.', 'st_cap_warn': 'Hai già usato il {pct}% del tuo limite dati mensile.', 'st_ping': 'Ping', 'st_jitter': 'jitter', 'st_down': 'Download', 'st_up': 'Upload', 'st_start': 'Avvia test', 'st_cancel': 'Annulla', 'st_again': 'Ripeti', 'st_ph_ping': 'Misura della latenza…', 'st_ph_down': 'Misura del download…', 'st_ph_up': 'Misura dell’upload…', 'st_done': 'Fatto: usati {mb} MB di dati.', 'st_err_busy': 'Il server di test di Cloudflare sta limitando le richieste. Riprova tra qualche minuto.', 'st_err_net': 'Impossibile raggiungere il server di test. Controlla la connessione.', 'st_cancelled': 'Annullato.', 'st_recent': 'Risultati recenti'}, 'pt': {'t_speedtest': 'Teste de velocidade', 'desc__t_speedtest': 'Meça o download, o upload e a latência da sua ligação.', 'st_sub': 'Mede a sua ligação contra a rede da Cloudflare; nada mais é enviado.', 'st_data': 'Usa até cerca de {mb} MB de dados, que contam num tarifário limitado.', 'st_cap_warn': 'Já usou {pct}% do seu limite mensal de dados.', 'st_ping': 'Ping', 'st_jitter': 'jitter', 'st_down': 'Download', 'st_up': 'Upload', 'st_start': 'Iniciar teste', 'st_cancel': 'Cancelar', 'st_again': 'Repetir', 'st_ph_ping': 'A medir a latência…', 'st_ph_down': 'A medir o download…', 'st_ph_up': 'A medir o upload…', 'st_done': 'Concluído: foram usados {mb} MB de dados.', 'st_err_busy': 'O servidor de teste da Cloudflare está a limitar pedidos. Tente de novo dentro de alguns minutos.', 'st_err_net': 'Não foi possível contactar o servidor de teste. Verifique a ligação.', 'st_cancelled': 'Cancelado.', 'st_recent': 'Resultados recentes'}, 'ru': {'t_speedtest': 'Тест скорости', 'desc__t_speedtest': 'Измерьте скорость загрузки, отдачи и задержку вашего интернета.', 'st_sub': 'Измеряет подключение к сети Cloudflare; больше ничего не отправляется.', 'st_data': 'Расходует примерно до {mb} МБ трафика, что учитывается на лимитном тарифе.', 'st_cap_warn': 'Вы уже израсходовали {pct}% месячного лимита трафика.', 'st_ping': 'Пинг', 'st_jitter': 'джиттер', 'st_down': 'Загрузка', 'st_up': 'Отдача', 'st_start': 'Начать тест', 'st_cancel': 'Отмена', 'st_again': 'Повторить', 'st_ph_ping': 'Измерение задержки…', 'st_ph_down': 'Измерение загрузки…', 'st_ph_up': 'Измерение отдачи…', 'st_done': 'Готово: израсходовано {mb} МБ трафика.', 'st_err_busy': 'Сервер Cloudflare сейчас ограничивает запросы. Попробуйте через несколько минут.', 'st_err_net': 'Не удалось связаться с сервером теста. Проверьте подключение.', 'st_cancelled': 'Отменено.', 'st_recent': 'Последние результаты'}}
+for _lng, _d in SPEEDTEST_I18N.items():
+    CUST_LABELS.setdefault(_lng, {}).update(_d)
+
 # ── Color picker / Always on top / Bulk rename labels (v2.13) ─────────
 TOOLS213_I18N = {
  'en':{'t_colorpicker':'Colour picker','desc__t_colorpicker':'Magnify any pixel on screen and copy its colour as HEX. Click to copy, Esc to cancel.',
@@ -1722,7 +1778,8 @@ def detect_language():
         lid = ctypes.windll.kernel32.GetUserDefaultUILanguage() & 0x3ff
         return {0x09:'en', 0x08:'el', 0x0a:'es', 0x07:'de', 0x0c:'fr',
                 0x10:'it', 0x16:'pt', 0x19:'ru'}.get(lid, 'en')
-    except Exception:
+    except Exception as _swallowed:
+        _note('detect_language', _swallowed)
         return 'en'
 
 # ── Single-instance guard ──────────────────────────────────────────────
@@ -1759,8 +1816,8 @@ def list_drives():
             dev = (p.device or '').rstrip('\\')
             if dev and p.fstype and 'cdrom' not in (p.opts or ''):
                 out.append(dev)
-    except Exception:
-        pass
+    except Exception as _swallowed:
+        _note('list_drives', _swallowed)
     return out
 
 def get_total_vram_gb():
@@ -1961,7 +2018,8 @@ def _battery_discharge_w():
             return None
         # Without instantaneous discharge rate, we can't compute exact watts.
         # Return None so the estimate path is used instead.
-    except Exception:
+    except Exception as _swallowed:
+        _note('_battery_discharge_w', _swallowed)
         return None
     return None
 
@@ -2121,7 +2179,8 @@ def _wmi_query(cls, *cols):
         if not r.stdout: return []
         data = json.loads(r.stdout)
         return data if isinstance(data, list) else [data]
-    except Exception:
+    except Exception as _swallowed:
+        _note('_wmi_query', _swallowed)
         return []
 
 def _wmi_batch():
@@ -2184,7 +2243,8 @@ def _wmi_batch():
                 v = [v]
             out[k] = v
         return out
-    except Exception:
+    except Exception as _swallowed:
+        _note('_wmi_batch', _swallowed)
         return empty
 
 def _reg_bios_info():
@@ -2231,7 +2291,8 @@ def _uptime_str():
         if d: return f'{d}d {h}h {m}m'
         if h: return f'{h}h {m}m'
         return f'{m}m'
-    except Exception:
+    except Exception as _swallowed:
+        _note('_uptime_str', _swallowed)
         return '—'
 
 def collect_system_info():
@@ -2295,7 +2356,7 @@ def collect_system_info():
                 'model': REG['sys_product'],
                 'family': out['machine'].get('family') or REG.get('sys_family', ''),
             })
-    except Exception: pass
+    except Exception as _swallowed: _note('collect_system_info', _swallowed)
     # ── Physical drives (SSD/HDD model + size) ──
     try:
         for d in W['drives']:
@@ -2310,7 +2371,7 @@ def collect_system_info():
                 'model': model, 'size': size, 'bus': bus, 'kind': kind,
                 'status': str(d.get('Status', '') or '').strip(),
             })
-    except Exception: pass
+    except Exception as _swallowed: _note('collect_system_info', _swallowed)
     # Fold in Get-PhysicalDisk: Windows knows SSD vs HDD and the real bus
     # (Win32_DiskDrive reports NVMe drives as 'SCSI'), and carries SMART
     # health. Matched on the model string, which both classes spell the
@@ -2341,7 +2402,7 @@ def collect_system_info():
                         drv[dst] = float(v)
                     except (TypeError, ValueError):
                         pass
-    except Exception: pass
+    except Exception as _swallowed: _note('collect_system_info', _swallowed)
     try:
         cpu = W['cpu']
         if cpu:
@@ -2371,8 +2432,8 @@ def collect_system_info():
                 out['cpu']['current_mhz'] = int(f.current) or None
                 if not out['cpu'].get('base_mhz'):
                     out['cpu']['base_mhz'] = int(f.max) or None
-        except Exception: pass
-    except Exception: pass
+        except Exception as _swallowed: _note('collect_system_info', _swallowed)
+    except Exception as _swallowed: _note('collect_system_info', _swallowed)
     try:
         vm = psutil.virtual_memory()
         sm = psutil.swap_memory()
@@ -2401,7 +2462,7 @@ def collect_system_info():
             maxcap = ma[0].get('MaxCapacityEx') or ma[0].get('MaxCapacity')
             # MaxCapacity is in KB, MaxCapacityEx in KB too (per WMI docs)
             if maxcap: out['ram']['max_bytes'] = int(maxcap) * 1024
-    except Exception: pass
+    except Exception as _swallowed: _note('collect_system_info', _swallowed)
     try:
         gpus = W['gpu']
         for g in gpus:
@@ -2423,7 +2484,7 @@ def collect_system_info():
             # fallback: registry-based GPU name + VRAM only
             gn = get_gpu_name(); gv = get_total_vram_gb()
             if gn: out['gpu'].append({'name': gn, 'vram': int((gv or 0) * 1073741824)})
-    except Exception: pass
+    except Exception as _swallowed: _note('collect_system_info', _swallowed)
     try:
         osinfo = W['os']
         if osinfo:
@@ -2451,7 +2512,7 @@ def collect_system_info():
                 'arch': _pf.machine(),
                 'uptime': _uptime_str(),
             }
-    except Exception: pass
+    except Exception as _swallowed: _note('collect_system_info', _swallowed)
     try:
         for p in psutil.disk_partitions(all=False):
             try:
@@ -2462,8 +2523,8 @@ def collect_system_info():
                     'total': u.total, 'used': u.used, 'free': u.free,
                     'percent': u.percent,
                 })
-            except Exception: continue
-    except Exception: pass
+            except Exception as _swallowed: _note('collect_system_info', _swallowed); continue
+    except Exception as _swallowed: _note('collect_system_info', _swallowed)
     try:
         addrs = psutil.net_if_addrs()
         stats = psutil.net_if_stats()
@@ -2477,11 +2538,11 @@ def collect_system_info():
                 'name': name, 'ip': ip4, 'mac': mac,
                 'speed_mbps': st.speed,
             })
-    except Exception: pass
+    except Exception as _swallowed: _note('collect_system_info', _swallowed)
     # gateway / DNS / public IP for the active connection
     try:
         out['net_info'] = _net_extra()
-    except Exception: pass
+    except Exception as _swallowed: _note('collect_system_info', _swallowed)
     # ── Battery (laptops) ──
     try:
         b = psutil.sensors_battery()
@@ -2515,7 +2576,7 @@ def collect_system_info():
             if bh.get('design_mwh') and bh.get('full_mwh'):
                 out['battery']['health'] = round(bh['full_mwh'] / bh['design_mwh'] * 100)
             if bh.get('cycles'):     out['battery']['cycles'] = bh['cycles']
-    except Exception: pass
+    except Exception as _swallowed: _note('collect_system_info', _swallowed)
     # ── Security (Secure Boot + TPM) ──
     try:
         sec = {}
@@ -2552,7 +2613,7 @@ def collect_system_info():
                 ver = nm.replace('Trusted Platform Module', '').strip()
                 if ver: sec['tpm_version'] = ver   # e.g. "2.0"
         out['security'] = sec
-    except Exception: pass
+    except Exception as _swallowed: _note('collect_system_info', _swallowed)
     # ── Motherboard ──
     try:
         mb = W['mobo']
@@ -2589,7 +2650,7 @@ def collect_system_info():
                 'version': REG.get('bios_version', ''),
                 'date': REG.get('bios_date', ''),
             }
-    except Exception: pass
+    except Exception as _swallowed: _note('collect_system_info', _swallowed)
     # ── Audio devices ──
     try:
         audios = W['audio']
@@ -2601,7 +2662,7 @@ def collect_system_info():
                 'manufacturer': str(a.get('Manufacturer','') or '').strip(),
                 'status': str(a.get('Status','') or '').strip(),
             })
-    except Exception: pass
+    except Exception as _swallowed: _note('collect_system_info', _swallowed)
     # ── Monitors (via WmiMonitorID under root/wmi) ──
     try:
         data = W['monitors']
@@ -2619,7 +2680,8 @@ def collect_system_info():
                 def _dec(lst):
                     try:
                         return ''.join(chr(c) for c in lst if isinstance(c, int) and 0 < c < 128).strip()
-                    except Exception:
+                    except Exception as _swallowed:
+                        _note('collect_system_info._dec', _swallowed)
                         return ''
                 mfr_raw = _dec(m.get('ManufacturerName') or [])
                 mfr = EDID_MFR.get(mfr_raw, mfr_raw)
@@ -2631,7 +2693,7 @@ def collect_system_info():
                     'manufacturer': mfr, 'model': model,
                     'code': code, 'year': year,
                 })
-    except Exception: pass
+    except Exception as _swallowed: _note('collect_system_info', _swallowed)
     # ── Optical drives ──
     try:
         opts = W['optical']
@@ -2644,7 +2706,7 @@ def collect_system_info():
                 'media': str(o.get('MediaType','') or '').strip(),
                 'drive': str(o.get('Drive','') or '').strip(),
             })
-    except Exception: pass
+    except Exception as _swallowed: _note('collect_system_info', _swallowed)
     return out
 
 # ── paths ──────────────────────────────────────────────────────────────
@@ -2731,19 +2793,6 @@ DEFAULTS = {
     'check_updates': True,   # check GitHub for a newer release on launch
     'last_update_check': 0,  # epoch seconds of the last check (throttle)
     # ── earthquakes (v2.6) ──
-    'quakes_on': False,      # earthquake alerts removed
-    'quakes_emsc': True,     # EMSC (Europe-centric) source
-    'quakes_usgs': True,     # USGS (global) source
-    'quakes_min_mmi': 3.0,   # alert when felt MMI >= this (3 = subtle, 4 = noticeable, 5 = strong, 6 = severe)
-    'quakes_min_mag': 2.5,   # pre-filter quakes below this magnitude
-    'quakes_max_age_min': 30,  # ignore events older than this many minutes
-    'quakes_max_dist_km': 100, # hide events farther than this from user
-    'quakes_alert_min':   20,  # how long the bar dot stays lit (minutes)
-    'quakes_toasts': True,   # show Windows toast on a felt quake
-    'quakes_mute': False,    # silence everything (no toast, no dot)
-    'quakes_lat': None,      # manual override (otherwise IP-derived)
-    'quakes_lon': None,
-    'quakes_seen': [],       # ids of already-alerted quakes (anti-spam)
     # ── power consumption (v2.7) ──
     'show_power': False,     # show estimated CPU+GPU power on the bar
     'power_unit': 'W',       # only 'W' for now (kW reserved for future)
@@ -2825,7 +2874,8 @@ def _is_msix():
         length = ctypes.c_uint32(0)
         rc = kernel32.GetCurrentPackageFullName(ctypes.byref(length), None)
         return rc != 15700   # any value except NO_PACKAGE means we're packaged
-    except Exception:
+    except Exception as _swallowed:
+        _note('_is_msix', _swallowed)
         return False
 
 def _startup_cmd():
@@ -2851,8 +2901,8 @@ def _open_startup_settings():
     the Run-key. Works on Windows 10 1803+."""
     try:
         os.startfile('ms-settings:startupapps')
-    except Exception:
-        pass
+    except Exception as _swallowed:
+        _note('_open_startup_settings', _swallowed)
 
 def is_startup_enabled():
     # In MSIX mode startup is managed by Windows Settings, so we report False
@@ -2901,8 +2951,8 @@ def sync_startup():
     if current != _startup_cmd():
         try:
             set_startup(True)
-        except Exception:
-            pass
+        except Exception as _swallowed:
+            _note('sync_startup', _swallowed)
 
 # ── Tools: safe shortcuts to built-in Windows utilities (v2.8) ─────────
 # Every entry just *opens* a tool Windows already ships — PulseDeck never
@@ -2943,7 +2993,8 @@ def launch_tool(action):
         try:
             os.startfile(target if isinstance(target, str) else target[0])
             return True
-        except Exception:
+        except Exception as _swallowed:
+            _note('launch_tool', _swallowed)
             return False
 
 def _dir_size(path):
@@ -2951,7 +3002,7 @@ def _dir_size(path):
     for root, _dirs, files in os.walk(path):
         for f in files:
             try: total += os.path.getsize(os.path.join(root, f))
-            except Exception: pass
+            except Exception as _swallowed: _note('_dir_size', _swallowed)
     return total
 
 def action_flush_dns():
@@ -2961,7 +3012,8 @@ def action_flush_dns():
                        startupinfo=_silent_startupinfo(), timeout=10,
                        capture_output=True)
         return True
-    except Exception:
+    except Exception as _swallowed:
+        _note('action_flush_dns', _swallowed)
         return False
 
 def action_clear_temp():
@@ -2979,7 +3031,8 @@ def action_clear_temp():
                 sz = os.path.getsize(p); os.remove(p); freed += sz
             elif os.path.isdir(p):
                 sz = _dir_size(p); shutil.rmtree(p, ignore_errors=True); freed += sz
-        except Exception:
+        except Exception as _swallowed:
+            _note('action_clear_temp', _swallowed)
             pass   # in use → leave it
     return freed
 
@@ -2991,7 +3044,8 @@ def action_empty_recyclebin():
             None, None,
             SHERB_NOCONFIRMATION | SHERB_NOPROGRESSUI | SHERB_NOSOUND)
         return True
-    except Exception:
+    except Exception as _swallowed:
+        _note('action_empty_recyclebin', _swallowed)
         return False
 
 def _lnk_target_path(lnk_path):
@@ -3022,7 +3076,8 @@ def _lnk_target_path(lnk_path):
                 if end > base_off:
                     return info[base_off:end].decode('mbcs', errors='replace')
         return None
-    except Exception:
+    except Exception as _swallowed:
+        _note('_lnk_target_path', _swallowed)
         return None
 
 def _startup_exe_from_cmd(cmd):
@@ -3065,8 +3120,8 @@ def _startup_reg_items(hive, subkey, wow_flag, source_label, editable):
                     'exists': os.path.exists(os.path.expandvars(exe)) if exe else None,
                     'editable': editable, 'key': ('reg', hive, subkey, name),
                 })
-    except Exception:
-        pass
+    except Exception as _swallowed:
+        _note('_startup_reg_items', _swallowed)
     return items
 
 def _startup_folder_items(folder, source_label, editable):
@@ -3085,8 +3140,8 @@ def _startup_folder_items(folder, source_label, editable):
                 'exists': os.path.exists(target) if target else True,
                 'editable': editable, 'key': ('file', full),
             })
-    except Exception:
-        pass
+    except Exception as _swallowed:
+        _note('_startup_folder_items', _swallowed)
     return items
 
 def collect_startup_items():
@@ -3108,15 +3163,15 @@ def collect_startup_items():
             os.environ.get('APPDATA', ''),
             r'Microsoft\Windows\Start Menu\Programs\Startup')
         items += _startup_folder_items(user_startup, 'folder', True)
-    except Exception:
-        pass
+    except Exception as _swallowed:
+        _note('collect_startup_items', _swallowed)
     try:
         common_startup = os.path.join(
             os.environ.get('ProgramData', ''),
             r'Microsoft\Windows\Start Menu\Programs\Startup')
         items += _startup_folder_items(common_startup, 'common', False)
-    except Exception:
-        pass
+    except Exception as _swallowed:
+        _note('collect_startup_items', _swallowed)
     # Inside the MSIX container HKCU writes and AppData file deletes are
     # copy-on-write virtualized: a "remove" would only mask the entry in our
     # private view while Windows keeps launching the app at logon. Show the
@@ -3140,7 +3195,8 @@ def action_remove_startup_item(key):
         elif key[0] == 'file':
             os.remove(key[1])
             return True
-    except Exception:
+    except Exception as _swallowed:
+        _note('action_remove_startup_item', _swallowed)
         return False
     return False
 
@@ -3157,7 +3213,8 @@ def action_reset_gpu_driver():
         for k in (VK_B, VK_SHIFT, VK_CTRL, VK_LWIN):
             u.keybd_event(k, 0, KEYEVENTF_KEYUP, 0)
         return True
-    except Exception:
+    except Exception as _swallowed:
+        _note('action_reset_gpu_driver', _swallowed)
         return False
 
 def action_lock_screen():
@@ -3165,7 +3222,8 @@ def action_lock_screen():
     try:
         ctypes.windll.user32.LockWorkStation()
         return True
-    except Exception:
+    except Exception as _swallowed:
+        _note('action_lock_screen', _swallowed)
         return False
 
 # ── Keep Awake (PowerToys "Awake"-style) ───────────────────────────────
@@ -3190,7 +3248,8 @@ def action_toggle_awake():
                 ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED)
             _AWAKE_ON = True
         return _AWAKE_ON
-    except Exception:
+    except Exception as _swallowed:
+        _note('action_toggle_awake', _swallowed)
         return None
 
 # ── Dark/Light theme toggle (PowerToys "Light Switch"-style) ───────────
@@ -3224,10 +3283,11 @@ def action_toggle_theme():
             ctypes.windll.user32.SendMessageTimeoutW(
                 HWND_BROADCAST, WM_SETTINGCHANGE, 0, 'ImmersiveColorSet',
                 SMTO_ABORTIFHUNG, 2000, ctypes.byref(res))
-        except Exception:
-            pass
+        except Exception as _swallowed:
+            _note('action_toggle_theme', _swallowed)
         return bool(new)
-    except Exception:
+    except Exception as _swallowed:
+        _note('action_toggle_theme', _swallowed)
         return None
 
 def action_restart_explorer():
@@ -3256,9 +3316,10 @@ def action_restart_explorer():
                                                 'explorer.exe')])
             except Exception:
                 try: os.startfile('explorer.exe')
-                except Exception: pass
+                except Exception as _swallowed: _note('action_restart_explorer', _swallowed)
         return True
-    except Exception:
+    except Exception as _swallowed:
+        _note('action_restart_explorer', _swallowed)
         return False
 
 # The shell CLSID that, when given an empty InprocServer32 default value,
@@ -3297,7 +3358,8 @@ def action_classic_context(enable):
                            startupinfo=si, timeout=8, capture_output=True)
         action_restart_explorer()
         return True
-    except Exception:
+    except Exception as _swallowed:
+        _note('action_classic_context', _swallowed)
         return False
 
 def action_hibernate():
@@ -3306,7 +3368,8 @@ def action_hibernate():
     try:
         ctypes.windll.powrprof.SetSuspendState(True, False, False)
         return True
-    except Exception:
+    except Exception as _swallowed:
+        _note('action_hibernate', _swallowed)
         return False
 
 # catalog: (category_key, icon, [(tool_key, icon, (kind, target)), ...])
@@ -3346,6 +3409,7 @@ TOOLS_CATALOG = [
     ]),
     ('cat_net', '🌐', [
         ('t_dnsboost',    '🚀', ('action', 'dns_boost')),
+        ('t_speedtest',   '⏱', ('action', 'speed_test')),
         ('t_netstatus',   '📶', ('settings', 'ms-settings:network-status')),
         ('t_adapters',    '🔌', ('applet', 'ncpa.cpl')),
         ('t_flushdns',    '♻', ('action', 'flush_dns')),
@@ -3393,8 +3457,8 @@ try:
         TOOLS_CATALOG = [
             (cat, icon, [t for t in tools if t[0] not in _hidden])
             for cat, icon, tools in TOOLS_CATALOG]
-except Exception:
-    pass
+except Exception as _swallowed:
+    _note('<module>', _swallowed)
 
 # ── DNS Boost: benchmark popular resolvers, IPv4 + IPv6 (v2.8) ──────────
 # Pure measurement — sends real DNS queries over UDP/53 and times the reply,
@@ -3458,11 +3522,12 @@ def dns_latency(server, is_ipv6=False, qtype=1, timeout=1.0,
         if len(data) >= 2 and _struct.unpack('>H', data[:2])[0] == tid:
             return dt
         return None
-    except Exception:
+    except Exception as _swallowed:
+        _note('dns_latency', _swallowed)
         return None
     finally:
         try: s.close()
-        except Exception: pass
+        except Exception as _swallowed: _note('dns_latency', _swallowed)
 
 def benchmark_dns(server, is_ipv6=False, rounds=4):
     """Median latency (ms) over a few queries; None if every query failed."""
@@ -3502,7 +3567,8 @@ def get_current_dns():
                     and not a.startswith('169.254.') and ':' not in a):
                 out.append(a)
         return out
-    except Exception:
+    except Exception as _swallowed:
+        _note('get_current_dns', _swallowed)
         return []
 
 def _active_net_kind():
@@ -3547,7 +3613,8 @@ def _active_net_kind():
         if row.dwType == IF_TYPE_ETHERNET:
             return 'eth'
         return None
-    except Exception:
+    except Exception as _swallowed:
+        _note('_active_net_kind', _swallowed)
         return None
 
 def _wifi_signal_percent():
@@ -3571,8 +3638,8 @@ def _wifi_signal_percent():
                     v = int(num)
                     if 0 <= v <= 100:
                         return v
-    except Exception:
-        pass
+    except Exception as _swallowed:
+        _note('_wifi_signal_percent', _swallowed)
     return None
 
 def _ping_latency_ms(target='1.1.1.1'):
@@ -3595,7 +3662,8 @@ def _ping_latency_ms(target='1.1.1.1'):
             digits = out[j - 1] + digits
             j -= 1
         return int(digits) if digits else None
-    except Exception:
+    except Exception as _swallowed:
+        _note('_ping_latency_ms', _swallowed)
         return None
 
 _PUBIP_CACHE = ('', 0.0)   # (ip, fetched-at) — see _net_extra
@@ -3615,10 +3683,10 @@ def _net_extra():
             a = line.strip()
             if a and ':' not in a:      # first IPv4 gateway
                 out['gateway'] = a; break
-    except Exception: pass
+    except Exception as _swallowed: _note('_net_extra', _swallowed)
     try:
         out['dns'] = get_current_dns()
-    except Exception: pass
+    except Exception as _swallowed: _note('_net_extra', _swallowed)
     try:
         # cache for 30 min so reopening the System tab doesn't re-hit the API
         global _PUBIP_CACHE
@@ -3632,7 +3700,7 @@ def _net_extra():
             ip = urllib.request.urlopen(req, timeout=4).read().decode().strip()
             out['public_ip'] = ip
             _PUBIP_CACHE = (ip, time.time())
-    except Exception: pass
+    except Exception as _swallowed: _note('_net_extra', _swallowed)
     return out
 
 def _battery_health():
@@ -3656,7 +3724,7 @@ def _battery_health():
             out['design_mwh'] = _num(d.get('design'))
             out['full_mwh'] = _num(d.get('full'))
             out['cycles'] = _num(d.get('cycles'))
-    except Exception: pass
+    except Exception as _swallowed: _note('_battery_health', _swallowed)
     return out
 
 # ── Diagnostics: hardware self-test (v2.8.2) ───────────────────────────
@@ -3762,8 +3830,8 @@ def _system_location(timeout=10):
             loc = (float(out[0].replace(',', '.')), float(out[1].replace(',', '.')))
             _SYSLOC_CACHE = (loc, time.time())
             return loc
-    except Exception:
-        pass
+    except Exception as _swallowed:
+        _note('_system_location', _swallowed)
     _SYSLOC_CACHE = (None, time.time())
     return None
 
@@ -3831,8 +3899,8 @@ def fetch_weather(unit='C', city='', lang='en'):
                         'https://api.bigdatacloud.net/data/reverse-geocode-client'
                         f'?latitude={lat}&longitude={lon}&localityLanguage={lang}')
                     name = (rg or {}).get('city') or (rg or {}).get('locality') or ''
-                except Exception:
-                    pass
+                except Exception as _swallowed:
+                    _note('fetch_weather', _swallowed)
             else:
                 g = _http_json('https://ipapi.co/json/')
                 lat, lon = g['latitude'], g['longitude']
@@ -3869,147 +3937,10 @@ def fetch_weather(unit='C', city='', lang='en'):
                           'tmin': round(_cv(tmin[i])), 'wd': wd})
         out['daily'] = daily
         return out
-    except Exception:
+    except Exception as _swallowed:
+        _note('fetch_weather', _swallowed)
         return None
 
-# ── Earthquakes (EMSC + USGS, free, no API key) ────────────────────────
-# Uses the Bakun-Wentworth model to estimate Modified Mercalli Intensity
-# at the user's location, so we only alert on quakes that would actually
-# be felt locally — not every distant quake anywhere in the country.
-
-import math as _math
-
-def _hypocentral_km(lat1, lon1, lat2, lon2, depth_km):
-    """Great-circle surface distance + depth → hypocentral distance (km)."""
-    R = 6371.0
-    p1 = _math.radians(lat1); p2 = _math.radians(lat2)
-    dp = _math.radians(lat2 - lat1); dl = _math.radians(lon2 - lon1)
-    a = _math.sin(dp/2)**2 + _math.cos(p1) * _math.cos(p2) * _math.sin(dl/2)**2
-    surf = 2 * R * _math.asin(_math.sqrt(a))
-    return _math.sqrt(surf**2 + (depth_km or 10)**2)
-
-def _felt_intensity_mmi(magnitude, hypocentral_km):
-    """Estimate MMI at a site from M and hypocentral distance.
-    Bakun & Wentworth (1997) intensity attenuation, clamped to [0, 12]."""
-    R = max(1.0, hypocentral_km)
-    mmi = 3.67 + 0.98 * magnitude - 1.10 * _math.log10(R) - 0.0033 * R
-    return max(0.0, min(12.0, mmi))
-
-def _mmi_label(mmi):
-    """Friendly description of a MMI level."""
-    if mmi < 2:   return 'imperceptible'
-    if mmi < 3:   return 'barely felt'
-    if mmi < 4:   return 'felt'
-    if mmi < 5:   return 'widely felt'
-    if mmi < 6:   return 'strong'
-    if mmi < 7:   return 'very strong'
-    if mmi < 8:   return 'severe'
-    if mmi < 9:   return 'violent'
-    return 'extreme'
-
-def _emsc_recent(min_mag=2.5, limit=200):
-    """Recent quakes from EMSC (FDSN-event JSON). Best-effort, returns list."""
-    try:
-        import datetime as _dt
-        start = (_dt.datetime.utcnow() - _dt.timedelta(hours=2)).strftime('%Y-%m-%dT%H:%M:%S')
-        url = ('https://www.seismicportal.eu/fdsnws/event/1/query?'
-               f'format=json&limit={limit}&minmag={min_mag}&start={start}')
-        data = _http_json(url, timeout=8) or {}
-        out = []
-        for f in data.get('features', []):
-            p = f.get('properties', {}) or {}
-            g = f.get('geometry', {}) or {}
-            coords = (g.get('coordinates') or [None, None, None])
-            lon, lat, dep = coords[0], coords[1], coords[2] if len(coords) > 2 else 10
-            try:
-                mag = float(p.get('mag'))
-                lat = float(lat); lon = float(lon)
-                dep = float(dep) if dep is not None else 10.0
-            except Exception:
-                continue
-            out.append({
-                'id': str(f.get('id') or p.get('unid') or p.get('source_id') or ''),
-                'mag': mag, 'lat': lat, 'lon': lon, 'depth': abs(dep),
-                'time': p.get('time') or '',
-                'region': p.get('flynn_region') or p.get('region') or '',
-                'source': 'EMSC',
-            })
-        return out
-    except Exception:
-        return []
-
-def _usgs_recent(min_mag=2.5):
-    """Recent quakes from USGS (past hour, all M2.5+). Best-effort."""
-    try:
-        url = 'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_hour.geojson'
-        data = _http_json(url, timeout=8) or {}
-        out = []
-        for f in data.get('features', []):
-            p = f.get('properties', {}) or {}
-            g = f.get('geometry', {}) or {}
-            coords = (g.get('coordinates') or [None, None, None])
-            lon, lat, dep = coords[0], coords[1], coords[2] if len(coords) > 2 else 10
-            try:
-                mag = float(p.get('mag'))
-                if mag < min_mag: continue
-                lat = float(lat); lon = float(lon)
-                dep = float(dep) if dep is not None else 10.0
-            except Exception:
-                continue
-            out.append({
-                'id': str(f.get('id') or ''),
-                'mag': mag, 'lat': lat, 'lon': lon, 'depth': abs(dep),
-                'time': p.get('time') or '',     # epoch ms
-                'region': p.get('place') or '',
-                'source': 'USGS',
-            })
-        return out
-    except Exception:
-        return []
-
-def fetch_quakes(user_lat, user_lon, sources=('emsc', 'usgs'), min_mag=2.5):
-    """Combine EMSC + USGS, annotate each with hypocentral distance, MMI
-    and a friendly relative time. Returns a list sorted by time desc."""
-    import datetime as _dt
-    if user_lat is None or user_lon is None:
-        return []
-    all_q = []
-    if 'emsc' in sources: all_q += _emsc_recent(min_mag=min_mag)
-    if 'usgs' in sources: all_q += _usgs_recent(min_mag=min_mag)
-    # de-dup by (rounded lat/lon/time/mag) — EMSC & USGS often list the same event
-    seen = set()
-    uniq = []
-    for q in all_q:
-        # time may be ISO string (EMSC) or epoch ms int (USGS); normalise to a
-        # rounded second-bucket for de-dup
-        t = q.get('time')
-        if isinstance(t, (int, float)):
-            t_key = int(t / 60000)   # minute bucket
-        else:
-            t_key = (str(t) or '')[:16]
-        key = (round(q['lat'], 1), round(q['lon'], 1), round(q['mag'], 1), t_key)
-        if key in seen: continue
-        seen.add(key)
-        uniq.append(q)
-    now = _dt.datetime.utcnow()
-    for q in uniq:
-        q['dist_km'] = _hypocentral_km(user_lat, user_lon, q['lat'], q['lon'], q['depth'])
-        q['mmi']     = _felt_intensity_mmi(q['mag'], q['dist_km'])
-        q['mmi_label'] = _mmi_label(q['mmi'])
-        # parse time → seconds ago
-        t = q.get('time') or ''
-        secs = None
-        try:
-            if isinstance(t, (int, float)):
-                secs = (now - _dt.datetime.utcfromtimestamp(t / 1000.0)).total_seconds()
-            elif t:
-                s = t.replace('Z', '').replace('T', ' ').split('.')[0]
-                secs = (now - _dt.datetime.fromisoformat(s)).total_seconds()
-        except Exception:
-            pass
-        q['age_sec'] = secs if secs is not None and secs >= 0 else None
-    uniq.sort(key=lambda q: q['age_sec'] if q['age_sec'] is not None else 1e12)
-    return uniq
 
 # ── CPU name ───────────────────────────────────────────────────────────
 def get_cpu_name():
@@ -4024,7 +3955,8 @@ def get_cpu_name():
             name = name.replace(junk, '')
         name = name.split('@')[0].replace('CPU', '').strip()
         return ' '.join(name.split())
-    except Exception:
+    except Exception as _swallowed:
+        _note('get_cpu_name', _swallowed)
         return 'CPU'
 
 # ── GPU utilization via PDH (locale-independent, no external tools) ────
@@ -4108,7 +4040,8 @@ class GpuCounter:
             mgb = (mem / 1073741824) if mem else None
             lgb = (limit / 1073741824) if limit else None
             return (upct, mgb, lgb)
-        except Exception:
+        except Exception as _swallowed:
+            _note('GpuCounter.read', _swallowed)
             return (None, None, None)
 
 # ── Live CPU frequency via PDH (psutil reports only the static base clock) ──
@@ -4138,7 +4071,8 @@ class CpuFreq:
             v, _ = winreg.QueryValueEx(k, '~MHz')
             winreg.CloseKey(k)
             return float(v)
-        except Exception:
+        except Exception as _swallowed:
+            _note('CpuFreq._nominal', _swallowed)
             return None
 
     def read_ghz(self):
@@ -4154,7 +4088,8 @@ class CpuFreq:
             if st != 0:
                 return None
             return (self.base_mhz * val.doubleValue / 100.0) / 1000.0
-        except Exception:
+        except Exception as _swallowed:
+            _note('CpuFreq.read_ghz', _swallowed)
             return None
 
 # ── Global hotkeys + PowerToys-style utilities (v2.13) ────────────────
@@ -4207,7 +4142,8 @@ class _HotkeyManager(threading.Thread):
         self._tid = ctypes.windll.kernel32.GetCurrentThreadId()
         try:
             self._register_all()
-        except Exception:
+        except Exception as _swallowed:
+            _note('_HotkeyManager.run', _swallowed)
             return
         msg = wintypes.MSG()
         while not self._stop:
@@ -4220,17 +4156,17 @@ class _HotkeyManager(threading.Thread):
                     # hop to the UI thread; Tk is not thread-safe
                     try:
                         self.root.after(0, cb)
-                    except Exception:
-                        pass
+                    except Exception as _swallowed:
+                        _note('_HotkeyManager.run', _swallowed)
         for i in self._actions:
             try: _u32.UnregisterHotKey(None, i)
-            except Exception: pass
+            except Exception as _swallowed: _note('_HotkeyManager.run', _swallowed)
 
     def stop(self):
         self._stop = True
         if self._tid:
             try: _u32.PostThreadMessageW(self._tid, _WM_QUIT, 0, 0)
-            except Exception: pass
+            except Exception as _swallowed: _note('_HotkeyManager.stop', _swallowed)
 
 
 # ── Always on top ──────────────────────────────────────────────────────
@@ -4268,7 +4204,8 @@ def toggle_always_on_top(skip_hwnds=()):
         if now == was:
             return (buf.value, None)          # refused (elevated window)
         return (buf.value, now)
-    except Exception:
+    except Exception as _swallowed:
+        _note('toggle_always_on_top', _swallowed)
         return None
 
 
@@ -4303,7 +4240,8 @@ class ColorPicker:
             self.shot = ImageGrab.grab(
                 bbox=(self.vx, self.vy, self.vx + self.vw, self.vy + self.vh),
                 all_screens=True).convert('RGB')
-        except Exception:
+        except Exception as _swallowed:
+            _note('ColorPicker.open', _swallowed)
             return
         root = self.w.root
         # click catcher: invisible, but a real window, so the pick-click is eaten
@@ -4386,27 +4324,27 @@ class ColorPicker:
             self.w.root.clipboard_clear()
             self.w.root.clipboard_append(val)
             self.w.root.update()
-        except Exception:
-            pass
+        except Exception as _swallowed:
+            _note('ColorPicker.take', _swallowed)
         try:
             self.w._toast(val + '  ' + _TOOLS_T(self.w.lang, 'cp_copied'))
-        except Exception:
-            pass
+        except Exception as _swallowed:
+            _note('ColorPicker.take', _swallowed)
 
     def close(self):
         if self._job:
             try: self.w.root.after_cancel(self._job)
-            except Exception: pass
+            except Exception as _swallowed: _note('ColorPicker.close', _swallowed)
             self._job = None
         for attr in ('panel', 'scrim'):
             win = getattr(self, attr, None)
             if win is not None:
                 try: win.destroy()
-                except Exception: pass
+                except Exception as _swallowed: _note('ColorPicker.close', _swallowed)
                 setattr(self, attr, None)
         self.shot = None          # ~19 MB of screenshot — let it go straight away
         try: _trim_working_set()
-        except Exception: pass
+        except Exception as _swallowed: _note('ColorPicker.close', _swallowed)
 
 
 def _TOOLS_T(lang, key):
@@ -4501,6 +4439,217 @@ def apply_rename(folder, plan):
                 errors.append(f'{old}: could not be restored (left as {os.path.basename(tmp)})')
     return done, errors
 
+
+# ── Internet speed test (v2.14) ────────────────────────────────────────
+# Runs only when the user presses Start. What we learned probing the endpoint:
+#  - Python's default User-Agent is refused (403), so we send our own;
+#  - a single request much above ~60 MB is refused, so downloads are pulled in
+#    25 MB pieces;
+#  - it rate-limits per IP after heavy use, and in tiers: once limited, 5 MB
+#    requests still pass while 10 MB ones get 429 and 15 MB ones 403. So the
+#    test starts with 25 MB pieces (fewest round-trips, best accuracy) and drops
+#    to 5 MB pieces if the big ones are refused, instead of failing outright;
+#    only if even those are refused is it reported as "busy, try later";
+#  - one stream already reached ~450 Mbps here, so two are plenty for home links.
+SPEEDTEST_HOST = 'speed.cloudflare.com'
+
+
+class SpeedTestError(Exception):
+    """'busy' (rate-limited), 'network', 'cancelled' or 'http NNN'."""
+
+
+class SpeedTest(threading.Thread):
+    DOWN_SECS, UP_SECS = 6.0, 5.0
+    WARMUP = 1.0                   # the first second is TCP ramp-up / socket-buffer fill
+    DOWN_CAP, UP_CAP = 250_000_000, 40_000_000
+    DOWN_CHUNK, UP_CHUNK = 25_000_000, 4_000_000
+    SMALL_DOWN, SMALL_UP = 5_000_000, 1_000_000     # fallback when big pieces are refused
+    STREAMS = 2
+
+    def __init__(self, on_update):
+        super().__init__(daemon=True, name='SpeedTest')
+        self.on_update = on_update     # called from worker threads with a dict
+        self.cancelled = False
+        self.used = 0                  # bytes actually moved
+        self.result = {}
+        self.colo = ''                 # Cloudflare site that answered, e.g. 'ATH'
+        self._down_chunk = self.DOWN_CHUNK
+        self._up_chunk = self.UP_CHUNK
+
+    @classmethod
+    def max_mb(cls):
+        return int(round((cls.DOWN_CAP + cls.UP_CAP) / 1e6, -1))
+
+    def cancel(self):
+        self.cancelled = True
+
+    def _ua(self):
+        return f'{DISPLAY_NAME}/{VERSION}'
+
+    def _conn(self):
+        return http.client.HTTPSConnection(SPEEDTEST_HOST, timeout=15)
+
+    @staticmethod
+    def _check(resp):
+        if resp.status == 429:
+            raise SpeedTestError('busy')
+        if resp.status != 200:
+            raise SpeedTestError(f'http {resp.status}')
+
+    def _emit(self, **d):
+        try:
+            self.on_update(d)
+        except Exception as _swallowed:
+            _note('SpeedTest._emit', _swallowed)
+
+    def _ping(self):
+        """Median round-trip over a kept-alive connection (so the TLS handshake
+        isn't counted), and jitter as the mean change between samples."""
+        c = self._conn()
+        rtts = []
+        try:
+            for i in range(9):
+                if self.cancelled:
+                    raise SpeedTestError('cancelled')
+                t = time.perf_counter()
+                c.request('GET', '/__down?bytes=0', headers={'User-Agent': self._ua()})
+                r = c.getresponse()
+                r.read()
+                self._check(r)
+                if not self.colo:
+                    tail = (r.getheader('cf-ray') or '').rsplit('-', 1)[-1]
+                    if len(tail) == 3 and tail.isalpha() and tail.isupper():
+                        self.colo = tail
+                if i:                                  # the first one opens the connection
+                    rtts.append((time.perf_counter() - t) * 1000)
+                self._emit(phase='ping', progress=i / 8)
+        finally:
+            c.close()
+        med = sorted(rtts)[len(rtts) // 2]
+        jit = sum(abs(a - b) for a, b in zip(rtts, rtts[1:])) / max(1, len(rtts) - 1)
+        return med, jit
+
+    def _transfer(self, up):
+        secs = self.UP_SECS if up else self.DOWN_SECS
+        cap = self.UP_CAP if up else self.DOWN_CAP
+        lock = threading.Lock()
+        st = {'bytes': 0, 'warm': 0, 'err': None, 'end': 0.0}
+        t0 = time.perf_counter()
+        warm_at, stop_at = t0 + self.WARMUP, t0 + secs
+
+        def count(n):
+            with lock:
+                st['bytes'] += n
+                if time.perf_counter() >= warm_at:
+                    st['warm'] += n
+
+        def done():
+            return (self.cancelled or st['err'] is not None
+                    or time.perf_counter() >= stop_at or st['bytes'] >= cap)
+
+        def down_worker():
+            c = self._conn()
+            try:
+                while not done():
+                    chunk = self._down_chunk
+                    c.request('GET', f'/__down?bytes={chunk}',
+                              headers={'User-Agent': self._ua()})
+                    r = c.getresponse()
+                    if r.status in (403, 429) and chunk > self.SMALL_DOWN:
+                        r.read()
+                        self._down_chunk = self.SMALL_DOWN   # both streams switch
+                        _note('SpeedTest.fallback', SpeedTestError(f'down {r.status} at {chunk}'))
+                        continue
+                    self._check(r)
+                    while not done():
+                        b = r.read(65536)
+                        if not b:
+                            break
+                        count(len(b))
+            except Exception as e:
+                st['err'] = st['err'] or e
+            finally:
+                st['end'] = max(st['end'], time.perf_counter())
+                c.close()
+
+        def up_worker():
+            block = b'\0' * 65536
+            c = self._conn()
+            try:
+                while not done():
+                    n = self._up_chunk
+                    c.putrequest('POST', '/__up')
+                    c.putheader('User-Agent', self._ua())
+                    c.putheader('Content-Type', 'application/octet-stream')
+                    c.putheader('Content-Length', str(n))
+                    c.endheaders()
+                    sent = 0
+                    while sent < n and not done():
+                        k = min(len(block), n - sent)
+                        c.send(block[:k])
+                        sent += k
+                        count(k)
+                    if sent < n:            # stopped mid-body: drop the connection
+                        break
+                    r = c.getresponse()
+                    r.read()
+                    if r.status in (403, 429) and n > self.SMALL_UP:
+                        self._up_chunk = self.SMALL_UP
+                        _note('SpeedTest.fallback', SpeedTestError(f'up {r.status} at {n}'))
+                        continue
+                    self._check(r)
+            except Exception as e:
+                st['err'] = st['err'] or e
+            finally:
+                st['end'] = max(st['end'], time.perf_counter())
+                c.close()
+
+        workers = [threading.Thread(target=up_worker if up else down_worker, daemon=True)
+                   for _ in range(self.STREAMS)]
+        for t in workers:
+            t.start()
+        phase = 'up' if up else 'down'
+        while any(t.is_alive() for t in workers):
+            time.sleep(0.25)
+            now = time.perf_counter()
+            with lock:
+                b, w = st['bytes'], st['warm']
+            live = (w * 8 / (now - warm_at) / 1e6 if now > warm_at + 0.25
+                    else b * 8 / max(0.05, now - t0) / 1e6)
+            self._emit(phase=phase, mbps=live, progress=min(1.0, (now - t0) / secs))
+        end = st['end'] or time.perf_counter()
+        self.used += st['bytes']
+        err = st['err']
+        if self.cancelled:
+            raise SpeedTestError('cancelled')
+        if err is not None and st['warm'] == 0:
+            raise err if isinstance(err, SpeedTestError) else SpeedTestError('network')
+        if err is not None:
+            _note('SpeedTest._transfer', err)   # partial result is still usable
+        span = end - warm_at
+        if st['warm'] > 0 and span >= 0.5:
+            return st['warm'] * 8 / span / 1e6
+        # The data cap was reached inside (or right after) the warm-up second:
+        # a very fast line. Measure the whole transfer instead - that slightly
+        # under-reports, because it includes TCP ramp-up, but it is far closer
+        # than the 0 the steady-state window would give.
+        return st['bytes'] * 8 / max(0.1, end - t0) / 1e6
+
+    def run(self):
+        try:
+            ping, jit = self._ping()
+            self.result.update(ping=round(ping, 1), jitter=round(jit, 1))
+            self._emit(phase='ping', progress=1.0, ping=ping, jitter=jit)
+            self.result['down'] = round(self._transfer(up=False), 1)
+            self._emit(phase='down', progress=1.0, mbps=self.result['down'])
+            self.result['up'] = round(self._transfer(up=True), 1)
+            self.result.update(used=self.used, ts=int(time.time()), colo=self.colo)
+            self._emit(phase='done', result=dict(self.result))
+        except SpeedTestError as e:
+            self._emit(phase='error', error=str(e), used=self.used)
+        except Exception as e:
+            _note('SpeedTest.run', e)
+            self._emit(phase='error', error='network', used=self.used)
 
 # ── History & data-usage stores ────────────────────────────────────────
 # Both are fed from one place (_HistoryStore's sampler thread) so the network
@@ -4608,6 +4757,11 @@ class _HistoryStore(threading.Thread):
     SAMPLE_SEC = 5          # live sampling cadence
     INTERVAL   = 60         # seconds per stored row
     KEEP_DAYS  = 7
+    # A full process scan costs ~370 ms with ~300 processes, so it only runs
+    # while the machine is already busy - exactly when a culprit is worth
+    # naming. An idle PC never pays for it.
+    CULPRIT_CPU = 70        # % machine-wide CPU in a 5 s sample
+    CULPRIT_RAM = 85        # % RAM in use
 
     def __init__(self, path, usage, sample_fn):
         super().__init__(daemon=True, name='HistoryStore')
@@ -4619,7 +4773,14 @@ class _HistoryStore(threading.Thread):
         self._acc = []                  # samples inside the current minute
         self._net_prev = None
         self._bucket = None             # epoch of the minute we're filling
+        # {minute_ts: {'c': [name, cpu%], 'r': [name, MB]}}
+        self.culprits = {}
+        self._culprit_acc = {}          # worst offender inside the current minute
+        self._proc_prev = None          # {pid: (name, cpu_seconds)} from the last scan
+        self._proc_prev_t = 0.0
+        self._ncpu = psutil.cpu_count() or 1
         self._load()
+        self._load_culprits()
 
     # ── persistence ──
     def _load(self):
@@ -4674,7 +4835,8 @@ class _HistoryStore(threading.Thread):
         try:
             c = psutil.net_io_counters()
             cur = (c.bytes_sent, c.bytes_recv)
-        except Exception:
+        except Exception as _swallowed:
+            _note('_HistoryStore._net_delta', _swallowed)
             return 0, 0, False
         prev, self._net_prev = self._net_prev, cur
         if prev is None:
@@ -4685,8 +4847,99 @@ class _HistoryStore(threading.Thread):
             up, dn = max(cur[0], 0), max(cur[1], 0)
         return up, dn, True
 
+    # ── spike culprits ──
+    def _culprits_path(self):
+        return os.path.join(os.path.dirname(self.path), 'culprits.json')
+
+    def _load_culprits(self):
+        cutoff = time.time() - self.KEEP_DAYS * 86400
+        try:
+            with open(self._culprits_path(), 'r', encoding='utf-8-sig') as f:
+                data = json.load(f)
+        except (OSError, ValueError):
+            return
+        if not isinstance(data, dict):
+            return
+        for k, v in data.items():
+            try:
+                ts = int(k)
+            except (TypeError, ValueError):
+                continue
+            if ts < cutoff or not isinstance(v, dict):
+                continue
+            rec = {}
+            for kind in ('c', 'r'):
+                x = v.get(kind)
+                if (isinstance(x, list) and len(x) == 2 and isinstance(x[0], str)
+                        and isinstance(x[1], (int, float))):
+                    rec[kind] = [x[0][:64], x[1]]
+            if rec:
+                self.culprits[ts] = rec
+
+    def _save_culprits(self):
+        cutoff = time.time() - self.KEEP_DAYS * 86400
+        for ts in [t for t in self.culprits if t < cutoff]:
+            self.culprits.pop(ts, None)
+        _atomic_write(self._culprits_path(),
+                      json.dumps({str(k): v for k, v in self.culprits.items()}))
+
+    def _sample_procs(self, cpu_high, ram_high, cpu_now=0.0):
+        """One process scan: CPU% from the change in each process's CPU time
+        since the previous scan (psutil's per-process percent needs a baseline
+        call per object, which a fresh scan doesn't have), RAM from its
+        resident size. Only the single worst offender per minute is kept."""
+        now = time.monotonic()
+        snap = {}
+        top_ram = None
+        for p in psutil.process_iter(['name', 'cpu_times', 'memory_info']):
+            try:
+                name = p.info.get('name') or ''
+                if not name or p.pid == 0 or name in ('System Idle Process', 'Idle'):
+                    continue
+                ct = p.info.get('cpu_times')
+                if ct is not None:
+                    snap[p.pid] = (name, ct.user + ct.system)
+                mi = p.info.get('memory_info')
+                if mi is not None and (top_ram is None or mi.rss > top_ram[1]):
+                    top_ram = (name, mi.rss)
+            except Exception as _swallowed:
+                _note('_HistoryStore._sample_procs', _swallowed)
+        prev, prev_t = self._proc_prev, self._proc_prev_t
+        self._proc_prev, self._proc_prev_t = snap, now
+        acc = self._culprit_acc
+        if cpu_high and prev and 0 < now - prev_t < 30:
+            dt = now - prev_t
+            best = None
+            for pid, (name, cpu_s) in snap.items():
+                old = prev.get(pid)
+                if old is None or old[0] != name:      # new process, or pid reused
+                    continue
+                pct = (cpu_s - old[1]) / dt / self._ncpu * 100.0
+                if best is None or pct > best[1]:
+                    best = (name, pct)
+            # Name it only if it carries a real share of the load: an absolute
+            # floor would hide the culprit on many-core CPUs, where one pegged
+            # core is ~3% of a 32-thread machine.
+            floor = max(1.0, 0.2 * cpu_now)
+            if best and best[1] >= floor and (acc.get('c') is None or best[1] > acc['c'][1]):
+                acc['c'] = [best[0], int(round(min(best[1], 100)))]
+        if ram_high and top_ram:
+            mb = int(round(top_ram[1] / 1048576))
+            if acc.get('r') is None or mb > acc['r'][1]:
+                acc['r'] = [top_ram[0], mb]
+
+    def culprit_at(self, ts):
+        return self.culprits.get(int(ts))
+
     def _flush(self, bucket_ts):
         acc, self._acc = self._acc, []
+        culprit, self._culprit_acc = self._culprit_acc, {}
+        if culprit:
+            self.culprits[int(bucket_ts)] = culprit
+            try:
+                self._save_culprits()
+            except Exception as _swallowed:
+                _note('_HistoryStore._flush', _swallowed)
         up, dn, ok = self._net_delta()
         # Totals are credited even when the app was closed for a while (that
         # traffic really did happen); the graph is not, because drawing hours
@@ -4714,17 +4967,30 @@ class _HistoryStore(threading.Thread):
         self._net_delta()               # prime the counter baseline
         self._bucket = int(time.time() // self.INTERVAL) * self.INTERVAL
         while not self._stop:
+            sample = None
             try:
-                self._acc.append(self._sample_fn())
-            except Exception:
-                pass
+                sample = self._sample_fn()
+                self._acc.append(sample)
+            except Exception as _swallowed:
+                _note('_HistoryStore.run', _swallowed)
+            if sample:
+                cpu, ram = sample[0], sample[1]
+                cpu_high = cpu is not None and cpu >= self.CULPRIT_CPU
+                ram_high = ram is not None and ram >= self.CULPRIT_RAM
+                if cpu_high or ram_high:
+                    try:
+                        self._sample_procs(cpu_high, ram_high, cpu or 0.0)
+                    except Exception as _swallowed:
+                        _note('_HistoryStore._sample_procs', _swallowed)
+                else:
+                    self._proc_prev = None      # a stale baseline would skew the next spike
             now = time.time()
             b = int(now // self.INTERVAL) * self.INTERVAL
             if b != self._bucket:
                 try:
                     self._flush(self._bucket)
-                except Exception:
-                    pass
+                except Exception as _swallowed:
+                    _note('_HistoryStore.run', _swallowed)
                 self._bucket = b
             for _ in range(self.SAMPLE_SEC * 4):
                 if self._stop:
@@ -4735,8 +5001,8 @@ class _HistoryStore(threading.Thread):
         self._stop = True
         try:
             self.usage.save(force=True)
-        except Exception:
-            pass
+        except Exception as _swallowed:
+            _note('_HistoryStore.stop', _swallowed)
 
     # ── queries ──
     def since(self, seconds):
@@ -4770,8 +5036,63 @@ def _trim_working_set():
     try:
         _k32.SetProcessWorkingSetSize(_k32.GetCurrentProcess(),
                                       ctypes.c_size_t(-1), ctypes.c_size_t(-1))
-    except Exception:
-        pass
+    except Exception as _swallowed:
+        _note('_trim_working_set', _swallowed)
+
+class _NetSampler(threading.Thread):
+    """Samples the network counters off the UI thread.
+
+    psutil.net_io_counters() walks every adapter the OS knows about - VPN
+    tunnels, Hyper-V switches, loopback filters - and costs ~5 ms per call on
+    a typical desktop, 100x more than the disk or memory counters. On the UI
+    thread that was 80% of each refresh. Here it runs at the refresh
+    interval the user picked, and the rate is divided by the time that
+    really elapsed, not the nominal interval, so a late tick can't inflate it.
+    """
+    def __init__(self, get_interval_ms):
+        super().__init__(daemon=True, name='NetSampler')
+        self._interval = get_interval_ms
+        self.up_bps = 0.0          # bytes per second, last sample
+        self.dn_bps = 0.0
+        self.session_up = 0        # bytes since PulseDeck started
+        self.session_dn = 0
+        self.total_up = 0          # OS counters (since boot)
+        self.total_dn = 0
+        self._stop = False
+
+    def run(self):
+        try:
+            c = psutil.net_io_counters()
+            prev = (c.bytes_sent, c.bytes_recv)
+        except Exception:
+            prev = None
+        prev_t = time.monotonic()
+        while not self._stop:
+            try:
+                wait = max(0.25, min(5.0, (self._interval() or 1000) / 1000.0))
+            except Exception:
+                wait = 1.0
+            time.sleep(wait)
+            try:
+                c = psutil.net_io_counters()
+            except Exception as _swallowed:
+                _note('_NetSampler.run', _swallowed)
+                continue
+            now = time.monotonic()
+            cur = (c.bytes_sent, c.bytes_recv)
+            self.total_up, self.total_dn = cur
+            if prev is not None:
+                up, dn = cur[0] - prev[0], cur[1] - prev[1]
+                if up >= 0 and dn >= 0:        # negative = counter reset
+                    dt = max(0.05, now - prev_t)
+                    self.up_bps, self.dn_bps = up / dt, dn / dt
+                    self.session_up += up
+                    self.session_dn += dn
+            prev, prev_t = cur, now
+
+    def stop(self):
+        self._stop = True
+
 
 class _SlowPoller(threading.Thread):
     """Polls slow hardware reads (~1 s interval) off the main thread.
@@ -4795,8 +5116,8 @@ class _SlowPoller(threading.Thread):
         self.lhm_wanted = False
         self.net_kind     = None   # 'wifi' | 'eth' | None (default-route interface)
         self.wifi_signal  = None   # int 0-100 | None (only polled while on Wi-Fi)
-        self.ping_ms      = None   # int | None (round-trip to 1.1.1.1, every 3rd poll)
-        self._poll_n      = 0
+        self.ping_ms      = None   # int | None (round-trip to 1.1.1.1, on demand)
+        self.ping_ts      = 0.0    # when ping_ms was measured
         self._stop        = False
 
     def run(self):
@@ -4808,40 +5129,36 @@ class _SlowPoller(threading.Thread):
         try:
             f = psutil.cpu_freq()
             self.cpu_freq_ghz = (f.current / 1000.0) if (f and f.current) else None
-        except Exception:
-            pass
+        except Exception as _swallowed:
+            _note('_SlowPoller._poll', _swallowed)
         try:
             self.battery = psutil.sensors_battery()
-        except Exception:
-            pass
+        except Exception as _swallowed:
+            _note('_SlowPoller._poll', _swallowed)
         try:
             self.disk_perdisk = psutil.disk_io_counters(perdisk=True) or {}
-        except Exception:
-            pass
+        except Exception as _swallowed:
+            _note('_SlowPoller._poll', _swallowed)
         try:
             self.nvidia_w, self.nvidia_temp_c = _nvidia_smi_stats()
-        except Exception:
-            pass
+        except Exception as _swallowed:
+            _note('_SlowPoller._poll', _swallowed)
         # AMD/Intel fallback — only once we're sure there's no NVIDIA GPU to
         # read from nvidia-smi (skips the .NET call entirely on NVIDIA rigs)
         if _NVSMI_OK is False and self.lhm_wanted:
             try:
                 self.lhm_gpu_temp_c = _lhm_gpu_temp()
-            except Exception:
-                pass
+            except Exception as _swallowed:
+                _note('_SlowPoller._poll', _swallowed)
         try:
             self.net_kind = _active_net_kind()
             self.wifi_signal = _wifi_signal_percent() if self.net_kind == 'wifi' else None
-        except Exception:
-            pass
-        # ping is the slowest of these reads (up to the 800 ms timeout on a
-        # dead link) — every 3rd poll (~3 s) is plenty "live" for a hover tip
-        self._poll_n += 1
-        if self._poll_n % 3 == 0:
-            try:
-                self.ping_ms = _ping_latency_ms()
-            except Exception:
-                pass
+        except Exception as _swallowed:
+            _note('_SlowPoller._poll', _swallowed)
+        # Latency is measured on demand when the Network tooltip opens (see
+        # Widget._request_ping) - it used to run here every ~3 s whether or
+        # not anyone was looking: 28,800 ping.exe launches and round-trips to
+        # 1.1.1.1 a day, for a number shown only while hovering one cell.
 
     def request_gpu_temp(self):
         """Arm the AMD/Intel GPU-temperature reader (first caller wins).
@@ -4858,7 +5175,7 @@ class _SlowPoller(threading.Thread):
         self.lhm_wanted = True
         def _warm():
             try: self.lhm_gpu_temp_c = _lhm_gpu_temp()
-            except Exception: pass
+            except Exception as _swallowed: _note('_SlowPoller.request_gpu_temp._warm', _swallowed)
         threading.Thread(target=_warm, daemon=True, name='LhmWarmup').start()
 
     def stop(self):
@@ -4874,12 +5191,12 @@ def _entry_focus(widget):
     """
     try:
         widget.focus_set()
-    except Exception:
-        pass
+    except Exception as _swallowed:
+        _note('_entry_focus', _swallowed)
     try:
         ctypes.windll.user32.SetFocus(widget.winfo_id())
-    except Exception:
-        pass
+    except Exception as _swallowed:
+        _note('_entry_focus', _swallowed)
 
 def _safe_wheel(canvas, e):
     """MouseWheel handler for the tab canvases. The bind is global
@@ -4888,8 +5205,8 @@ def _safe_wheel(canvas, e):
     try:
         if canvas.winfo_exists():
             canvas.yview_scroll(int(-e.delta / 120), 'units')
-    except Exception:
-        pass
+    except Exception as _swallowed:
+        _note('_safe_wheel', _swallowed)
 
 # ── Customize Window (v2.6) ────────────────────────────────────────────
 class CustomizeWindow:
@@ -4931,7 +5248,7 @@ class CustomizeWindow:
         win.geometry('760x600')
         win.configure(bg=self.T['bg'])
         try: win.iconbitmap(os.path.join(_base_dir(), 'app.ico'))
-        except Exception: pass
+        except Exception as _swallowed: _note('CustomizeWindow.open', _swallowed)
         self._win = win
         # center on screen
         win.update_idletasks()
@@ -4950,8 +5267,8 @@ class CustomizeWindow:
         grip.bind('<ButtonRelease-1>', self._rz_release)
         try:
             self._round_corners(win, 12)
-        except Exception:
-            pass
+        except Exception as _swallowed:
+            _note('CustomizeWindow.open', _swallowed)
         win.lift(); win.focus_force()
         # release always-on-top once it has surfaced, so other windows can be
         # brought in front of the settings window afterwards
@@ -4976,8 +5293,8 @@ class CustomizeWindow:
         self._rz = None
         try:
             self._round_corners(self._win, 12)
-        except Exception:
-            pass
+        except Exception as _swallowed:
+            _note('CustomizeWindow._rz_release', _swallowed)
 
     def _round_corners(self, win, radius):
         # Win32 SetWindowRgn for soft rounded look
@@ -4987,8 +5304,8 @@ class CustomizeWindow:
         try:
             rgn = ctypes.windll.gdi32.CreateRoundRectRgn(0, 0, w, h, radius * 2, radius * 2)
             ctypes.windll.user32.SetWindowRgn(hwnd, rgn, True)
-        except Exception:
-            pass
+        except Exception as _swallowed:
+            _note('CustomizeWindow._round_corners', _swallowed)
 
     def _build_chrome(self):
         win = self._win; T = self.T
@@ -5003,8 +5320,8 @@ class CustomizeWindow:
             emb = tk.PhotoImage(file=os.path.join(_base_dir(), 'icons', 'tray.png'))
             self._tb_emb = emb
             tk.Label(tb, image=emb, bg=T['titlebar']).pack(side='left', padx=(12, 8), pady=6)
-        except Exception:
-            pass
+        except Exception as _swallowed:
+            _note('CustomizeWindow._build_chrome', _swallowed)
         tk.Label(tb, text=self.L['title'], fg=T['text'], bg=T['titlebar'],
                  font=('Segoe UI', 11, 'bold')).pack(side='left')
         # close button
@@ -5083,14 +5400,14 @@ class CustomizeWindow:
     def _on_apply(self):
         """Apply changes and KEEP the window open. The bar rebuild happens
         in the next event-loop tick so the click event finishes first."""
-        _log(f'_on_apply ENTER dirty={getattr(self, "_dirty", False)}')
+        _trace(f'_on_apply ENTER dirty={getattr(self, "_dirty", False)}')
         if not getattr(self, '_dirty', False):
             return
         try: self._win.after(20, self._do_apply_keep_open)
         except Exception: self._do_apply_keep_open()
 
     def _do_apply_keep_open(self):
-        _log('_do_apply ENTER')
+        _trace('_do_apply ENTER')
         try:
             # apply language first so subsequent rebuild speaks the new tongue
             if 'language' in self._pending:
@@ -5102,31 +5419,31 @@ class CustomizeWindow:
             had_lang = 'language' in self._pending
             for k, v in self._pending.items():
                 self.w.cfg[k] = v
-            _log(f'  -> merged {list(self._pending.keys())}')
+            _trace(f'  -> merged {list(self._pending.keys())}')
             save_config(self.w.cfg)
             self._pending = {}
             self._dirty = False
             # Rebuild the bar — no in-place repaint of this window, so no
             # half-redrawn state. Apply button just gets a brief "✓ Saved".
             try: self.w._rebuild()
-            except Exception: pass
+            except Exception as _swallowed: _note('CustomizeWindow._do_apply_keep_open', _swallowed)
             try:
                 self._apply_btn.config(text='✓ ' + self.L['apply'],
                                        bg=self.T['green'], fg='#0b0f18')
-            except Exception: pass
+            except Exception as _swallowed: _note('CustomizeWindow._do_apply_keep_open', _swallowed)
             # Reset the Apply button after a short delay so the user knows
             # subsequent clicks are for new changes.
             try: self._win.after(1200, self._reset_apply_button)
-            except Exception: pass
+            except Exception as _swallowed: _note('CustomizeWindow._do_apply_keep_open', _swallowed)
         except Exception as e:
-            _log(f'_do_apply EXC: {e}\n' + traceback.format_exc())
+            _note('CustomizeWindow._do_apply', e, tb=True)
 
     def _reset_apply_button(self):
         """After a successful Apply, dim the button back to its idle look."""
         try:
             self._apply_btn.config(text=self.L['apply'],
                                    bg=self.T['line'], fg='#0b0f18')
-        except Exception: pass
+        except Exception as _swallowed: _note('CustomizeWindow._reset_apply_button', _swallowed)
 
     def _on_cancel(self):
         """Discard pending changes and close the window."""
@@ -5147,8 +5464,8 @@ class CustomizeWindow:
         """Release always-on-top so the user can bring other windows in front."""
         try:
             if self._win: self._win.attributes('-topmost', False)
-        except Exception:
-            pass
+        except Exception as _swallowed:
+            _note('CustomizeWindow._drop_topmost', _swallowed)
 
     def _minimize(self):
         """Send the borderless window to the taskbar.
@@ -5164,8 +5481,8 @@ class CustomizeWindow:
             self._minimized = True
             win.overrideredirect(False)
             win.iconify()
-        except Exception:
-            pass
+        except Exception as _swallowed:
+            _note('CustomizeWindow._minimize', _swallowed)
 
     def _on_restore(self, e=None):
         """Re-apply the frameless chrome after a restore-from-minimize."""
@@ -5180,20 +5497,20 @@ class CustomizeWindow:
                 win.lift(); win.focus_force()
                 win.after(300, self._drop_topmost)
                 try: self._round_corners(win, 12)
-                except Exception: pass
-        except Exception:
-            pass
+                except Exception as _swallowed: _note('CustomizeWindow._on_restore', _swallowed)
+        except Exception as _swallowed:
+            _note('CustomizeWindow._on_restore', _swallowed)
 
     def close(self):
         try: self._win.destroy()
-        except Exception: pass
+        except Exception as _swallowed: _note('CustomizeWindow.close', _swallowed)
         self._win = None
         try: self.w._customize = None
-        except Exception: pass
+        except Exception as _swallowed: _note('CustomizeWindow.close', _swallowed)
         # the settings window builds hundreds of widgets + the sysinfo
         # scan; hand those pages back instead of holding them for good
         try: self.w.root.after(500, _trim_working_set)
-        except Exception: pass
+        except Exception as _swallowed: _note('CustomizeWindow.close', _swallowed)
 
     # ── tabs ──
     def show_tab(self, tid):
@@ -5224,6 +5541,43 @@ class CustomizeWindow:
         # build the selected tab
         getattr(self, f'_tab_{tid}')()
 
+    def _scroll_area(self, pady=4, on_resize=None):
+        """A vertically scrollable region filling the content pane.
+
+        Returns (canvas, body): pack the tab's widgets into `body`. The body
+        is kept as wide as the canvas viewport so right-packed children stay
+        visible; on_resize(event) runs after that for tabs that re-wrap text
+        or re-flow a grid. The mouse wheel scrolls this canvas.
+        """
+        T = self.T
+        outer = tk.Frame(self._content, bg=T['bg'])
+        outer.pack(fill='both', expand=True, padx=20, pady=pady)
+        canvas = tk.Canvas(outer, bg=T['bg'], highlightthickness=0, bd=0)
+        sb = tk.Scrollbar(outer, orient='vertical', command=canvas.yview,
+                          bg=T['panel'], troughcolor=T['bg2'], activebackground=T['cyan'],
+                          bd=0, highlightthickness=0, width=10)
+        canvas.configure(yscrollcommand=sb.set)
+        sb.pack(side='right', fill='y')
+        canvas.pack(side='left', fill='both', expand=True)
+        body = tk.Frame(canvas, bg=T['bg'])
+        win = canvas.create_window((0, 0), window=body, anchor='nw')
+
+        def _configure(e):
+            try:
+                canvas.itemconfig(win, width=e.width)
+            except Exception as _swallowed:
+                _note('CustomizeWindow._scroll_area', _swallowed)
+            if on_resize is not None:
+                try:
+                    on_resize(e)
+                except Exception as _swallowed:
+                    _note('CustomizeWindow._scroll_area.on_resize', _swallowed)
+        canvas.bind('<Configure>', _configure)
+        body.bind('<Configure>',
+                  lambda e: canvas.configure(scrollregion=canvas.bbox('all')))
+        canvas.bind_all('<MouseWheel>', lambda e: _safe_wheel(canvas, e))
+        return canvas, body
+
     def _section(self, title, padx=24):
         T = self.T
         f = tk.Frame(self._content, bg=T['bg'])
@@ -5253,8 +5607,8 @@ class CustomizeWindow:
                 self._apply_btn.config(state='normal',
                                        bg=self.T['cyan'], fg='#0b0f18',
                                        text='● ' + self.L['apply'])
-        except Exception:
-            pass
+        except Exception as _swallowed:
+            _note('CustomizeWindow._mark_dirty', _swallowed)
 
     def _on_check(self, key, val, on_toggle):
         # write to a staging dict; nothing applies until "Apply" is clicked.
@@ -5264,7 +5618,7 @@ class CustomizeWindow:
             # callback that has side-effects we want live (e.g. opening
             # Windows Settings); these are passed-through unchanged.
             try: self._win.after(1, lambda: on_toggle(val))
-            except Exception: pass
+            except Exception as _swallowed: _note('CustomizeWindow._on_check', _swallowed)
 
     def _radio_group(self, parent, label, cfg_key, options, on_change=None):
         """options = [(value, label), ...]"""
@@ -5311,7 +5665,7 @@ class CustomizeWindow:
         self._mark_dirty()
         if on_change:
             try: self._win.after(1, lambda: on_change(val))
-            except Exception: pass
+            except Exception as _swallowed: _note('CustomizeWindow._on_radio', _swallowed)
 
     # ── General tab ──
     def _tab_general(self):
@@ -5336,7 +5690,7 @@ class CustomizeWindow:
             menu = tk.Toplevel(self._win); menu.overrideredirect(True)
             menu.configure(bg=T['panel'], highlightbackground=T['line'], highlightthickness=1)
             try: menu.attributes('-topmost', True)
-            except Exception: pass
+            except Exception as _swallowed: _note('CustomizeWindow._tab_general._show_lang_menu', _swallowed)
             x = btn.winfo_rootx(); y = btn.winfo_rooty() + btn.winfo_height() + 2
             menu.geometry(f'+{x}+{y}')
             for code in LANGS:
@@ -5348,7 +5702,7 @@ class CustomizeWindow:
                 def _pick(c=code, m=menu, b=btn):
                     btn.config(text=LANG_NAMES[c] + '  ▾')
                     try: m.destroy()
-                    except Exception: pass
+                    except Exception as _swallowed: _note('CustomizeWindow._tab_general._show_lang_menu._pick', _swallowed)
                     self._on_lang_change(c)
                 row.bind('<Button-1>', lambda e, p=_pick: p())
                 row.bind('<Enter>', lambda e, r=row: r.config(bg=T['bg2']))
@@ -5359,9 +5713,9 @@ class CustomizeWindow:
             # holds keyboard focus, which made the menu close instantly.
             def _close(_e=None, m=menu):
                 try: m.grab_release()
-                except Exception: pass
+                except Exception as _swallowed: _note('CustomizeWindow._tab_general._show_lang_menu._close', _swallowed)
                 try: m.destroy()
-                except Exception: pass
+                except Exception as _swallowed: _note('CustomizeWindow._tab_general._show_lang_menu._close', _swallowed)
             def _outside(e, m=menu):
                 try:
                     if not m.winfo_exists():
@@ -5370,13 +5724,13 @@ class CustomizeWindow:
                               and m.winfo_rooty() <= e.y_root <= m.winfo_rooty() + m.winfo_height())
                     if not inside:
                         _close()
-                except Exception:
-                    pass
+                except Exception as _swallowed:
+                    _note('CustomizeWindow._tab_general._show_lang_menu._outside', _swallowed)
             menu.bind('<Button-1>', _outside, add='+')
             menu.bind('<Escape>', _close)
             menu.update_idletasks()
             try: menu.grab_set()
-            except Exception: pass
+            except Exception as _swallowed: _note('CustomizeWindow._tab_general._show_lang_menu', _swallowed)
         btn.bind('<Button-1>', _show_lang_menu)
         btn.bind('<Enter>', lambda e: btn.config(bg=T['bg2']))
         btn.bind('<Leave>', lambda e: btn.config(bg=T['panel']))
@@ -5442,22 +5796,7 @@ class CustomizeWindow:
         # 600-px window. Drag-to-reorder still works inside the canvas because
         # _row_drag compares absolute screen coords (winfo_rooty vs e.y_root),
         # which scrolling keeps consistent on both sides.
-        outer = tk.Frame(self._content, bg=T['bg'])
-        outer.pack(fill='both', expand=True, padx=20, pady=(4, 0))
-        mcanvas = tk.Canvas(outer, bg=T['bg'], highlightthickness=0, bd=0)
-        msb = tk.Scrollbar(outer, orient='vertical', command=mcanvas.yview,
-                           bg=T['panel'], troughcolor=T['bg2'],
-                           activebackground=T['cyan'], bd=0,
-                           highlightthickness=0, width=10)
-        mcanvas.configure(yscrollcommand=msb.set)
-        msb.pack(side='right', fill='y')
-        mcanvas.pack(side='left', fill='both', expand=True)
-        holder = tk.Frame(mcanvas, bg=T['bg'])
-        hwin = mcanvas.create_window((0, 0), window=holder, anchor='nw')
-        mcanvas.bind('<Configure>', lambda e: mcanvas.itemconfig(hwin, width=e.width))
-        holder.bind('<Configure>',
-                    lambda e: mcanvas.configure(scrollregion=mcanvas.bbox('all')))
-        mcanvas.bind_all('<MouseWheel>', lambda e: _safe_wheel(mcanvas, e))
+        mcanvas, holder = self._scroll_area(pady=(4, 0))
 
         hint = tk.Label(holder, text='  ' + L['drag_hint'], fg=T['muted'],
                         bg=T['bg'], font=('Segoe UI', 9))
@@ -5566,7 +5905,7 @@ class CustomizeWindow:
         self._mark_dirty()
         # repaint the metrics tab to show the new order
         try: self.show_tab('metrics')
-        except Exception: pass
+        except Exception as _swallowed: _note('CustomizeWindow._move_row', _swallowed)
 
     def _get_order(self):
         # staged order takes precedence over the saved one
@@ -5590,7 +5929,7 @@ class CustomizeWindow:
         row.config(bg=self.T['bg2'])
         for c in row.winfo_children():
             try: c.config(bg=self.T['bg2'])
-            except Exception: pass
+            except Exception as _swallowed: _note('CustomizeWindow._row_press', _swallowed)
 
     def _row_drag(self, e, row):
         if getattr(self, '_drag_row', None) != row: return
@@ -5604,7 +5943,8 @@ class CustomizeWindow:
                 if y1 <= e.y_root <= y1 + r.winfo_height():
                     target = r
                     break
-            except Exception:
+            except Exception as _swallowed:
+                _note('CustomizeWindow._row_drag', _swallowed)
                 continue
         old = getattr(self, '_drag_target', None)
         if target is old: return
@@ -5614,16 +5954,16 @@ class CustomizeWindow:
                 old.config(bg=self.T['panel'])
                 for c in old.winfo_children():
                     try: c.config(bg=self.T['panel'])
-                    except Exception: pass
-            except Exception: pass
+                    except Exception as _swallowed: _note('CustomizeWindow._row_drag', _swallowed)
+            except Exception as _swallowed: _note('CustomizeWindow._row_drag', _swallowed)
         # highlight the new target
         if target is not None:
             try:
                 target.config(bg='#1d3a52')
                 for c in target.winfo_children():
                     try: c.config(bg='#1d3a52')
-                    except Exception: pass
-            except Exception: pass
+                    except Exception as _swallowed: _note('CustomizeWindow._row_drag', _swallowed)
+            except Exception as _swallowed: _note('CustomizeWindow._row_drag', _swallowed)
         self._drag_target = target
 
     def _row_release(self, e, row):
@@ -5640,8 +5980,8 @@ class CustomizeWindow:
                 r.config(bg=self.T['panel'])
                 for c in r.winfo_children():
                     try: c.config(bg=self.T['panel'])
-                    except Exception: pass
-            except Exception: pass
+                    except Exception as _swallowed: _note('CustomizeWindow._row_release', _swallowed)
+            except Exception as _swallowed: _note('CustomizeWindow._row_release', _swallowed)
         if tgt is None or tgt is src:
             return   # plain click / dropped on itself — nothing to do
         # single reorder: move src to tgt's position
@@ -5655,8 +5995,8 @@ class CustomizeWindow:
                 rr.pack(fill='x', pady=3)
             self._pending['cell_order'] = [r._cell_id for r in rows]
             self._mark_dirty()
-        except Exception:
-            pass
+        except Exception as _swallowed:
+            _note('CustomizeWindow._row_release', _swallowed)
 
     def _reset_order(self):
         self._pending['cell_order'] = None
@@ -5684,7 +6024,7 @@ class CustomizeWindow:
             menu = tk.Toplevel(self._win); menu.overrideredirect(True)
             menu.configure(bg=T['panel'], highlightbackground=T['line'], highlightthickness=1)
             try: menu.attributes('-topmost', True)
-            except Exception: pass
+            except Exception as _swallowed: _note('CustomizeWindow._tab_appearance._show_theme_menu', _swallowed)
             x = tbtn.winfo_rootx(); y = tbtn.winfo_rooty() + tbtn.winfo_height() + 2
             menu.geometry(f'+{x}+{y}')
             for name in THEMES:
@@ -5696,7 +6036,7 @@ class CustomizeWindow:
                 def _pick(n=name, m=menu, b=tbtn):
                     b.config(text=n.capitalize() + '  ▾')
                     try: m.destroy()
-                    except Exception: pass
+                    except Exception as _swallowed: _note('CustomizeWindow._tab_appearance._show_theme_menu._pick', _swallowed)
                     self._on_radio('theme', n, None)
                 row.bind('<Button-1>', lambda e, p=_pick: p())
                 row.bind('<Enter>', lambda e, r=row: r.config(bg=T['bg2']))
@@ -5705,9 +6045,9 @@ class CustomizeWindow:
             # Close on click-outside / Escape via a modal grab (see lang menu).
             def _close(_e=None, m=menu):
                 try: m.grab_release()
-                except Exception: pass
+                except Exception as _swallowed: _note('CustomizeWindow._tab_appearance._show_theme_menu._close', _swallowed)
                 try: m.destroy()
-                except Exception: pass
+                except Exception as _swallowed: _note('CustomizeWindow._tab_appearance._show_theme_menu._close', _swallowed)
             def _outside(e, m=menu):
                 try:
                     if not m.winfo_exists():
@@ -5716,13 +6056,13 @@ class CustomizeWindow:
                               and m.winfo_rooty() <= e.y_root <= m.winfo_rooty() + m.winfo_height())
                     if not inside:
                         _close()
-                except Exception:
-                    pass
+                except Exception as _swallowed:
+                    _note('CustomizeWindow._tab_appearance._show_theme_menu._outside', _swallowed)
             menu.bind('<Button-1>', _outside, add='+')
             menu.bind('<Escape>', _close)
             menu.update_idletasks()
             try: menu.grab_set()
-            except Exception: pass
+            except Exception as _swallowed: _note('CustomizeWindow._tab_appearance._show_theme_menu', _swallowed)
         tbtn.bind('<Button-1>', _show_theme_menu)
         tbtn.bind('<Enter>', lambda e: tbtn.config(bg=T['bg2']))
         tbtn.bind('<Leave>', lambda e: tbtn.config(bg=T['panel']))
@@ -5786,7 +6126,7 @@ class CustomizeWindow:
         loc_btn.pack(anchor='w', padx=24, pady=(8, 0))
         def _open_loc(_e=None):
             try: os.startfile('ms-settings:privacy-location')
-            except Exception: pass
+            except Exception as _swallowed: _note('CustomizeWindow._weather_settings._open_loc', _swallowed)
         loc_btn.bind('<Button-1>', _open_loc)
         loc_btn.bind('<Enter>', lambda e: loc_btn.config(bg=T['bg2']))
         loc_btn.bind('<Leave>', lambda e: loc_btn.config(bg=T['panel']))
@@ -5864,19 +6204,7 @@ class CustomizeWindow:
         apply_btn.pack(side='right')
 
         # ── preview list ──
-        outer = tk.Frame(self._content, bg=T['bg'])
-        outer.pack(fill='both', expand=True, padx=20, pady=4)
-        canvas = tk.Canvas(outer, bg=T['bg'], highlightthickness=0, bd=0)
-        sb = tk.Scrollbar(outer, orient='vertical', command=canvas.yview,
-                          bg=T['panel'], troughcolor=T['bg2'], activebackground=T['cyan'],
-                          bd=0, highlightthickness=0, width=10)
-        canvas.configure(yscrollcommand=sb.set)
-        sb.pack(side='right', fill='y'); canvas.pack(side='left', fill='both', expand=True)
-        body = tk.Frame(canvas, bg=T['bg'])
-        body_window = canvas.create_window((0, 0), window=body, anchor='nw')
-        canvas.bind('<Configure>', lambda e: canvas.itemconfig(body_window, width=e.width))
-        body.bind('<Configure>', lambda e: canvas.configure(scrollregion=canvas.bbox('all')))
-        canvas.bind_all('<MouseWheel>', lambda e: _safe_wheel(canvas, e))
+        canvas, body = self._scroll_area()
 
         def load_files():
             folder = state['folder']
@@ -5973,6 +6301,162 @@ class CustomizeWindow:
         refresh()
 
 
+    # ── Speed test tab (v2.14) ──
+    def _tab_speedtest(self):
+        T = self.T; L = self.L
+        f = tk.Frame(self._content, bg=T['bg'])
+        f.pack(side='top', fill='x', padx=24, pady=(14, 2))
+        tk.Label(f, text='⏱  ' + L.get('t_speedtest', 'Speed test'), fg=T['text'], bg=T['bg'],
+                 font=('Segoe UI', 12, 'bold')).pack(side='left')
+        back = tk.Label(f, text='←  ' + L.get('tools', 'Tools'), fg=T['cyan'], bg=T['bg'],
+                        font=('Segoe UI', 9), cursor='hand2')
+        back.pack(side='right')
+        back.bind('<Button-1>', lambda e: self.show_tab('tools'))
+        sub = tk.Label(self._content, text=L.get('st_sub', '') + '  '
+                       + L.get('st_data', '').replace('{mb}', str(SpeedTest.max_mb())),
+                       fg=T['muted'], bg=T['bg'], font=('Segoe UI', 9),
+                       justify='left', wraplength=500)
+        sub.pack(side='top', anchor='w', padx=24, fill='x')
+        sub.bind('<Configure>', lambda e: sub.configure(wraplength=max(200, e.width - 8)))
+        tk.Frame(self._content, bg=T['line'], height=1).pack(
+            side='top', fill='x', padx=24, pady=(6, 0))
+
+        # a monthly data limit that is nearly used up deserves a warning first
+        cap = float(self.w.cfg.get('data_cap_gb') or 0)
+        usage = getattr(self.w, '_usage', None)
+        if cap > 0 and usage is not None:
+            up_, dn_ = usage.month()
+            pct = (up_ + dn_) / (1024.0 ** 3) / cap * 100
+            if pct >= 80:
+                tk.Label(self._content, text='⚠  ' + L.get('st_cap_warn', '')
+                         .replace('{pct}', f'{pct:.0f}'), fg=T['orange'], bg=T['bg'],
+                         font=('Segoe UI', 9)).pack(side='top', anchor='w', padx=24, pady=(8, 0))
+
+        # ── three result tiles ──
+        tiles = tk.Frame(self._content, bg=T['bg'])
+        tiles.pack(side='top', fill='x', padx=24, pady=(14, 4))
+        vals = {}
+        for key, label, colour in (('ping', L.get('st_ping', 'Ping'), T['magenta']),
+                                   ('down', L.get('st_down', 'Download'), T['cyan']),
+                                   ('up', L.get('st_up', 'Upload'), T['blue'])):
+            card = tk.Frame(tiles, bg=T['panel'])
+            card.pack(side='left', fill='both', expand=True, padx=(0, 8) if key != 'up' else 0)
+            tk.Label(card, text=label, fg=colour, bg=T['panel'],
+                     font=('Segoe UI', 9, 'bold')).pack(anchor='w', padx=12, pady=(10, 0))
+            v = tk.Label(card, text='—', fg=T['text'], bg=T['panel'],
+                         font=('Segoe UI', 22, 'bold'))
+            v.pack(anchor='w', padx=12)
+            u = tk.Label(card, text='ms' if key == 'ping' else 'Mbps', fg=T['muted'],
+                         bg=T['panel'], font=('Segoe UI', 9))
+            u.pack(anchor='w', padx=12, pady=(0, 10))
+            vals[key] = (v, u)
+
+        bar = tk.Frame(self._content, bg=T['bg2'], height=6)
+        bar.pack(side='top', fill='x', padx=24, pady=(8, 0))
+        fill = tk.Frame(bar, bg=T['cyan'], height=6)
+        status = tk.Label(self._content, text='', fg=T['muted'], bg=T['bg'],
+                          font=('Segoe UI', 9))
+        status.pack(side='top', anchor='w', padx=24, pady=(6, 0))
+        btn = tk.Label(self._content, text='▶  ' + L.get('st_start', 'Start test'),
+                       fg=T['bg'], bg=T['cyan'], font=('Segoe UI', 10, 'bold'),
+                       padx=18, pady=7, cursor='hand2')
+        btn.pack(side='top', anchor='w', padx=24, pady=(10, 4))
+
+        hist_box = tk.Frame(self._content, bg=T['bg'])
+        hist_box.pack(side='top', fill='x', padx=24, pady=(12, 0))
+
+        def show_history():
+            for ch in hist_box.winfo_children():
+                ch.destroy()
+            items = [r for r in (self.w.cfg.get('speedtest_history') or [])
+                     if isinstance(r, dict) and 'down' in r]
+            if not items:
+                return
+            tk.Label(hist_box, text=L.get('st_recent', 'Recent results'), fg=T['text'],
+                     bg=T['bg'], font=('Segoe UI', 10, 'bold')).pack(anchor='w')
+            for r in items[:5]:
+                when = time.strftime('%d/%m %H:%M', time.localtime(r.get('ts', 0)))
+                tk.Label(hist_box, font=('Consolas', 9), fg=T['muted'], bg=T['bg'],
+                         text=f"{when}   ↓ {r['down']:>6.1f}   ↑ {r.get('up', 0):>6.1f} Mbps"
+                              f"   {L.get('st_ping', 'Ping')} {r.get('ping', 0):.0f} ms"
+                         ).pack(anchor='w')
+
+        state = {'test': None}
+        PHASE = {'ping': L.get('st_ph_ping', 'Measuring latency…'),
+                 'down': L.get('st_ph_down', 'Measuring download…'),
+                 'up': L.get('st_ph_up', 'Measuring upload…')}
+        STEP = {'ping': 0, 'down': 1, 'up': 2}
+
+        def apply(d):
+            if not status.winfo_exists():
+                return
+            ph = d.get('phase')
+            if ph in PHASE:
+                status.config(text=PHASE[ph], fg=T['muted'])
+                frac = (STEP[ph] + float(d.get('progress', 0))) / 3.0
+                fill.place(x=0, y=0, relwidth=max(0.01, min(1.0, frac)), height=6)
+                if ph == 'ping' and d.get('ping') is not None:
+                    vals['ping'][0].config(text=f"{d['ping']:.0f}")
+                    vals['ping'][1].config(text=f"ms  ·  {L.get('st_jitter', 'jitter')} "
+                                                f"{d['jitter']:.0f} ms")
+                if ph in ('down', 'up') and d.get('mbps') is not None:
+                    vals[ph][0].config(text=f"{d['mbps']:.0f}")
+            elif ph == 'done':
+                r = d['result']
+                fill.place(x=0, y=0, relwidth=1.0, height=6)
+                vals['down'][0].config(text=f"{r['down']:.0f}")
+                vals['up'][0].config(text=f"{r['up']:.0f}")
+                done_txt = L.get('st_done', 'Done.').replace('{mb}', f"{r['used'] / 1e6:.0f}")
+                if r.get('colo'):
+                    done_txt += f"  ·  Cloudflare {r['colo']}"
+                status.config(text=done_txt, fg=T['green'])
+                hist = [r] + [x for x in (self.w.cfg.get('speedtest_history') or [])
+                              if isinstance(x, dict)][:4]
+                self.w._set('speedtest_history', hist)
+                show_history()
+                finish()
+            elif ph == 'error':
+                err = d.get('error', 'network')
+                msg = {'busy': L.get('st_err_busy', ''),
+                       'cancelled': L.get('st_cancelled', 'Cancelled.')}.get(
+                           err, L.get('st_err_net', ''))
+                status.config(text=msg, fg=T['muted'] if err == 'cancelled' else T['orange'])
+                finish()
+
+        def on_update(d):
+            # called from the test's worker threads - hop onto the UI thread
+            try:
+                self._win.after(0, lambda: apply(d))
+            except Exception as _swallowed:
+                _note('CustomizeWindow._tab_speedtest.on_update', _swallowed)
+
+        def finish():
+            state['test'] = None
+            if btn.winfo_exists():
+                btn.config(text='▶  ' + L.get('st_again', 'Run again'), bg=T['cyan'])
+
+        def start(_e=None):
+            t = state['test']
+            if t is not None:                      # the button doubles as Cancel
+                t.cancel()
+                return
+            for v, _u in vals.values():
+                v.config(text='—')
+            vals['ping'][1].config(text='ms')
+            fill.place(x=0, y=0, relwidth=0.01, height=6)
+            btn.config(text='■  ' + L.get('st_cancel', 'Cancel'), bg=T['orange'])
+            t = SpeedTest(on_update)
+            state['test'] = t
+            t.start()
+
+        btn.bind('<Button-1>', start)
+        # leaving the tab (or closing Settings) must not leave a test running
+        def _stop_on_leave(e):
+            if e.widget is btn and state['test'] is not None:
+                state['test'].cancel()
+        btn.bind('<Destroy>', _stop_on_leave, add='+')
+        show_history()
+
     # ── History tab (v2.12) ──
     HIST_RANGES = (('1h', 3600), ('24h', 86400), ('7d', 604800))
 
@@ -6063,24 +6547,15 @@ class CustomizeWindow:
             b.bind('<Button-1>', lambda e, c=code: pick(c))
             btns[code] = b
 
-        note = tk.Label(self._content, text=L.get('hist_gap_note', ''), fg=T['muted'],
+        note = tk.Label(self._content, text=L.get('hist_gap_note', '') + '  '
+                        + L.get('hist_hover', ''), fg=T['muted'], wraplength=480, justify='left',
                         bg=T['bg'], font=('Segoe UI', 8))
-        note.pack(anchor='w', padx=24)
+        note.pack(anchor='w', padx=24, fill='x')
+        note.bind('<Configure>',
+                  lambda e: note.configure(wraplength=max(200, e.width - 8)))
 
         # ── scrollable body ──
-        outer = tk.Frame(self._content, bg=T['bg'])
-        outer.pack(fill='both', expand=True, padx=20, pady=6)
-        canvas = tk.Canvas(outer, bg=T['bg'], highlightthickness=0, bd=0)
-        sb = tk.Scrollbar(outer, orient='vertical', command=canvas.yview,
-                          bg=T['panel'], troughcolor=T['bg2'], activebackground=T['cyan'],
-                          bd=0, highlightthickness=0, width=10)
-        canvas.configure(yscrollcommand=sb.set)
-        sb.pack(side='right', fill='y'); canvas.pack(side='left', fill='both', expand=True)
-        body = tk.Frame(canvas, bg=T['bg'])
-        body_window = canvas.create_window((0, 0), window=body, anchor='nw')
-        canvas.bind('<Configure>', lambda e: canvas.itemconfig(body_window, width=e.width))
-        body.bind('<Configure>', lambda e: canvas.configure(scrollregion=canvas.bbox('all')))
-        canvas.bind_all('<MouseWheel>', lambda e: _safe_wheel(canvas, e))
+        canvas, body = self._scroll_area(pady=6)
 
         empty = tk.Label(body, text=L.get('hist_collecting', ''), fg=T['muted'],
                          bg=T['bg'], font=('Segoe UI', 9), wraplength=520,
@@ -6101,7 +6576,63 @@ class CustomizeWindow:
             cv.pack(fill='x', padx=12, pady=(0, 10))
             charts.append((cv, idx, color, peak_color, scale, stat, idx2, color2))
             cv.bind('<Configure>', lambda e: redraw())
+            cv.bind('<Motion>', lambda e, c=cv, i=idx, st=stat: hover(e, c, i, st))
+            cv.bind('<Leave>', lambda e, c=cv, st=stat: unhover(c, st))
             return cv
+
+        view = {'rows': [], 't0': 0.0, 't1': 1.0, 'secs': 86400, 'summary': {}}
+
+        def _clock(ts):
+            # 1 h / 24 h: time of day is enough; 7 d also needs the date.
+            # Numeric formats only, so no weekday names to translate.
+            fmt = '%d/%m %H:%M' if view['secs'] > 86400 else '%H:%M'
+            return time.strftime(fmt, time.localtime(ts))
+
+        def hover(e, cv, idx, stat):
+            rows = view['rows']
+            w_ = cv.winfo_width()
+            if not rows or w_ < 4:
+                return
+            span = view['t1'] - view['t0']
+            ts = view['t0'] + e.x / float(w_ - 1) * span
+            # nearest row; one minute per row, so beyond a column's width is a gap
+            import bisect
+            keys = view['keys']
+            i = bisect.bisect_left(keys, ts)
+            cands = [j for j in (i - 1, i) if 0 <= j < len(rows)]
+            j = min(cands, key=lambda k: abs(keys[k] - ts)) if cands else None
+            tol = max(90.0, span / w_ * 1.5)
+            cv.delete('hover')
+            cv.create_line(e.x, 0, e.x, cv.winfo_height(), fill=T['text'],
+                           dash=(2, 2), tags='hover')
+            if j is None or abs(keys[j] - ts) > tol:
+                stat.config(text=f"{_clock(ts)}  ·  {L.get('hist_nodata', 'no data')}",
+                            fg=T['muted'])
+                return
+            r = rows[j]
+            txt, colour = _clock(r[0]), T['text']
+            if idx == 1:
+                txt += (f"  ·  {L.get('hist_avg', 'avg')} {r[1]}%"
+                        f"  ·  {L.get('hist_peak', 'peak')} {r[2]}%")
+            elif idx == 3:
+                txt += f"  ·  {r[3]}%"
+            elif idx == 4:
+                txt += f"  ·  {r[4]}%" if r[4] >= 0 else '  ·  —'
+            else:
+                txt += f"  ·  ↓ {_human_bytes(r[6])}  ↑ {_human_bytes(r[5])}"
+            who = hist.culprit_at(r[0]) if hist else None
+            if who:
+                if idx == 1 and who.get('c'):
+                    txt += f"  ·  ⚠ {who['c'][0][:28]} {who['c'][1]}%"
+                    colour = T['orange']
+                elif idx == 3 and who.get('r'):
+                    txt += f"  ·  ⚠ {who['r'][0][:28]} {_human_bytes(who['r'][1] * 1048576)}"
+                    colour = T['green']
+            stat.config(text=txt, fg=colour)
+
+        def unhover(cv, stat):
+            cv.delete('hover')
+            stat.config(text=view['summary'].get(str(cv), ''), fg=T['muted'])
 
         chart(L.get('hist_cpu', 'CPU'), T['orange'], '#7a4a1e', 1)
         chart(L.get('hist_ram', 'RAM'), T['green'],  '#1e5a2a', 3)
@@ -6122,19 +6653,34 @@ class CustomizeWindow:
             else:
                 empty.pack_forget()
             t1 = time.time(); t0 = t1 - secs
+            view.update(rows=rows, keys=[r[0] for r in rows], t0=t0, t1=t1, secs=secs)
             for cv, idx, color, peak, scale, stat, idx2, color2 in charts:
                 self._hist_draw(cv, rows, t0, t1, idx, color, peak,
                                 scale=scale, idx2=idx2, color2=color2)
+                # a small marker over every minute with a named culprit, so
+                # it is obvious where hovering will explain a spike
+                kind = {1: 'c', 3: 'r'}.get(idx)
+                if kind and hist is not None and hist.culprits:
+                    w_ = cv.winfo_width()
+                    if w_ > 4:
+                        for r in rows:
+                            who = hist.culprits.get(r[0])
+                            if who and who.get(kind):
+                                x = int((r[0] - t0) / float(t1 - t0) * (w_ - 1))
+                                cv.create_oval(x - 2, 1, x + 2, 5, fill=color, outline='')
                 vals = [r[idx] for r in rows if r[idx] is not None and r[idx] >= 0]
                 if not vals:
                     stat.config(text=L.get('hist_gpu_off', '') if idx == 4 else '—')
+                    view['summary'][str(cv)] = stat.cget('text')
                 elif scale is None:
                     dn = sum(r[6] for r in rows); up = sum(r[5] for r in rows)
                     stat.config(text=f"↓ {_human_bytes(dn)}   ↑ {_human_bytes(up)}")
+                    view['summary'][str(cv)] = stat.cget('text')
                 else:
                     pk = max(r[idx + 1] for r in rows) if idx == 1 else max(vals)
                     stat.config(text=f"{L.get('hist_avg','avg')} {sum(vals)/len(vals):.0f}%"
                                      f"   {L.get('hist_peak','peak')} {pk:.0f}%")
+                view['summary'][str(cv)] = stat.cget('text')
 
         self._win.after(60, redraw)
 
@@ -6243,46 +6789,6 @@ class CustomizeWindow:
         tk.Frame(body, bg=T['line'], height=1).pack(fill='x', padx=24, pady=(8, 4))
         self._weather_settings(body)
 
-    # ── Alerts tab (dormant — earthquakes stay removed; kept for reference) ──
-    def _tab_alerts(self):
-        T = self.T; L = self.L
-        self._section('🚨  ' + L['alerts'])
-        body = tk.Frame(self._content, bg=T['bg']); body.pack(fill='both', expand=True)
-        # weather location + unit (lives here now that the tray submenu is gone)
-        tk.Label(body, text='🌤  ' + L.get('weather_lbl', 'Weather'), fg=T['cyan'],
-                 bg=T['bg'], font=('Segoe UI', 10, 'bold')).pack(anchor='w', padx=24, pady=(6, 0))
-        self._weather_settings(body)
-        tk.Frame(body, bg=T['line'], height=1).pack(fill='x', padx=24, pady=(8, 4))
-        self._check_row(body, L['quakes_on'], 'quakes_on',
-                        on_toggle=lambda v: (self.w._rebuild(),
-                                              self.w._ensure_quakes_thread() if v else None))
-        # sources row
-        sr = tk.Frame(body, bg=T['bg']); sr.pack(fill='x', padx=24, pady=6)
-        tk.Label(sr, text=L['sources'], fg=T['muted'], bg=T['bg'],
-                 font=('Segoe UI', 10), width=20, anchor='w').pack(side='left')
-        for key, name in (('quakes_emsc', 'EMSC (Europe)'),
-                          ('quakes_usgs', 'USGS (Global)')):
-            var = tk.BooleanVar(value=bool(self.w.cfg.get(key)))
-            tk.Checkbutton(sr, text=' ' + name, variable=var, fg=T['text'], bg=T['bg'],
-                           selectcolor=T['bg2'], activebackground=T['bg'],
-                           activeforeground=T['text'], font=('Segoe UI', 10),
-                           bd=0, command=lambda k=key, v=var:
-                           (self.w.cfg.update({k: v.get()}), save_config(self.w.cfg))
-                           ).pack(side='left', padx=8)
-        # felt level
-        levels = QUAKES_LEVELS.get(self.lang, QUAKES_LEVELS['en'])
-        self._radio_group(body, L['felt_level'], 'quakes_min_mmi',
-                          [(th, lbl.split('(')[0].strip()) for lbl, th in levels])
-        self._check_row(body, '🔔  Toast notifications', 'quakes_toasts')
-        self._check_row(body, '🔇  Mute all', 'quakes_mute')
-        # recent events button
-        rb = tk.Button(self._content, text='📜  ' + L['recent_evt'],
-                       command=self.w._show_quake_history,
-                       bg=T['panel'], fg=T['text'], bd=0,
-                       font=('Segoe UI', 10), padx=14, pady=6,
-                       activebackground=T['bg2'], activeforeground=T['cyan'],
-                       cursor='hand2')
-        rb.pack(side='top', anchor='w', padx=24, pady=10)
 
     # ── About tab ──
     # ── System Info tab ──
@@ -6333,14 +6839,14 @@ class CustomizeWindow:
                     _i[0] = (_i[0] + 1) % 2
                     loading.config(text=_frames[_i[0]] + loading_txt[1:])
                     self._win.after(500, _tick)
-            except Exception: pass
+            except Exception as _swallowed: _note('CustomizeWindow._tab_system._tick', _swallowed)
         self._win.after(500, _tick)
         # Collect in a thread so the UI stays responsive (WMI calls take ~1s)
         def _bg():
             info = collect_system_info()
             self._sysinfo = info          # cache for instant view switching
             try: self._win.after(0, lambda: self._render_system(info, loading))
-            except Exception: pass
+            except Exception as _swallowed: _note('CustomizeWindow._tab_system._bg', _swallowed)
         threading.Thread(target=_bg, daemon=True).start()
 
     def _render_system(self, info, loading_lbl):
@@ -6351,39 +6857,19 @@ class CustomizeWindow:
         if self._active_tab != 'system':
             return
         try: loading_lbl.destroy()
-        except Exception: pass
+        except Exception as _swallowed: _note('CustomizeWindow._render_system', _swallowed)
         T = self.T
         # Scrollable body
-        outer = tk.Frame(self._content, bg=T['bg'])
-        outer.pack(fill='both', expand=True, padx=20, pady=4)
-        canvas = tk.Canvas(outer, bg=T['bg'], highlightthickness=0, bd=0)
-        sb = tk.Scrollbar(outer, orient='vertical', command=canvas.yview,
-                          bg=T['panel'], troughcolor=T['bg2'],
-                          activebackground=T['cyan'], bd=0, highlightthickness=0,
-                          width=10)
-        canvas.configure(yscrollcommand=sb.set)
-        sb.pack(side='right', fill='y')
-        canvas.pack(side='left', fill='both', expand=True)
-        body = tk.Frame(canvas, bg=T['bg'])
-        body_window = canvas.create_window((0, 0), window=body, anchor='nw')
         # value labels that should re-wrap when the window is resized (so long
         # values like the CPU model or BIOS string wrap instead of being clipped)
         sys_vals = []
-        # keep body the same width as the canvas viewport so right-packed
-        # children (brand logos) stay visible.
-        def _resize_body(e, _wid=body_window):
-            try:
-                canvas.itemconfig(_wid, width=e.width)
-                # leave room for the key column (~150 px) + paddings + scrollbar
-                wl = max(140, e.width - 210)
-                for vl in sys_vals:
-                    try: vl.configure(wraplength=wl)
-                    except Exception: pass
-            except Exception: pass
-        canvas.bind('<Configure>', _resize_body)
-        body.bind('<Configure>',
-                  lambda e: canvas.configure(scrollregion=canvas.bbox('all')))
-        canvas.bind_all('<MouseWheel>', lambda e: _safe_wheel(canvas, e))
+        def _rewrap(e):
+            # leave room for the key column (~150 px) + paddings + scrollbar
+            wl = max(140, e.width - 210)
+            for vl in sys_vals:
+                try: vl.configure(wraplength=wl)
+                except Exception as _swallowed: _note('CustomizeWindow._render_system._rewrap', _swallowed)
+        canvas, body = self._scroll_area(on_resize=_rewrap)
 
         def _brand_logo(parent, name, bg_color):
             """Brand logo image. Returns a Label with a PNG, or None."""
@@ -6444,7 +6930,8 @@ class CustomizeWindow:
                     new_w = max(1, int(w0 * target_h / h0))
                     im = im.resize((new_w, target_h), Image.LANCZOS)
                     cache[key] = ImageTk.PhotoImage(im, master=self._win)
-                except Exception:
+                except Exception as _swallowed:
+                    _note('CustomizeWindow._render_system._brand_logo', _swallowed)
                     return None
             img = cache[key]
             lbl = tk.Label(parent, image=img, bg=bg_color, bd=0,
@@ -6531,7 +7018,8 @@ class CustomizeWindow:
             try:
                 if not bn_val.winfo_exists():
                     return   # tab switched or window closed → stop the loop
-            except Exception:
+            except Exception as _swallowed:
+                _note('CustomizeWindow._render_system._refresh_bn', _swallowed)
                 return
             w = self.w
             per = list(getattr(w, '_percpu', []) or [])
@@ -6557,8 +7045,8 @@ class CustomizeWindow:
                         act = max(0.0, min(100.0, act))
                         disk_now = act if disk_now is None else max(disk_now, act)
                     _disk_prev[name] = (bt, now)
-            except Exception:
-                pass
+            except Exception as _swallowed:
+                _note('CustomizeWindow._render_system._refresh_bn', _swallowed)
             for k, v in (('cpu', cpu_now), ('gpu', gpu_now), ('ram', ram_now),
                          ('vram', vram_now), ('disk', disk_now)):
                 _buf[k].append(v)
@@ -6574,8 +7062,8 @@ class CustomizeWindow:
                 bn_metrics.config(text=res.get('metrics', ''))
                 up_val.config(text=_uptime_str())
                 self._win.after(1000, _refresh_bn)
-            except Exception:
-                pass
+            except Exception as _swallowed:
+                _note('CustomizeWindow._render_system._refresh_bn', _swallowed)
 
         _refresh_bn()
 
@@ -6589,7 +7077,7 @@ class CustomizeWindow:
                     self._win.clipboard_append(txt)
                     cp_btn.config(text='✓  ' + self.L['copied'])
                     self._win.after(1500, lambda: cp_btn.config(text=_copy_lbl))
-                except Exception: pass
+                except Exception as _swallowed: _note('CustomizeWindow._render_system._footer._copy_all', _swallowed)
             cp_btn = tk.Label(body, text=_copy_lbl, fg=T['cyan'], bg=T['bg'],
                               font=('Segoe UI', 10), padx=12, pady=6, cursor='hand2')
             cp_btn.pack(anchor='w', padx=4, pady=8)
@@ -6728,7 +7216,7 @@ class CustomizeWindow:
             _slow = getattr(self.w, '_slow', None)
             # asks the poller to load the .NET reader on first need
             try: _slow.request_gpu_temp()
-            except Exception: pass
+            except Exception as _swallowed: _note('CustomizeWindow._render_system', _swallowed)
             gt = getattr(_slow, 'nvidia_temp_c', None)
             if gt is None:
                 gt = getattr(_slow, 'lhm_gpu_temp_c', None)
@@ -6943,7 +7431,7 @@ class CustomizeWindow:
             _slow = getattr(self.w, '_slow', None)
             # asks the poller to load the .NET reader on first need
             try: _slow.request_gpu_temp()
-            except Exception: pass
+            except Exception as _swallowed: _note('CustomizeWindow._render_sys_summary', _swallowed)
             gt = getattr(_slow, 'nvidia_temp_c', None)
             if gt is None:
                 gt = getattr(_slow, 'lhm_gpu_temp_c', None)
@@ -7105,16 +7593,6 @@ class CustomizeWindow:
                  font=('Segoe UI', 10), anchor='w').pack(side='left')
         svar = tk.StringVar()          # always empty → the list shows everything
         # scrollable body
-        outer = tk.Frame(self._content, bg=T['bg'])
-        outer.pack(fill='both', expand=True, padx=20, pady=4)
-        canvas = tk.Canvas(outer, bg=T['bg'], highlightthickness=0, bd=0)
-        sb = tk.Scrollbar(outer, orient='vertical', command=canvas.yview,
-                          bg=T['panel'], troughcolor=T['bg2'], activebackground=T['cyan'],
-                          bd=0, highlightthickness=0, width=10)
-        canvas.configure(yscrollcommand=sb.set)
-        sb.pack(side='right', fill='y'); canvas.pack(side='left', fill='both', expand=True)
-        body = tk.Frame(canvas, bg=T['bg'])
-        body_window = canvas.create_window((0, 0), window=body, anchor='nw')
         TILE_W = 150
         _grid_groups = []   # [(container_frame, [tile_widgets])]
 
@@ -7128,17 +7606,12 @@ class CustomizeWindow:
                 for i, t in enumerate(tiles):
                     t.grid(row=i // cols, column=i % cols, padx=4, pady=4, sticky='nsew')
             try: canvas.configure(scrollregion=canvas.bbox('all'))
-            except Exception: pass
+            except Exception as _swallowed: _note('CustomizeWindow._tab_tools._relayout_grid', _swallowed)
 
-        def _on_canvas_configure(e, _wid=body_window):
-            try: canvas.itemconfig(_wid, width=e.width)
-            except Exception: pass
+        def _on_resize(e):
             if self.w.cfg.get('tools_layout') == 'grid' and _grid_groups:
                 _relayout_grid()
-        canvas.bind('<Configure>', _on_canvas_configure)
-        body.bind('<Configure>',
-                  lambda e: canvas.configure(scrollregion=canvas.bbox('all')))
-        canvas.bind_all('<MouseWheel>', lambda e: _safe_wheel(canvas, e))
+        canvas, body = self._scroll_area(on_resize=_on_resize)
 
         def _tool_row(parent, tkey, ticon, label, action):
             destructive = action[0] == 'action' and action[1] not in (
@@ -7234,7 +7707,7 @@ class CustomizeWindow:
             if mode == 'grid' and _grid_groups:
                 self._win.after_idle(_relayout_grid)
             try: canvas.configure(scrollregion=canvas.bbox('all'))
-            except Exception: pass
+            except Exception as _swallowed: _note('CustomizeWindow._tab_tools._paint', _swallowed)
 
         _style_toggle()
         _paint()
@@ -7248,6 +7721,9 @@ class CustomizeWindow:
             return
         if target == 'dns_boost':
             self.show_tab('dns')          # full DNS Boost panel, returns via its Back link
+            return
+        if target == 'speed_test':
+            self.show_tab('speedtest')
             return
         if target == 'bulk_rename':
             self.show_tab('rename')
@@ -7331,8 +7807,8 @@ class CustomizeWindow:
     def _tool_toast(self, msg):
         try:
             self.w._toast(msg)
-        except Exception:
-            pass
+        except Exception as _swallowed:
+            _note('CustomizeWindow._tool_toast', _swallowed)
 
     def _open_battery_report(self):
         """Run the built-in `powercfg /batteryreport` and open the resulting
@@ -7348,8 +7824,8 @@ class CustomizeWindow:
                 subprocess.run(['powercfg', '/batteryreport', '/output', path],
                                 capture_output=True, timeout=15, startupinfo=si)
                 webbrowser.open('file:///' + path.replace('\\', '/'))
-            except Exception:
-                pass
+            except Exception as _swallowed:
+                _note('CustomizeWindow._open_battery_report._bg', _swallowed)
         threading.Thread(target=_bg, daemon=True).start()
 
     def _confirm(self, msg, on_yes):
@@ -7360,16 +7836,16 @@ class CustomizeWindow:
         dlg.configure(bg=T['panel'], highlightbackground=T['line'],
                       highlightthickness=1)
         try: dlg.attributes('-topmost', True)
-        except Exception: pass
+        except Exception as _swallowed: _note('CustomizeWindow._confirm', _swallowed)
         tk.Label(dlg, text=msg, fg=T['text'], bg=T['panel'], font=('Segoe UI', 10),
                  wraplength=W - 44, justify='left').pack(
                      anchor='w', padx=20, pady=(18, 14))
         btns = tk.Frame(dlg, bg=T['panel']); btns.pack(fill='x', padx=20, pady=(0, 16))
         def _close():
             try: dlg.grab_release()
-            except Exception: pass
+            except Exception as _swallowed: _note('CustomizeWindow._confirm._close', _swallowed)
             try: dlg.destroy()
-            except Exception: pass
+            except Exception as _swallowed: _note('CustomizeWindow._confirm._close', _swallowed)
         no = tk.Label(btns, text=L.get('cf_no', 'Cancel'), fg=T['muted'], bg=T['bg2'],
                       font=('Segoe UI', 10), padx=16, pady=6, cursor='hand2')
         no.pack(side='right')
@@ -7380,7 +7856,7 @@ class CustomizeWindow:
         def _go(_e):
             _close()
             try: on_yes()
-            except Exception: pass
+            except Exception as _swallowed: _note('CustomizeWindow._confirm._go', _swallowed)
         yes.bind('<Button-1>', _go)
         # height from content (width is fixed), then center over the window
         dlg.update_idletasks()
@@ -7390,7 +7866,7 @@ class CustomizeWindow:
         dlg.geometry(f'{W}x{h_}+{max(0, px)}+{max(0, py)}')
         dlg.lift(); dlg.update()
         try: dlg.grab_set()
-        except Exception: pass
+        except Exception as _swallowed: _note('CustomizeWindow._confirm', _swallowed)
 
     # ── DNS Boost tab (v2.8): benchmark resolvers, no system changes ──
     def _tab_dns(self):
@@ -7430,28 +7906,14 @@ class CustomizeWindow:
                  font=('Segoe UI', 8), wraplength=420, justify='left').pack(
                      side='left', padx=12)
         # results area (scrollable)
-        outer = tk.Frame(self._content, bg=T['bg'])
-        outer.pack(fill='both', expand=True, padx=20, pady=4)
-        canvas = tk.Canvas(outer, bg=T['bg'], highlightthickness=0, bd=0)
-        sb = tk.Scrollbar(outer, orient='vertical', command=canvas.yview,
-                          bg=T['panel'], troughcolor=T['bg2'], activebackground=T['cyan'],
-                          bd=0, highlightthickness=0, width=10)
-        canvas.configure(yscrollcommand=sb.set)
-        sb.pack(side='right', fill='y'); canvas.pack(side='left', fill='both', expand=True)
-        body = tk.Frame(canvas, bg=T['bg'])
-        body_window = canvas.create_window((0, 0), window=body, anchor='nw')
-        canvas.bind('<Configure>',
-                    lambda e: canvas.itemconfig(body_window, width=e.width))
-        body.bind('<Configure>',
-                  lambda e: canvas.configure(scrollregion=canvas.bbox('all')))
-        canvas.bind_all('<MouseWheel>', lambda e: _safe_wheel(canvas, e))
+        canvas, body = self._scroll_area()
 
         def _copy(ip):
             try:
                 self._win.clipboard_clear(); self._win.clipboard_append(ip)
                 self.w._toast(L.get('dns_copied', 'Copied'))
-            except Exception:
-                pass
+            except Exception as _swallowed:
+                _note('CustomizeWindow._tab_dns._copy', _swallowed)
 
         def _ms(v):
             return f'{v:.0f} ms' if v is not None else '—'
@@ -7501,7 +7963,7 @@ class CustomizeWindow:
                          fg=T['muted'], bg=T['bg'], font=('Segoe UI', 8),
                          wraplength=440, justify='left').pack(anchor='w', pady=(8, 0))
             try: canvas.configure(scrollregion=canvas.bbox('all'))
-            except Exception: pass
+            except Exception as _swallowed: _note('CustomizeWindow._tab_dns._render', _swallowed)
 
         def _worker():
             ipv6 = _ipv6_available()
@@ -7512,7 +7974,8 @@ class CustomizeWindow:
                     self._win.after(0, lambda i=i: status.config(
                         text=f"{L.get('dns_testing', 'Testing…')}  {i+1}/{total}")
                         if status.winfo_exists() else None)
-                except Exception:
+                except Exception as _swallowed:
+                    _note('CustomizeWindow._tab_dns._worker', _swallowed)
                     return   # window closed
                 a = benchmark_dns(v4s[0], False)
                 b = benchmark_dns(v6s[0], True) if ipv6 else None
@@ -7532,7 +7995,7 @@ class CustomizeWindow:
                 find_btn.config(text='🔄  ' + L.get('dns_again', 'Test again'))
                 self._dns_running = False
             try: self._win.after(0, _finish)
-            except Exception: pass
+            except Exception as _swallowed: _note('CustomizeWindow._tab_dns._worker', _swallowed)
 
         def _start(_e=None):
             if getattr(self, '_dns_running', False):
@@ -7568,21 +8031,7 @@ class CustomizeWindow:
                                padx=12, pady=5, cursor='hand2')
         refresh_btn.pack(side='right')
         # scrollable body
-        outer = tk.Frame(self._content, bg=T['bg'])
-        outer.pack(fill='both', expand=True, padx=20, pady=4)
-        canvas = tk.Canvas(outer, bg=T['bg'], highlightthickness=0, bd=0)
-        sb = tk.Scrollbar(outer, orient='vertical', command=canvas.yview,
-                          bg=T['panel'], troughcolor=T['bg2'], activebackground=T['cyan'],
-                          bd=0, highlightthickness=0, width=10)
-        canvas.configure(yscrollcommand=sb.set)
-        sb.pack(side='right', fill='y'); canvas.pack(side='left', fill='both', expand=True)
-        body = tk.Frame(canvas, bg=T['bg'])
-        body_window = canvas.create_window((0, 0), window=body, anchor='nw')
-        canvas.bind('<Configure>',
-                    lambda e: canvas.itemconfig(body_window, width=e.width))
-        body.bind('<Configure>',
-                  lambda e: canvas.configure(scrollregion=canvas.bbox('all')))
-        canvas.bind_all('<MouseWheel>', lambda e: _safe_wheel(canvas, e))
+        canvas, body = self._scroll_area()
 
         SRC_LABEL = {
             'HKCU': 'HKCU', 'HKLM': 'HKLM', 'HKLM32': 'HKLM (32-bit)',
@@ -7607,7 +8056,7 @@ class CustomizeWindow:
                 for it in items:
                     _row(body, it)
             try: canvas.configure(scrollregion=canvas.bbox('all'))
-            except Exception: pass
+            except Exception as _swallowed: _note('CustomizeWindow._tab_startup._load', _swallowed)
 
         def _remove(it):
             def _go():
@@ -7660,12 +8109,29 @@ class CustomizeWindow:
             emb = tk.PhotoImage(file=os.path.join(_base_dir(), 'icons', 'tray.png'))
             self._about_emb = emb
             tk.Label(body, image=emb, bg=T['bg']).pack(pady=(28, 8))
-        except Exception:
-            pass
+        except Exception as _swallowed:
+            _note('CustomizeWindow._tab_about', _swallowed)
         tk.Label(body, text=DISPLAY_NAME, fg=T['text'], bg=T['bg'],
                  font=('Segoe UI', 22, 'bold')).pack()
         tk.Label(body, text=L['version'] + ' ' + VERSION, fg=T['muted'], bg=T['bg'],
                  font=('Segoe UI', 10)).pack(pady=(0, 4))
+        # the diagnostics log: what a user can send along with a bug report
+        lp = _log_path()
+        has_log = bool(lp) and os.path.exists(lp)
+        diag = tk.Label(body, text='📄  ' + L.get('diag_open', 'Diagnostics log')
+                        + ('' if has_log else '  ·  ' + L.get('diag_empty', 'nothing logged')),
+                        fg=T['cyan'] if has_log else T['muted'], bg=T['bg'],
+                        font=('Segoe UI', 9), cursor='hand2' if has_log else '')
+        diag.pack(pady=(0, 6))
+        def _open_log(_e=None):
+            try:
+                if lp and os.path.exists(lp):
+                    subprocess.Popen(['explorer', '/select,', lp])
+                else:
+                    os.startfile(CONFIG_DIR)
+            except Exception as _swallowed:
+                _note('CustomizeWindow._tab_about._open_log', _swallowed)
+        diag.bind('<Button-1>', _open_log)
         tk.Label(body, text="© 2026 Fokion Papanikolaou", fg=T['muted'], bg=T['bg'],
                  font=('Segoe UI', 9)).pack(pady=(0, 18))
         # ── link icons in a single horizontal row ──
@@ -7721,10 +8187,8 @@ class Widget:
     def __init__(self):
         self._first_run = not os.path.exists(CONFIG_PATH)
         self.cfg = load_config()
-        # earthquake alerts were removed — scrub them from any existing saved
-        # config so old installs don't keep showing them. (Weather was
-        # restored in 2.10 — no longer scrubbed.)
-        self.cfg['quakes_on'] = False
+        # the earthquake cell was removed in 2.8.5 - drop it from any saved
+        # order so an old config can't ask for a cell that no longer exists
         if isinstance(self.cfg.get('cell_order'), list):
             self.cfg['cell_order'] = [c for c in self.cfg['cell_order']
                                       if c != 'quake']
@@ -7735,7 +8199,7 @@ class Widget:
         # Safety net: never let a stray callback error crash the widget
         def _rce(exc, val, tb):
             try:
-                _log('CALLBACK EXC:\n' + ''.join(traceback.format_exception(exc, val, tb)))
+                _note('tk-callback', val, tb=True)   # once per distinct bug
             except Exception:
                 pass
         self.root.report_callback_exception = _rce
@@ -7754,14 +8218,13 @@ class Widget:
         except Exception: taskbar_h = 40
         self.H = taskbar_h or 40
 
-        try:    self._prev_net = psutil.net_io_counters()
-        except Exception: self._prev_net = None
+        self._net = _NetSampler(lambda: self.cfg.get('interval', 1000))
+        self._net.start()
         try:    self._prev_disk = psutil.disk_io_counters()
         except Exception: self._prev_disk = None
         # tooltip + per-disk + process-sampler state
         self._perdisk_prev = None
         self._perdisk_rates = {}        # {disk: (read_bytes_s, write_bytes_s)}
-        self._net_session = {'up': 0, 'dn': 0}
         self._percpu = []
         self._proc_top = {'cpu': [], 'mem': []}
         self._tip = None
@@ -7777,20 +8240,22 @@ class Widget:
         except Exception: self._vram_total = None
         self._gpu_counter = None
         self._gpu_running = False
-        try:    self._cpufreq = CpuFreq()
-        except Exception:
-            class _NoFreq:
-                ok = False
-                def read_ghz(self): return None
-            self._cpufreq = _NoFreq()
+        # CpuFreq opens a PDH counter query, which costs ~350 ms the first
+        # time (it loads the perf-counter providers) - a quarter of start-up.
+        # Build it on a thread; the GHz label shows the fallback until then.
+        class _NoFreq:
+            ok = False
+            def read_ghz(self): return None
+        self._cpufreq = _NoFreq()
+        def _load_freq():
+            try:
+                self._cpufreq = CpuFreq()
+            except Exception as _swallowed:
+                _note('Widget.__init__._load_freq', _swallowed)
+        threading.Thread(target=_load_freq, daemon=True, name='CpuFreqInit').start()
         self._weather = None
         self._weather_running = False
         self._weather_dirty = False
-        # earthquakes (v2.6)
-        self._quake_active = None      # the most recent felt quake (dict) or None
-        self._quake_active_until = 0   # epoch when the dot should clear
-        self._quake_recent = []        # last 20 felt events (for the menu)
-        self._quakes_running = False
         # power (v2.7) — name lookups go through the registry/WMI; tolerate failure
         try:    self._cpu_name_cached = get_cpu_name()
         except Exception: self._cpu_name_cached = ''
@@ -7869,8 +8334,8 @@ class Widget:
             if getattr(self, '_tray', None):
                 self._tray.notify(HINTS.get(self.lang, HINTS['en']),
                                   DISPLAY_NAME)
-        except Exception:
-            pass
+        except Exception as _swallowed:
+            _note('Widget._first_run_notify', _swallowed)
 
     # ── adaptive chroma key ────────────────────────────────────────────
     def _adapt_key_color(self):
@@ -7908,18 +8373,19 @@ class Widget:
                     a = [int(c1[i:i+2], 16) for i in (1, 3, 5)]
                     bch = [int(c2[i:i+2], 16) for i in (1, 3, 5)]
                     return all(abs(x - y) <= 6 for x, y in zip(a, bch))
-                except Exception:
+                except Exception as _swallowed:
+                    _note('Widget._adapt_key_color._close', _swallowed)
                     return False
             if not _close(new_key, old):
                 self._adaptive_key = new_key
                 self._apply_bg_mode()
                 self._build_ui()       # recreate children with the new bg
                 self._position()
-        except Exception:
-            pass
+        except Exception as _swallowed:
+            _note('Widget._adapt_key_color', _swallowed)
         finally:
             try: self.root.deiconify()
-            except Exception: pass
+            except Exception as _swallowed: _note('Widget._adapt_key_color', _swallowed)
 
     # ── background mode (transparent vs. dark translucent) ─────────────
     def _apply_bg_mode(self):
@@ -7939,8 +8405,8 @@ class Widget:
             self.root.configure(bg=self.bg)
             try:
                 self.root.attributes('-transparentcolor', '')
-            except Exception:
-                pass
+            except Exception as _swallowed:
+                _note('Widget._apply_bg_mode', _swallowed)
             self.root.attributes('-alpha', self.cfg['opacity'])
 
     def _toggle_transparent(self):
@@ -7953,8 +8419,8 @@ class Widget:
         """Run fn on the Tk thread (tray callbacks fire on another thread)."""
         try:
             self.root.after(0, fn)
-        except Exception:
-            pass
+        except Exception as _swallowed:
+            _note('Widget._ui', _swallowed)
 
     # action helpers (always run on Tk thread)
     def _act_metric(self, key):
@@ -7977,8 +8443,8 @@ class Widget:
             if getattr(self, '_picker', None) is None:
                 self._picker = ColorPicker(self)
             self._picker.open()
-        except Exception:
-            pass
+        except Exception as _swallowed:
+            _note('Widget.open_color_picker', _swallowed)
 
     def do_always_on_top(self):
         """Pin/unpin whatever window is in front."""
@@ -8023,7 +8489,8 @@ class Widget:
             return gb
         except (ValueError, TypeError):
             return None
-        except Exception:
+        except Exception as _swallowed:
+            _note('Widget._act_set_data_cap', _swallowed)
             return None
 
     def _act_set_city(self, parent=None, title=None, prompt=None):
@@ -8045,89 +8512,13 @@ class Widget:
             self._weather_dirty = True
             self._ensure_weather_thread()
             return city
-        except Exception:
+        except Exception as _swallowed:
+            _note('Widget._act_set_city', _swallowed)
             return None
 
     def _act_set_rebuild(self, key, val):
         self._set(key, val); self._rebuild()
 
-    # ── earthquakes handlers ───────────────────────────────────────────
-    def _act_quakes_mmi(self, threshold):
-        self._set('quakes_min_mmi', float(threshold))
-
-    def _show_quake_history(self):
-        """Small popup listing the recent felt events near the user."""
-        try:
-            win = tk.Toplevel(self.root)
-            win.title(QUAKES_LABEL.get(self.lang, QUAKES_LABEL['en']))
-            win.configure(bg='#0d1117')
-            try: win.iconbitmap(os.path.join(_base_dir(), 'app.ico'))
-            except Exception: pass
-            win.geometry('540x420'); win.resizable(False, False)
-            try: win.attributes('-topmost', True)
-            except Exception: pass
-            HEAD = '#161b22'; LINE = '#2d333b'; GREY = '#8b96a2'; WHITE = '#ecf2f8'
-            ORANGE = '#ffa657'; RED = '#f85149'; CYAN = '#3fc3ff'
-            tk.Label(win, text='🚨  ' + QUAKES_LABEL.get(self.lang, QUAKES_LABEL['en']),
-                     bg='#0d1117', fg=CYAN, font=('Segoe UI', 14, 'bold')).pack(anchor='w', padx=18, pady=(14, 6))
-            _L = CUST_LABELS.get(self.lang, CUST_LABELS['en'])
-            tk.Label(win, text=_L['felt_near'], bg='#0d1117', fg=GREY,
-                     font=('Segoe UI', 9)).pack(anchor='w', padx=18)
-            tk.Frame(win, bg=LINE, height=1).pack(fill='x', padx=18, pady=(8, 0))
-
-            frame = tk.Frame(win, bg='#0d1117'); frame.pack(fill='both', expand=True, padx=18, pady=10)
-            if not self._quake_recent:
-                tk.Label(frame, bg='#0d1117', fg=GREY, text=_L['no_felt'],
-                         font=('Segoe UI', 10)).pack(anchor='w', pady=20)
-            else:
-                # click any row to dismiss the matching active alert
-                def _click_row(qq, rr):
-                    try:
-                        # if the clicked event IS the active one, dismiss it
-                        act = self._quake_active
-                        if act and act.get('id') and act['id'] == qq.get('id'):
-                            self._dismiss_quake_alert()
-                        # always mark as seen
-                        if qq.get('id'):
-                            seen = set(self.cfg.get('quakes_seen', []) or [])
-                            seen.add(qq['id'])
-                            self.cfg['quakes_seen'] = list(seen)[-200:]
-                            save_config(self.cfg)
-                        try: rr.destroy()
-                        except Exception: pass
-                    except Exception: pass
-                for q in self._quake_recent[:10]:
-                    row = tk.Frame(frame, bg=HEAD, highlightbackground=LINE,
-                                   highlightthickness=1, cursor='hand2')
-                    row.pack(fill='x', pady=3)
-                    inner = tk.Frame(row, bg=HEAD, cursor='hand2')
-                    inner.pack(fill='x', padx=10, pady=6)
-                    row.bind('<Button-1>', lambda e, qq=q, rr=row: _click_row(qq, rr))
-                    inner.bind('<Button-1>', lambda e, qq=q, rr=row: _click_row(qq, rr))
-                    col = RED if q['mmi'] >= 5 else (ORANGE if q['mmi'] >= 4 else CYAN)
-                    tk.Label(inner, text=f"M{q['mag']:.1f}", bg=HEAD, fg=col,
-                             font=('Segoe UI', 12, 'bold'), width=6, anchor='w').pack(side='left')
-                    detail = f"{q['dist_km']:.0f} km · MMI {q['mmi']:.1f} ({q['mmi_label']})"
-                    region = q.get('region', '')[:60]
-                    if region:
-                        detail = f"{region}\n{detail}"
-                    tk.Label(inner, text=detail, bg=HEAD, fg=WHITE, justify='left',
-                             font=('Segoe UI', 9)).pack(side='left', padx=10)
-                    age = q.get('age_sec')
-                    if age is not None:
-                        if age < 60:    ago = f"{int(age)}s"
-                        elif age < 3600: ago = f"{int(age/60)}m"
-                        else:           ago = f"{int(age/3600)}h"
-                    else:
-                        ago = ''
-                    src = q.get('source', '')
-                    tk.Label(inner, text=f"{ago}\n{src}", bg=HEAD, fg=GREY,
-                             font=('Segoe UI', 8), justify='right').pack(side='right')
-            tk.Button(win, text='Close', command=win.destroy,
-                      bg=HEAD, fg=WHITE, bd=0, font=('Segoe UI', 10),
-                      padx=20, pady=6, cursor='hand2').pack(pady=10)
-        except Exception:
-            pass
 
     def _act_toggle(self, key):
         self._set(key, not self.cfg.get(key)); self._rebuild()
@@ -8158,8 +8549,8 @@ class Widget:
             try:
                 self._tray.menu = self._tray_menu()
                 self._tray.update_menu()
-            except Exception:
-                pass
+            except Exception as _swallowed:
+                _note('Widget._act_language', _swallowed)
 
     def _act_transparent(self):
         self._toggle_transparent(); self._rebuild()
@@ -8175,25 +8566,30 @@ class Widget:
         self._user_quit = True   # deliberate exit — see run()'s watchdog
         try:
             self._history.stop()
-        except Exception:
-            pass
+        except Exception as _swallowed:
+            _note('Widget._act_quit', _swallowed)
         try:
             if self._hotkeys:
                 self._hotkeys.stop()
-        except Exception:
-            pass
+        except Exception as _swallowed:
+            _note('Widget._act_quit', _swallowed)
+        try:
+            self._net.stop()
+        except Exception as _swallowed:
+            _note('Widget._act_quit', _swallowed)
         try:
             if getattr(self, '_tray', None):
                 self._tray.stop()
-        except Exception:
-            pass
+        except Exception as _swallowed:
+            _note('Widget._act_quit', _swallowed)
         self.root.destroy()
 
     def _setup_tray(self):
         try:
             import pystray
             from PIL import Image
-        except Exception:
+        except Exception as _swallowed:
+            _note('Widget._setup_tray', _swallowed)
             return
         try:
             img = Image.open(os.path.join(_base_dir(), 'icons', 'tray.png'))
@@ -8226,8 +8622,8 @@ class Widget:
         self._tray_last_val = v
         try:
             self._tray.title = f'{DISPLAY_NAME} — CPU {v}%'
-        except Exception:
-            pass
+        except Exception as _swallowed:
+            _note('Widget._update_tray_cpu', _swallowed)
 
     def _check_data_cap(self):
         """Warn once at 80% and again at 100% of the monthly data limit.
@@ -8241,7 +8637,8 @@ class Widget:
             return
         try:
             up, dn = self._usage.month()
-        except Exception:
+        except Exception as _swallowed:
+            _note('Widget._check_data_cap', _swallowed)
             return
         pct = (up + dn) / (1024.0 ** 3) / cap * 100.0
         lvl = self._alert_fired.get('data') or 0
@@ -8257,8 +8654,8 @@ class Widget:
                 if getattr(self, '_tray', None):
                     try:
                         self._tray.notify(body, L.get('usage_alert_t', 'Data limit'))
-                    except Exception:
-                        pass
+                    except Exception as _swallowed:
+                        _note('Widget._check_data_cap', _swallowed)
                 break
 
     def _perf_alert(self, key, above, fire_at, clear_at, title, body):
@@ -8274,8 +8671,8 @@ class Widget:
             if getattr(self, '_tray', None):
                 try:
                     self._tray.notify(body, title)
-                except Exception:
-                    pass
+                except Exception as _swallowed:
+                    _note('Widget._perf_alert', _swallowed)
         elif fired and above < clear_at:
             self._alert_fired[key] = False
 
@@ -8348,7 +8745,11 @@ class Widget:
         share one global baseline, so each would get the load since the
         OTHER one asked — both wrong.
         """
-        cpu = self._hist['cpu'][-1] if self._hist['cpu'] else None
+        # The sampler thread starts during __init__, before _hist exists, so
+        # its first sample must tolerate the attribute not being there yet
+        # (the new diagnostics log caught this race on its first run).
+        hist = getattr(self, '_hist', None)
+        cpu = hist['cpu'][-1] if hist and hist['cpu'] else None
         try:
             ram = psutil.virtual_memory().percent
         except Exception:
@@ -8367,9 +8768,9 @@ class Widget:
                 self._weather = fetch_weather(self.cfg.get('weather_unit', 'C'),
                                               self.cfg.get('weather_city', ''),
                                               self.lang)
-            except Exception:
+            except Exception as _swallowed:
                 # Network/API blip — keep the loop alive so we retry next cycle.
-                pass
+                _note('Widget._weather_loop', _swallowed)
             self._weather_dirty = False
             # refresh every ~20 min, but wake early if unit/city changed
             for _ in range(120):
@@ -8378,149 +8779,6 @@ class Widget:
                 time.sleep(10)
         self._weather_running = False
 
-    def _dismiss_quake_alert(self):
-        """User clicked the bar's quake icon → clear the active alert."""
-        try:
-            q = self._quake_active
-            if q and q.get('id'):
-                # also mark this event as seen so polling won't re-trigger it
-                seen = set(self.cfg.get('quakes_seen', []) or [])
-                seen.add(q['id'])
-                self.cfg['quakes_seen'] = list(seen)[-200:]
-                save_config(self.cfg)
-            self._quake_active = None
-            self._quake_active_until = 0
-            if getattr(self, 'lbl_quake', None):
-                self.lbl_quake.config(text='')
-        except Exception:
-            pass
-
-    # ── Earthquakes background polling ─────────────────────────────────
-    def _ensure_quakes_thread(self):
-        if self.cfg.get('quakes_on') and not self._quakes_running:
-            self._quakes_running = True
-            threading.Thread(target=self._quakes_loop, daemon=True).start()
-
-    def _user_latlon(self):
-        """User's coordinates: manual override > weather > ipapi."""
-        lat = self.cfg.get('quakes_lat')
-        lon = self.cfg.get('quakes_lon')
-        if isinstance(lat, (int, float)) and isinstance(lon, (int, float)):
-            return float(lat), float(lon)
-        # piggy-back on weather's geo if we already have it
-        try:
-            w = self._weather or {}
-            if w.get('lat') is not None and w.get('lon') is not None:
-                return float(w['lat']), float(w['lon'])
-        except Exception:
-            pass
-        try:
-            g = _http_json('https://ipapi.co/json/', timeout=6)
-            return float(g['latitude']), float(g['longitude'])
-        except Exception:
-            return None, None
-
-    def _quakes_loop(self):
-        # wait a moment so the weather thread can grab geo first
-        time.sleep(10)
-        while self.cfg.get('quakes_on'):
-            try:
-                self._check_quakes_once()
-            except Exception:
-                pass
-            # 5-minute poll, wake every 5s to react to config changes
-            for _ in range(60):
-                if not self.cfg.get('quakes_on'):
-                    break
-                time.sleep(5)
-        self._quakes_running = False
-
-    def _check_quakes_once(self):
-        lat, lon = self._user_latlon()
-        if lat is None: return
-        # ── debug: inject a synthetic event from a trigger file (for tests) ──
-        trigger = os.path.join(_exe_dir(), '_quake_test.json')
-        if os.path.exists(trigger):
-            try:
-                with open(trigger, 'r', encoding='utf-8') as f:
-                    fake = json.load(f)
-                os.remove(trigger)
-                # fill in derived fields if the test didn't
-                if 'dist_km' not in fake and lat is not None:
-                    fake['dist_km'] = _hypocentral_km(
-                        lat, lon, fake.get('lat', lat), fake.get('lon', lon),
-                        fake.get('depth', 10))
-                if 'mmi' not in fake:
-                    fake['mmi'] = _felt_intensity_mmi(fake.get('mag', 4.0),
-                                                     fake.get('dist_km', 10))
-                fake.setdefault('mmi_label', _mmi_label(fake['mmi']))
-                fake.setdefault('age_sec', 60)
-                fake.setdefault('source', 'TEST')
-                fake.setdefault('id', f'test-{int(time.time())}')
-                # show it
-                self._quake_active = fake
-                self._quake_active_until = time.time() + float(
-                    self.cfg.get('quakes_alert_min', 20)) * 60
-                self._quake_recent = [fake] + (self._quake_recent or [])
-                title = QUAKES_TOAST_TITLE.get(self.lang, QUAKES_TOAST_TITLE['en'])
-                body = (f"M{fake['mag']:.1f} · {fake['dist_km']:.0f} km · "
-                        f"{fake.get('region','')[:60]}").strip(' ·')
-                try:
-                    if getattr(self, '_tray', None):
-                        self._tray.notify(body, title)
-                except Exception:
-                    pass
-                return
-            except Exception:
-                pass
-        sources = []
-        if self.cfg.get('quakes_emsc'): sources.append('emsc')
-        if self.cfg.get('quakes_usgs'): sources.append('usgs')
-        if not sources: return
-        min_mag = float(self.cfg.get('quakes_min_mag', 2.5))
-        events = fetch_quakes(lat, lon, sources=tuple(sources), min_mag=min_mag)
-        max_age  = float(self.cfg.get('quakes_max_age_min', 30)) * 60.0
-        max_dist = float(self.cfg.get('quakes_max_dist_km', 100))
-        alert_min = float(self.cfg.get('quakes_alert_min', 20))
-        min_mmi = float(self.cfg.get('quakes_min_mmi', 3.0))
-        seen = set(self.cfg.get('quakes_seen', []) or [])
-        # find new felt events (must be inside the radius the user wants)
-        new_felt = []
-        for q in events:
-            if q['mmi'] < min_mmi: continue
-            if q['dist_km'] is None or q['dist_km'] > max_dist: continue
-            if q['age_sec'] is None or q['age_sec'] > max_age: continue
-            if q['id'] and q['id'] in seen: continue
-            new_felt.append(q)
-        # build the "recent felt events" list (last 20, any time, any source)
-        # also constrained by the user's radius
-        felt_all = [q for q in events
-                    if q['mmi'] >= min_mmi
-                    and q.get('dist_km') is not None
-                    and q['dist_km'] <= max_dist]
-        self._quake_recent = felt_all[:20]
-        # process new events: strongest first
-        new_felt.sort(key=lambda q: q['mmi'], reverse=True)
-        if new_felt:
-            strongest = new_felt[0]
-            self._quake_active = strongest
-            # bar dot stays lit for the configured number of minutes
-            self._quake_active_until = time.time() + alert_min * 60
-            # toast notification (unless muted)
-            if (self.cfg.get('quakes_toasts') and not self.cfg.get('quakes_mute')
-                    and getattr(self, '_tray', None)):
-                title = QUAKES_TOAST_TITLE.get(self.lang, QUAKES_TOAST_TITLE['en'])
-                body = (f"M{strongest['mag']:.1f} · {strongest['dist_km']:.0f} km · "
-                        f"{strongest.get('region','')[:60]}").strip(' ·')
-                try:
-                    self._tray.notify(body, title)
-                except Exception:
-                    pass
-            # remember all alerted IDs so we don't re-fire (cap at 200)
-            for q in new_felt:
-                if q['id']: seen.add(q['id'])
-            self.cfg['quakes_seen'] = list(seen)[-200:]
-            save_config(self.cfg)
 
     def _welcome(self):
         """First-run clickable banner — tapping it reliably opens the menu."""
@@ -8646,8 +8904,8 @@ class Widget:
         if self.cfg.get('transparent_bg'):
             try:
                 self.root.attributes('-transparentcolor', self.bg)
-            except Exception:
-                pass
+            except Exception as _swallowed:
+                _note('Widget._position', _swallowed)
 
     # ── icon loader ───────────────────────────────────────────────────
     def _matte_icon(self, path):
@@ -8681,21 +8939,21 @@ class Widget:
             img = None
         if img is None:
             try: img = tk.PhotoImage(file=path)
-            except Exception: return   # never let a missing icon crash the widget
+            except Exception as _swallowed: _note('Widget._icon', _swallowed); return   # never let a missing icon crash the widget
         self._imgs.append(img)
         tk.Label(self.root, image=img, bg=self.bg, bd=0).pack(side='left', padx=(2, 0))
 
     def _rebuild(self, _attempts=0):
         """Rebuild the UI safely (deferred until any menu grab is gone)."""
-        _log(f'_rebuild ENTER (attempts={_attempts}, rebuilding={getattr(self, "_rebuilding", False)})')
+        _trace(f'_rebuild ENTER (attempts={_attempts}, rebuilding={getattr(self, "_rebuilding", False)})')
         # re-entrancy guard: silently drop overlapping calls
         if getattr(self, '_rebuilding', False):
-            _log('  -> re-entry blocked')
+            _trace('  -> re-entry blocked')
             return
         try:
             gc = self.root.grab_current()
             if gc is not None and _attempts < 40:
-                _log(f'  -> grab={gc}, deferring')
+                _trace(f'  -> grab={gc}, deferring')
                 self.root.after(50, lambda: self._rebuild(_attempts + 1))
                 return
         except Exception as e:
@@ -8705,11 +8963,11 @@ class Widget:
             jid = getattr(self, '_pending_rebuild_after', None)
             if jid:
                 try: self.root.after_cancel(jid)
-                except Exception: pass
+                except Exception as _swallowed: _note('Widget._rebuild', _swallowed)
                 self._pending_rebuild_after = None
-        except Exception:
-            pass
-        _log('rebuild start')
+        except Exception as _swallowed:
+            _note('Widget._rebuild', _swallowed)
+        _trace('rebuild start')
         try:
             self._build_ui(); self._position()
             # Re-assert the colour key: after the window resizes, Windows can
@@ -8717,11 +8975,11 @@ class Widget:
             if self.cfg.get('transparent_bg'):
                 try:
                     self.root.attributes('-transparentcolor', self.bg)
-                except Exception:
-                    pass
-            _log('rebuild done')
-        except Exception:
-            _log('rebuild EXC:\n' + traceback.format_exc())
+                except Exception as _swallowed:
+                    _note('Widget._rebuild', _swallowed)
+            _trace('rebuild done')
+        except Exception as e:
+            _note('Widget._rebuild', e, tb=True)
         finally:
             self._rebuilding = False
 
@@ -8737,8 +8995,8 @@ class Widget:
         for w in self.root.winfo_children():
             try:
                 if isinstance(w, tk.Toplevel): continue
-            except Exception:
-                pass
+            except Exception as _swallowed:
+                _note('Widget._build_ui', _swallowed)
             w.destroy()
         self._imgs = []
         # (re)load the weather glyphs against the CURRENT chroma key —
@@ -8788,7 +9046,8 @@ class Widget:
                 lbl = tk.Label(parent, image=img, bg=self.bg, bd=0)
                 lbl.pack(side='left', padx=(2, 0))
                 return lbl
-            except Exception:
+            except Exception as _swallowed:
+                _note('Widget._build_ui.icon', _swallowed)
                 return None
 
         def val(parent, width):
@@ -8860,7 +9119,6 @@ class Widget:
         self.lbl_net_icon = None
         self._net_icon_imgs = {}
         self.lbl_power = self.lbl_power_top = None
-        self.lbl_quake = None
 
         # ── cell builders, keyed by cell id ──
         def b_cpu():
@@ -8976,15 +9234,13 @@ class Widget:
         order = list(self.cfg.get('cell_order') or DEFAULT_CELL_ORDER)
         for cid in DEFAULT_CELL_ORDER:
             if cid not in order: order.append(cid)
-        if self.cfg.get('critical_last', True) and 'quake' in order:
-            order.remove('quake'); order.append('quake')
         # Build cells in order
         for cid in order:
             if not self.cfg.get(visible_keys.get(cid, ''), False): continue
             try:
                 builders[cid]()
-            except Exception:
-                pass
+            except Exception as _swallowed:
+                _note('Widget._build_ui', _swallowed)
 
         # place cells according to orientation (no separators; tight spacing
         # to save taskbar room — just a small gap between cells)
@@ -9041,11 +9297,11 @@ class Widget:
                 n = max(1, len(self._rgb_targets))
                 for i, w in enumerate(self._rgb_targets):
                     try: w.config(fg=hsv_to_hex((self._rgb_hue + i / n) % 1.0))
-                    except Exception: pass
+                    except Exception as _swallowed: _note('Widget._animate', _swallowed)
                 comp = hsv_to_hex((self._rgb_hue + 0.5) % 1.0, 0.9, 0.5)
                 for s in self._sep_labels:
                     try: s.config(fg=comp)
-                    except Exception: pass
+                    except Exception as _swallowed: _note('Widget._animate', _swallowed)
                 if self.spark_cpu: self._draw_spark(self.spark_cpu, self._hist['cpu'])
                 if self.spark_ram: self._draw_spark(self.spark_ram, self._hist['ram'])
                 delay = 60
@@ -9058,7 +9314,10 @@ class Widget:
     def _fmt(self, delta_bytes):
         """Format a per-interval byte delta as a per-second rate (bytes or bits)."""
         secs = max(0.001, self.cfg['interval'] / 1000.0)
-        per_sec = delta_bytes / secs
+        return self._fmt_rate(delta_bytes / secs)
+
+    def _fmt_rate(self, per_sec):
+        """Format a bytes-per-second value in the user's unit (bytes or bits)."""
         if self.cfg.get('net_unit') == 'bits':
             bits = per_sec * 8
             if bits >= 1e9: return f'{bits/1e9:.1f} Gb'
@@ -9090,15 +9349,16 @@ class Widget:
             r = RECT()
             ctypes.windll.user32.GetWindowRect(self._bar_hwnd(), ctypes.byref(r))
             return r.left, r.top
-        except Exception:
+        except Exception as _swallowed:
+            _note('Widget._bar_screen_xy', _swallowed)
             return self.root.winfo_x(), self.root.winfo_y()
 
     def _set_bar_pos(self, x, y):
         """Place the bar at SCREEN coords (x, y)."""
         try:
             self.root.geometry(f'+{x}+{y}')
-        except Exception:
-            pass
+        except Exception as _swallowed:
+            _note('Widget._set_bar_pos', _swallowed)
 
     # NOTE (investigated 2026-07-23, do not retry blindly): reparenting the
     # bar INTO Shell_TrayWnd (SetParent, the TrafficMonitor approach) was
@@ -9134,14 +9394,14 @@ class Widget:
                 u.BringWindowToTop(hwnd)
             else:
                 u.SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, f)
-        except Exception:
-            pass
+        except Exception as _swallowed:
+            _note('Widget._keep_on_top', _swallowed)
 
     def _trim_loop(self):
         """Trim the working set now and every 5 minutes after."""
         _trim_working_set()
         try: self.root.after(300000, self._trim_loop)
-        except Exception: pass
+        except Exception as _swallowed: _note('Widget._trim_loop', _swallowed)
 
     def _foreground_loop(self):
         """Keep the widget reliably above all other windows."""
@@ -9223,9 +9483,9 @@ class Widget:
         try:
             for p in psutil.process_iter():
                 try: p.cpu_percent()
-                except Exception: pass
-        except Exception:
-            pass
+                except Exception as _swallowed: _note('Widget._proc_sampler', _swallowed)
+        except Exception as _swallowed:
+            _note('Widget._proc_sampler', _swallowed)
         ncpu = psutil.cpu_count() or 1
         while True:
             time.sleep(5.0)
@@ -9242,9 +9502,11 @@ class Widget:
                             continue
                         mi = p.info.get('memory_info')
                         procs.append((nm, p.cpu_percent(), mi.rss if mi else 0))
-                    except Exception:
+                    except Exception as _swallowed:
+                        _note('Widget._proc_sampler', _swallowed)
                         continue
-            except Exception:
+            except Exception as _swallowed:
+                _note('Widget._proc_sampler', _swallowed)
                 continue
             tc = sorted(procs, key=lambda x: x[1], reverse=True)[:3]
             tm = sorted(procs, key=lambda x: x[2], reverse=True)[:3]
@@ -9262,8 +9524,8 @@ class Widget:
         try:
             if time.time() - float(self.cfg.get('last_update_check', 0)) < 12 * 3600:
                 return
-        except Exception:
-            pass
+        except Exception as _swallowed:
+            _note('Widget._check_updates', _swallowed)
         try:
             data = _http_json(RELEASES_API, timeout=8)
             tag = (data.get('tag_name') or '').lstrip('vV')
@@ -9276,16 +9538,16 @@ class Widget:
                         self._tray.notify(
                             f'{DISPLAY_NAME} {tag} — ' + UPDATE_LABEL.get(self.lang, UPDATE_LABEL['en']),
                             DISPLAY_NAME)
-                except Exception:
-                    pass
-        except Exception:
-            pass
+                except Exception as _swallowed:
+                    _note('Widget._check_updates', _swallowed)
+        except Exception as _swallowed:
+            _note('Widget._check_updates', _swallowed)
 
     def _open_releases(self):
         try:
             webbrowser.open(RELEASES_URL)
-        except Exception:
-            pass
+        except Exception as _swallowed:
+            _note('Widget._open_releases', _swallowed)
 
     # ── hover tooltips ─────────────────────────────────────────────────
     def _all_widgets(self, w):
@@ -9298,7 +9560,7 @@ class Widget:
         def on_enter(_e, k=kind, x=extra, fr=frame):
             if self._tip_hide_job:
                 try: self.root.after_cancel(self._tip_hide_job)
-                except Exception: pass
+                except Exception as _swallowed: _note('Widget._bind_hover.on_enter', _swallowed)
                 self._tip_hide_job = None
             self._show_tip(k, x, fr)
         def on_leave(_e):
@@ -9307,11 +9569,37 @@ class Widget:
             w.bind('<Enter>', on_enter, add='+')
             w.bind('<Leave>', on_leave, add='+')
 
+    def _request_ping(self):
+        """Measure latency now, off the UI thread, then refresh the Network
+        tooltip if it is still open. The tooltip is the only consumer."""
+        if getattr(self, '_ping_busy', False):
+            return
+        self._ping_busy = True
+        def work():
+            try:
+                self._slow.ping_ms = _ping_latency_ms()
+                self._slow.ping_ts = time.time()
+            except Exception as _swallowed:
+                _note('Widget._request_ping', _swallowed)
+            finally:
+                self._ping_busy = False
+            try:
+                self.root.after(0, self._refresh_net_tip)
+            except Exception as _swallowed:
+                _note('Widget._request_ping', _swallowed)
+        threading.Thread(target=work, daemon=True, name='Ping').start()
+
+    def _refresh_net_tip(self):
+        tf = getattr(self, '_tip_for', None)
+        if self._tip is not None and tf and tf[0] == 'net':
+            self._show_tip(*tf)
+
     def _hide_tip(self):
         self._tip_hide_job = None
+        self._tip_for = None
         if self._tip is not None:
             try: self._tip.destroy()
-            except Exception: pass
+            except Exception as _swallowed: _note('Widget._hide_tip', _swallowed)
             self._tip = None
 
     @staticmethod
@@ -9362,7 +9650,7 @@ class Widget:
                 elif self._vram_total:
                     rows.append(('VRAM', f'{self._vram_total:.1f} GB', GREEN))
                 try: self._slow.request_gpu_temp()
-                except Exception: pass
+                except Exception as _swallowed: _note('Widget._tip_content', _swallowed)
                 gt = self._slow.nvidia_temp_c
                 if gt is None:
                     gt = self._slow.lhm_gpu_temp_c
@@ -9381,15 +9669,15 @@ class Widget:
                     if sig is not None:
                         rows.append((tp('signal'), f'{sig}%',
                                      GREEN if sig >= 60 else (ORANGE if sig >= 30 else RED)))
-                ping = getattr(self._slow, 'ping_ms', None)
+                ping = (getattr(self._slow, 'ping_ms', None)
+                        if time.time() - getattr(self._slow, 'ping_ts', 0) < 15 else None)
                 if ping is not None:
                     rows.append((tp('ping'), f'{ping} ms',
                                  GREEN if ping < 60 else (ORANGE if ping < 150 else RED)))
-                rows.append((tp('session') + ' ↑', self._hb(self._net_session['up']), BLUE))
-                rows.append((tp('session') + ' ↓', self._hb(self._net_session['dn']), GREEN))
-                io = psutil.net_io_counters()
-                rows.append((tp('total') + ' ↑', self._hb(io.bytes_sent), None))
-                rows.append((tp('total') + ' ↓', self._hb(io.bytes_recv), None))
+                rows.append((tp('session') + ' ↑', self._hb(self._net.session_up), BLUE))
+                rows.append((tp('session') + ' ↓', self._hb(self._net.session_dn), GREEN))
+                rows.append((tp('total') + ' ↑', self._hb(self._net.total_up), None))
+                rows.append((tp('total') + ' ↓', self._hb(self._net.total_dn), None))
             elif kind == 'disk':
                 title = (self.t('disk') + ' I/O', '')
                 rows.append((tp('perdisk'), '', None))
@@ -9458,21 +9746,6 @@ class Widget:
                         rows.append((self._gpu_name_cached[:30], '', None))
                 else:
                     rows.append((tp('loading'), '', None))
-            elif kind == 'quake':
-                title = (QUAKES_LABEL.get(self.lang, QUAKES_LABEL['en']), '')
-                q = self._quake_active
-                if q is not None:
-                    rows.append(('Magnitude', f"M{q['mag']:.1f}", ORANGE))
-                    rows.append(('Distance', f"{q['dist_km']:.0f} km", None))
-                    rows.append(('Intensity', f"MMI {q['mmi']:.1f} ({q['mmi_label']})", PURPLE))
-                    if q.get('region'):
-                        rows.append(('Region', str(q['region'])[:40], None))
-                    if q.get('age_sec') is not None:
-                        ageMin = q['age_sec'] / 60
-                        rows.append(('Time', f"{ageMin:.0f} min ago", None))
-                    rows.append(('Source', q.get('source', '—'), None))
-                else:
-                    rows.append(('No active alert', '', None))
         except Exception:
             rows.append(('—', '', None))
         return title, rows, bars
@@ -9482,6 +9755,9 @@ class Widget:
             return
         title, rows, bars = self._tip_content(kind, extra)
         self._hide_tip()
+        self._tip_for = (kind, extra, frame)
+        if kind == 'net' and time.time() - getattr(self._slow, 'ping_ts', 0) > 10:
+            self._request_ping()          # arrives in ~15 ms and redraws this tip
         PANEL='#161b22'; LINE='#2d333b'; GREY='#8b96a2'; WHITE='#ecf2f8'
         tcol = {'cpu':'#58a6ff','ram':'#3fb950','gpu':'#39d3c3','net':'#58a6ff',
                 'disk':'#a371f7','diskspace':'#a371f7','batt':'#3fb950',
@@ -9489,7 +9765,7 @@ class Widget:
         tip = tk.Toplevel(self.root)
         tip.overrideredirect(True); tip.attributes('-topmost', True)
         try: tip.attributes('-alpha', 0.97)
-        except Exception: pass
+        except Exception as _swallowed: _note('Widget._show_tip', _swallowed)
         outer = tk.Frame(tip, bg=LINE); outer.pack()
         inner = tk.Frame(outer, bg=PANEL); inner.pack(padx=1, pady=1)
         hdr = tk.Frame(inner, bg=PANEL); hdr.pack(fill='x', padx=12, pady=(9, 5))
@@ -9541,8 +9817,9 @@ class Widget:
     def _update(self):
         try:
             self._update_tick()
-        except Exception:
-            _log('update tick EXC:\n' + traceback.format_exc())
+        except Exception as e:
+            # runs twice a second: a persistent error must not flood the log
+            _note('Widget._update_tick', e, tb=True)
         # When a cell's text width changes (power watts, battery's ⚡ on plug-in,
         # GPU —/%, …) the layered window resizes. Windows does NOT
         # re-key the newly exposed strip, so a black band flashes unless we
@@ -9556,14 +9833,14 @@ class Widget:
                 if w != getattr(self, '_last_bar_w', None):
                     self._last_bar_w = w
                     self.root.attributes('-transparentcolor', self.bg)
-            except Exception:
-                pass
+            except Exception as _swallowed:
+                _note('Widget._update', _swallowed)
         # ALWAYS reschedule, no matter what: a single bad sample (a flaky
         # PDH counter, a transient psutil error) must not freeze the widget.
         try:
             self.root.after(self.cfg.get('interval', 1000), self._update)
-        except Exception:
-            pass
+        except Exception as _swallowed:
+            _note('Widget._update', _swallowed)
 
     def _update_tick(self):
         self._follow_taskbar()
@@ -9583,8 +9860,8 @@ class Widget:
             self._cap_checked = _now
             try:
                 self._check_data_cap()
-            except Exception:
-                pass
+            except Exception as _swallowed:
+                _note('Widget._update_tick', _swallowed)
         self._perf_alert('cpu', cpu, 90, 80,
                           PERF_ALERT_TITLE.get(self.lang, PERF_ALERT_TITLE['en'])['cpu'],
                           f'{cpu:.0f}%')
@@ -9627,16 +9904,12 @@ class Widget:
                 self.lbl_ram.config(text=txt, fg=self._load_color(ram))
             self._draw_spark(self.spark_ram, self._hist['ram'])
         if self.lbl_up:
-            net = psutil.net_io_counters()
-            up = net.bytes_sent - self._prev_net.bytes_sent
-            dn = net.bytes_recv - self._prev_net.bytes_recv
-            self._prev_net = net
-            self._net_session['up'] += max(0, up)
-            self._net_session['dn'] += max(0, dn)
+            # sampled on the NetSampler thread (the OS call is ~5 ms)
+            up_bps, dn_bps = self._net.up_bps, self._net.dn_bps
             # pad to 7 (the max _fmt width, e.g. "12.5 Mb"/"10.5 Gb") so the
             # monospaced, fixed-width=7 net cells never resize → no black strip
-            self.lbl_up.config(text=f'{self._fmt(up):>7}')
-            self.lbl_dn.config(text=f'{self._fmt(dn):>7}')
+            self.lbl_up.config(text=f'{self._fmt_rate(up_bps):>7}')
+            self.lbl_dn.config(text=f'{self._fmt_rate(dn_bps):>7}')
             # swap the cell icon when the connection type changes (Wi-Fi ⇄ cable)
             kind = getattr(self._slow, 'net_kind', None)
             if (self.lbl_net_icon is not None and self._net_icon_imgs
@@ -9644,7 +9917,7 @@ class Widget:
                 img = self._net_icon_imgs.get(kind) or self._net_icon_imgs.get(None)
                 if img is not None:
                     try: self.lbl_net_icon.config(image=img)
-                    except Exception: pass
+                    except Exception as _swallowed: _note('Widget._update_tick', _swallowed)
                 self._net_kind_shown = kind
         if self.lbl_disk_r:
             try:
@@ -9655,8 +9928,8 @@ class Widget:
                     self.lbl_disk_r.config(text=f'{self._fmt(rd):>6}')
                     self.lbl_disk_w.config(text=f'{self._fmt(wr):>6}')
                 self._prev_disk = d
-            except Exception:
-                pass
+            except Exception as _swallowed:
+                _note('Widget._update_tick', _swallowed)
         # per-disk I/O rates (for the disk tooltip)
         if self.cfg.get('tooltips') and (self.lbl_disk_r or self._disk_lbls):
             try:
@@ -9671,8 +9944,8 @@ class Widget:
                                         (v.write_bytes - p.write_bytes) / secs)
                     self._perdisk_rates = rates
                 self._perdisk_prev = pd
-            except Exception:
-                pass
+            except Exception as _swallowed:
+                _note('Widget._update_tick', _swallowed)
         # per-drive space % — throttled to every 5s (free space moves slowly,
         # and disk_usage hits the filesystem on every call)
         if self._disk_lbls:
@@ -9684,8 +9957,8 @@ class Widget:
                         u = psutil.disk_usage(drive + '\\')
                         lbl.config(text=f'{drive[0]} {u.percent:.0f}%',
                                    fg=self._load_color(u.percent))
-                    except Exception:
-                        pass
+                    except Exception as _swallowed:
+                        _note('Widget._update_tick', _swallowed)
         if self.lbl_batt:
             b = self._slow.battery  # pre-fetched by _SlowPoller
             if b is not None:
@@ -9744,19 +10017,6 @@ class Widget:
                 self.lbl_power.config(text=detail)
             else:
                 self.lbl_power.config(text=f'{total:>3} W')
-        # ── earthquake dot: blink while active, clear when expired ──
-        if getattr(self, 'lbl_quake', None):
-            active = (self._quake_active is not None
-                      and time.time() < self._quake_active_until
-                      and not self.cfg.get('quakes_mute'))
-            if active:
-                # gentle blink driven by the existing animation tick
-                col = '#f85149' if (int(time.time() * 2) % 2 == 0) else '#7a1d1d'
-                self.lbl_quake.config(text='🚨', fg=col)
-            else:
-                self.lbl_quake.config(text='')
-                if self._quake_active and time.time() >= self._quake_active_until:
-                    self._quake_active = None
         # (reschedule happens in the _update() wrapper above, in a finally-like
         # path so a failing tick can't freeze the loop)
 
@@ -9811,7 +10071,7 @@ class Widget:
     def _update_once(self):
         # refresh values immediately after rebuild
         try: self.lbl_cpu and self.lbl_cpu.config(text='..')
-        except Exception: pass
+        except Exception as _swallowed: _note('Widget._update_once', _swallowed)
 
     def _set_opacity(self, v):
         self._set('opacity', v); self.root.attributes('-alpha', v)
@@ -9828,7 +10088,7 @@ class Widget:
         others = [k for k in all_keys if k != key]
         if self.cfg.get(key) and not any(self.cfg.get(o) for o in others):
             return
-        _log(f'toggle_metric {key} -> {not self.cfg.get(key)}')
+        _trace(f'toggle_metric {key} -> {not self.cfg.get(key)}')
         self._set(key, not self.cfg.get(key))
         self._pending_rebuild = True
         if key == 'show_gpu' and self.cfg.get('show_gpu'):
@@ -9968,8 +10228,8 @@ class Widget:
         # the popup menu won't appear. Force focus, then release the grab.
         try:
             self.root.focus_force()
-        except Exception:
-            pass
+        except Exception as _swallowed:
+            _note('Widget._popup_menu', _swallowed)
         try:
             m.tk_popup(px, py)
         finally:
@@ -10014,15 +10274,15 @@ class Widget:
         except Exception:
             try:
                 webbrowser.open(f'https://apps.microsoft.com/detail/{pid}')
-            except Exception:
-                pass
+            except Exception as _swallowed:
+                _note('Widget._open_review', _swallowed)
 
     def _show_donate(self):
         """A small donation card with PayPal & Revolut buttons."""
         try:
             self._donate_impl()
-        except Exception:
-            pass
+        except Exception as _swallowed:
+            _note('Widget._show_donate', _swallowed)
 
     def _donate_impl(self):
         win = tk.Toplevel(self.root)
@@ -10041,7 +10301,7 @@ class Widget:
 
         def open_link(url):
             try: webbrowser.open(url)
-            except Exception: pass
+            except Exception as _swallowed: _note('Widget._donate_impl.open_link', _swallowed)
 
         def mkbtn(parent, text, bg, url):
             b = tk.Label(parent, text=text, fg='white', bg=bg,
@@ -10099,8 +10359,8 @@ class Widget:
                     subprocess.Popen([sys.executable])
                 else:
                     subprocess.Popen([sys.executable, os.path.abspath(__file__)])
-            except Exception:
-                pass
+            except Exception as _swallowed:
+                _note('Widget.run', _swallowed)
 
 if __name__ == '__main__':
     if already_running():

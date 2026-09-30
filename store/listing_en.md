@@ -67,14 +67,14 @@ PulseDeck is **free**. If it earns a spot on your taskbar, a Donate link in the 
 Made by Fokion Papanikolaou.
 
 ## What's new (release notes)
-**v2.13.0 — history, data usage and three new tools**
-• **History** — CPU, RAM, GPU and network charted over the last hour, 24 hours or 7 days, kept across restarts. Periods when PulseDeck wasn't running show as gaps rather than invented data
-• **Data usage** — up/down totals for today, this month and the last 30 days, with an optional monthly limit that warns at 80% and 100%
-• **Drive health** — SMART status for every physical disk, plus temperature and wear where Windows allows reading them
-• **Colour picker** (Win+Shift+C) — magnify any pixel on screen and copy its colour as HEX
-• **Always on top** (Win+Ctrl+T) — pin the window you're using above all others
-• **Bulk rename** — find & replace or a regular expression across many files, with a full preview before anything changes
-• Fixes: NVMe drives are no longer listed as "SCSI", and SSD vs HDD now comes from Windows instead of being guessed from the model name
+**v2.14.0 — who did that?**
+• **Spike culprits** — hover the History graph during a CPU or RAM spike to see which program caused it (e.g. "MsMpEng.exe 81%"); spikes are marked so you know where to look
+• **Speed test** (Tools → Network) — download, upload, ping and jitter against Cloudflare, with your recent results; it tells you up front how much data it uses
+• **About twice as fast to start and much lighter on every refresh** — the slow network counter read moved off the screen-drawing thread
+• **Diagnostics log** (About → Diagnostics log) — silent when all is well, records what went wrong when something does, for bug reports
+• Latency is only measured while you look at the Network tooltip, instead of every 3 seconds all day
+• Fixes: a damaged settings file can no longer stop the app from starting; settings are saved safely even if the PC loses power mid-save; the per-drive space cells have a picker again (Metrics tab)
+
 
 ## Search keywords (up to 7)
 system monitor · cpu gpu ram monitor · taskbar widget · dns benchmark · pc tools · network monitor · hardware monitor
