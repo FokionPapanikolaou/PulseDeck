@@ -67,6 +67,10 @@ PulseDeck is **free**. If it earns a spot on your taskbar, a Donate link in the 
 Made by Fokion Papanikolaou.
 
 ## What's new (release notes)
+**v2.14.1**
+• Fixed: opening the System tab, running the speed test or the DNS test, or hovering the Network tooltip no longer leaves a small Windows resource behind every time
+• Fixed: the AMD/Intel GPU-temperature reader no longer starts twice
+
 **v2.14.0 — who did that?**
 • **Spike culprits** — hover the History graph during a CPU or RAM spike to see which program caused it (e.g. "MsMpEng.exe 81%"); spikes are marked so you know where to look
 • **Speed test** (Tools → Network) — download, upload, ping and jitter against Cloudflare, with your recent results; it tells you up front how much data it uses

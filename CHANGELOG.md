@@ -6,6 +6,10 @@ All notable changes to **PulseDeck** are documented here.
 
 ## [Unreleased]
 
+---
+
+## [2.14.1] — 2026-09-30
+
 ### Fixed
 - **Background tasks no longer leave a system handle behind every time.**
   Opening *Settings → System*, running the speed test or the DNS benchmark, and

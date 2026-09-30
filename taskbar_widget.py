@@ -22,7 +22,7 @@ import random
 
 APP_NAME = 'PulseDeck'       # internal identity: config dir, mutex, registry, Store package
 DISPLAY_NAME = 'PulseDeck'   # user-visible product name (rebrand)
-VERSION  = '2.14.0'
+VERSION  = '2.14.1'
 
 # ── Diagnostics log ────────────────────────────────────────────────────
 # Always on, but quiet: a healthy session writes nothing at all. What does
