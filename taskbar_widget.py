@@ -8323,6 +8323,10 @@ class Widget:
         # release the cold start-up pages once the UI has settled, then
         # keep doing it slowly (opening/closing Settings allocates a lot)
         self.root.after(6000, self._trim_loop)
+        # and once more after a minute: the weather fetch and update check
+        # (the TLS certificate store alone is tens of MB) usually land after
+        # the first trim and would otherwise stay resident until the 5-minute one
+        self.root.after(60000, _trim_working_set)
 
         # First launch: a Windows tray notification points to the settings icon.
         if self._first_run:
