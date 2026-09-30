@@ -7,6 +7,7 @@ import winreg
 import json
 import subprocess
 import threading
+import queue
 import time
 import webbrowser
 import urllib.request
@@ -1947,8 +1948,16 @@ def _nvidia_smi_power():
 
 _LHM_OK = None      # None = untested, False = unavailable (never retry), True = works
 _LHM_COMPUTER = None   # cached LibreHardwareMonitor.Hardware.Computer instance
+# LhmWarmup and _SlowPoller both call in on the first request, and the CLR
+# load (~0.8 s) outlasts a poll tick: unserialized, both opened a Computer
+# and the first one was never closed
+_LHM_LOCK = threading.Lock()
 
 def _lhm_gpu_temp():
+    with _LHM_LOCK:
+        return _lhm_gpu_temp_locked()
+
+def _lhm_gpu_temp_locked():
     """Return AMD/Intel GPU core temperature in °C via LibreHardwareMonitor,
     or None. NVIDIA GPUs use nvidia-smi instead (exact, no admin, cheaper) —
     this is the fallback for vendors nvidia-smi can't cover.
@@ -5039,6 +5048,37 @@ def _trim_working_set():
     except Exception as _swallowed:
         _note('_trim_working_set', _swallowed)
 
+def _ui_pump(widget, inbox, busy, poll_ms=100):
+    """Run the callables worker threads put on `inbox`, on the Tk thread.
+
+    A worker must never call Tk itself - not even after(0, ...). On Windows,
+    Tcl gives every thread that calls into it a condition-variable Event and
+    frees it only for threads Tcl created, so each short-lived worker left
+    one kernel Event handle behind for good (Settings -> System leaked one
+    per open). Instead the Tk side polls, and only while busy() is true or
+    work is still queued; it stops once `widget` is destroyed.
+    """
+    def tick():
+        try:
+            if not widget.winfo_exists():
+                return
+        except Exception:
+            return
+        while True:
+            try:
+                fn = inbox.get_nowait()
+            except queue.Empty:
+                break
+            try:
+                fn()
+            except Exception as _swallowed:
+                _note('_ui_pump', _swallowed)
+        # busy() is read after draining: if the worker has finished, all it
+        # ever queued is already visible, so nothing can be stranded
+        if busy() or not inbox.empty():
+            widget.after(poll_ms, tick)
+    widget.after(poll_ms, tick)
+
 class _NetSampler(threading.Thread):
     """Samples the network counters off the UI thread.
 
@@ -6423,12 +6463,11 @@ class CustomizeWindow:
                 status.config(text=msg, fg=T['muted'] if err == 'cancelled' else T['orange'])
                 finish()
 
+        inbox = queue.SimpleQueue()
         def on_update(d):
-            # called from the test's worker threads - hop onto the UI thread
-            try:
-                self._win.after(0, lambda: apply(d))
-            except Exception as _swallowed:
-                _note('CustomizeWindow._tab_speedtest.on_update', _swallowed)
+            # called from the test's threads - queued for the UI thread,
+            # which _ui_pump drains (a worker must not call Tk itself)
+            inbox.put(lambda: apply(d))
 
         def finish():
             state['test'] = None
@@ -6448,6 +6487,7 @@ class CustomizeWindow:
             t = SpeedTest(on_update)
             state['test'] = t
             t.start()
+            _ui_pump(self._win, inbox, t.is_alive)
 
         btn.bind('<Button-1>', start)
         # leaving the tab (or closing Settings) must not leave a test running
@@ -6841,13 +6881,18 @@ class CustomizeWindow:
                     self._win.after(500, _tick)
             except Exception as _swallowed: _note('CustomizeWindow._tab_system._tick', _swallowed)
         self._win.after(500, _tick)
-        # Collect in a thread so the UI stays responsive (WMI calls take ~1s)
+        # Collect in a thread so the UI stays responsive (WMI calls take ~1s);
+        # the result comes back through _ui_pump, never a Tk call from _bg
+        inbox = queue.SimpleQueue()
         def _bg():
             info = collect_system_info()
-            self._sysinfo = info          # cache for instant view switching
-            try: self._win.after(0, lambda: self._render_system(info, loading))
-            except Exception as _swallowed: _note('CustomizeWindow._tab_system._bg', _swallowed)
-        threading.Thread(target=_bg, daemon=True).start()
+            def _show():
+                self._sysinfo = info      # cache for instant view switching
+                self._render_system(info, loading)
+            inbox.put(_show)
+        t = threading.Thread(target=_bg, daemon=True)
+        t.start()
+        _ui_pump(self._win, inbox, t.is_alive)
 
     def _render_system(self, info, loading_lbl):
         # The hardware scan runs in a background thread; by the time it calls
@@ -7965,18 +8010,17 @@ class CustomizeWindow:
             try: canvas.configure(scrollregion=canvas.bbox('all'))
             except Exception as _swallowed: _note('CustomizeWindow._tab_dns._render', _swallowed)
 
+        inbox = queue.SimpleQueue()   # worker -> UI thread, see _ui_pump
         def _worker():
             ipv6 = _ipv6_available()
             results = []
             total = len(DNS_PROVIDERS)
             for i, (name, v4s, v6s) in enumerate(DNS_PROVIDERS):
-                try:
-                    self._win.after(0, lambda i=i: status.config(
-                        text=f"{L.get('dns_testing', 'Testing…')}  {i+1}/{total}")
-                        if status.winfo_exists() else None)
-                except Exception as _swallowed:
-                    _note('CustomizeWindow._tab_dns._worker', _swallowed)
+                if self._win is None:
                     return   # window closed
+                inbox.put(lambda i=i: status.config(
+                    text=f"{L.get('dns_testing', 'Testing…')}  {i+1}/{total}")
+                    if status.winfo_exists() else None)
                 a = benchmark_dns(v4s[0], False)
                 b = benchmark_dns(v6s[0], True) if ipv6 else None
                 results.append([name, v4s[0], a, v6s[0], b, False])
@@ -7994,8 +8038,7 @@ class CustomizeWindow:
                 status.config(text='')
                 find_btn.config(text='🔄  ' + L.get('dns_again', 'Test again'))
                 self._dns_running = False
-            try: self._win.after(0, _finish)
-            except Exception as _swallowed: _note('CustomizeWindow._tab_dns._worker', _swallowed)
+            inbox.put(_finish)
 
         def _start(_e=None):
             if getattr(self, '_dns_running', False):
@@ -8003,7 +8046,9 @@ class CustomizeWindow:
             self._dns_running = True
             status.config(text=L.get('dns_testing', 'Testing…'))
             find_btn.config(text='⏳  ' + L.get('dns_testing', 'Testing…'))
-            threading.Thread(target=_worker, daemon=True).start()
+            t = threading.Thread(target=_worker, daemon=True)
+            t.start()
+            _ui_pump(self._win, inbox, t.is_alive)
         find_btn.bind('<Button-1>', _start)
 
     def _tab_startup(self):
@@ -9579,6 +9624,7 @@ class Widget:
         if getattr(self, '_ping_busy', False):
             return
         self._ping_busy = True
+        inbox = queue.SimpleQueue()   # worker -> UI thread, see _ui_pump
         def work():
             try:
                 self._slow.ping_ms = _ping_latency_ms()
@@ -9587,11 +9633,10 @@ class Widget:
                 _note('Widget._request_ping', _swallowed)
             finally:
                 self._ping_busy = False
-            try:
-                self.root.after(0, self._refresh_net_tip)
-            except Exception as _swallowed:
-                _note('Widget._request_ping', _swallowed)
-        threading.Thread(target=work, daemon=True, name='Ping').start()
+            inbox.put(self._refresh_net_tip)
+        t = threading.Thread(target=work, daemon=True, name='Ping')
+        t.start()
+        _ui_pump(self.root, inbox, t.is_alive)
 
     def _refresh_net_tip(self):
         tf = getattr(self, '_tip_for', None)

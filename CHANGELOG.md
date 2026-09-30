@@ -6,6 +6,20 @@ All notable changes to **PulseDeck** are documented here.
 
 ## [Unreleased]
 
+### Fixed
+- **Background tasks no longer leave a system handle behind every time.**
+  Opening *Settings → System*, running the speed test or the DNS benchmark, and
+  hovering the Network tooltip each start a short-lived helper that passed its
+  result back to the window in a way that was never cleaned up: one kernel
+  event handle left allocated per use, for good (20 opens of the System tab:
+  +16 to +18). Each one is tiny, but in a widget that stays running for weeks
+  the count only ever went up. The helpers now hand their results over without
+  touching the window themselves, and the count stays flat.
+- **The AMD/Intel GPU-temperature reader was opened twice** the first time a
+  temperature was needed: the warm-up and the regular poll both started it,
+  because loading .NET takes longer than one poll tick, and the first copy was
+  never closed. It is opened once now.
+
 ---
 
 ## [2.14.0] — 2026-09-30 — *Who did that?*
