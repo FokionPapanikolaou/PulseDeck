@@ -21,7 +21,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D6?logo=windows&logoColor=white" alt="Windows">
-  <img src="https://img.shields.io/badge/version-2.14.1-3fb950" alt="v2.14.1">
+  <img src="https://img.shields.io/badge/version-2.15.0-3fb950" alt="v2.15.0">
   <img src="https://img.shields.io/badge/price-Free-brightgreen" alt="Free">
   <img src="https://img.shields.io/badge/languages-8-blueviolet" alt="8 languages">
   <img src="https://img.shields.io/badge/themes-10-orange" alt="10 themes">
@@ -47,6 +47,7 @@
 - **RAM** — usage % and **used / total GB**
 - **GPU** — usage % + **VRAM used / total GB** *(via Windows performance counters — no extra tools)*
 - **Network** — real-time upload ▲ / download ▼ (MB/s **or** Mbps)
+- **Wi-Fi** — signal %, with band, channel and link speed on hover
 - **Disk** — read **R** / write **W** speed, **+ per-drive space %** (C:, D: …)
 - **Battery** — % with ⚡ charging indicator (laptops only)
 
@@ -66,7 +67,18 @@ Point at any metric for a popup panel:
 - **Drive health** — SMART status per physical disk (temperature and wear too,
   where Windows allows reading them).
 
-### 🆕 Who did that? · Speed test (v2.14)
+### 🆕 Is it the internet, or is it me? (v2.15)
+- **Packet loss & outages** — a tiny ping every 3 s measures packet loss and
+  jitter, and the History tab charts every outage: *"14:02 – 14:09 · 7 min ·
+  Internet down"* (or *Network disconnected* when it was your own Wi-Fi/cable).
+- **Wi-Fi on the bar** — signal strength; hover for network, band (2.4/5/6 GHz),
+  channel, Wi-Fi generation and link speed.
+- **What's filling the disk?** — folder sizes with bars, click to dig in,
+  plus the 50 largest files. Never deletes anything.
+- **Battery health** — how much capacity your laptop battery has left, and how
+  it fell over time.
+
+### Who did that? · Speed test (v2.14)
 - **Spike culprits** — during a CPU or RAM spike the History tab records which
   process caused it; hover the graph to see e.g. `⚠ MsMpEng.exe 81%`.
 - **Speed test** — download, upload, ping and jitter against Cloudflare, with
@@ -230,16 +242,23 @@ python make_promo.py
 #    hook finds the _tcl_data / _tk_data folders it expects.
 python -c "import zipfile,sys,os;st='build_tcl9';[zipfile.ZipFile(os.path.join(sys.prefix,'tcl',z)).extractall(st) for z in os.listdir(os.path.join(sys.prefix,'tcl')) if z.startswith(('libtcl','libtk')) and z.endswith('.zip')]"
 
-# 4) build the portable exe
-pyinstaller --noconfirm --onefile --windowed --name PulseDeck `
-  --icon app.ico --add-data "icons;icons" --add-data "app.ico;." --add-data "lhm;lhm" `
-  --add-data "build_tcl9/tcl_library;_tcl_data" --add-data "build_tcl9/tk_library;_tk_data" `
-  --hidden-import pystray._win32 --hidden-import clr_loader --hidden-import pythonnet `
-  taskbar_widget.py
+# 4) build: --onefile for the portable exe (dist\PulseDeck.exe),
+#    --onedir for the installer and Store package (dist\PulseDeck\ + _internal\)
+$opts = @('--noconfirm', '--windowed', '--name', 'PulseDeck',
+  '--icon', 'app.ico', '--add-data', 'icons;icons', '--add-data', 'app.ico;.', '--add-data', 'lhm;lhm',
+  '--add-data', 'build_tcl9/tcl_library;_tcl_data', '--add-data', 'build_tcl9/tk_library;_tk_data',
+  '--hidden-import', 'pystray._win32', '--hidden-import', 'clr_loader', '--hidden-import', 'pythonnet')
+pyinstaller @opts --onefile taskbar_widget.py
+pyinstaller @opts --onedir  taskbar_widget.py
 
-# 5) (optional) build the installer — needs Inno Setup 6
+# 5) (optional) build the installer from dist\PulseDeck\ — needs Inno Setup 6
 ISCC installer.iss
 ```
+
+The installer and the Store package use the one-folder build because it runs
+from its own folder; the single-file build unpacks itself to `%TEMP%` on every
+start, where Storage Sense and temp cleaners can delete files while it runs
+(it notices and restarts itself if that happens).
 
 `lhm/` bundles [LibreHardwareMonitorLib](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor)
 (MPL 2.0, used unmodified) for AMD/Intel GPU temperature — no admin needed

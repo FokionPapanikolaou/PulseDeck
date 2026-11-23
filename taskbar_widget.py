@@ -22,7 +22,8 @@ import random
 
 APP_NAME = 'PulseDeck'       # internal identity: config dir, mutex, registry, Store package
 DISPLAY_NAME = 'PulseDeck'   # user-visible product name (rebrand)
-VERSION  = '2.14.1'
+VERSION  = '2.15.0'
+_START_MONO = time.monotonic()   # process start, for "just restarted?" checks
 
 # ── Diagnostics log ────────────────────────────────────────────────────
 # Always on, but quiet: a healthy session writes nothing at all. What does
@@ -1713,12 +1714,468 @@ POWERTOOLS_I18N = {
 for _lng, _d in POWERTOOLS_I18N.items():
     CUST_LABELS.setdefault(_lng, {}).update(_d)
 
+# ── Disk usage / Battery health / Wi-Fi / Connection labels (v2.15) ───
+V215_I18N = {
+ 'en': {
+  't_diskusage': "What's filling the disk?",
+  'desc__t_diskusage': 'See which folders and files take up the most space. Nothing is deleted.',
+  't_batthealth': 'Battery health',
+  'desc__t_batthealth': "How much of its original capacity your battery still holds, and how that changed over time.",
+  'du_sub': 'Pick a drive or folder. Click a folder to look inside, ↗ opens it in File Explorer. PulseDeck never deletes anything here.',
+  'du_pick': 'Pick a drive or folder to scan.',
+  'du_folder': 'Folder…',
+  'du_scanning': 'Scanning… {n} files · {size}',
+  'du_done': '{size} in {n} files · scanned in {s} s',
+  'du_cloud': '{size} more is online-only (OneDrive) and takes no space here.',
+  'du_skipped': "{n} folders couldn't be read (Windows keeps them private).",
+  'du_up': 'Up',
+  'du_files_here': 'Files in this folder',
+  'du_folders': 'Folders',
+  'du_largest': 'Largest files',
+  'bh_sub': "Read from Windows' own battery report. No admin rights needed.",
+  'bh_loading': 'Reading the battery report…',
+  'bh_err': "Windows couldn't produce a battery report.",
+  'bh_none': 'No battery found.',
+  'bh_health': 'Health',
+  'bh_good': 'Good',
+  'bh_fair': 'Fair: noticeably worn',
+  'bh_poor': 'Worn: a replacement is worth considering',
+  'bh_design': 'Design capacity',
+  'bh_full': 'Full charge capacity',
+  'bh_wear': 'Wear',
+  'bh_cycles': 'Charge cycles',
+  'bh_model': 'Battery',
+  'bh_history': 'Capacity over time',
+  'bh_report': 'Save the full Windows battery report',
+  'wf_ssid': 'Network',
+  'wf_band': 'Band',
+  'wf_channel': 'channel',
+  'wf_standard': 'Standard',
+  'wf_link': 'Link speed',
+  'wf_hidden': 'Network name hidden: allow location for desktop apps to show it',
+  'wf_none': 'Not connected to Wi-Fi',
+  'cn_title': 'Connection',
+  'cn_monitor': 'Monitor the connection (packet loss and outages)',
+  'cn_hint': 'Sends a tiny ping to 1.1.1.1 every 3 seconds (8.8.8.8 if that one doesn\'t answer), about 2 MB a day. Results stay on this PC.',
+  'cn_collect': 'Collecting: the first minutes appear shortly.',
+  'cn_ping_avg': 'avg ping',
+  'cn_loss': 'packet loss',
+  'cn_loss5': 'Packet loss (5 min)',
+  'cn_jitter': 'jitter',
+  'cn_outages': '{n} outages',
+  'cn_recent': 'Recent outages',
+  'cn_ongoing': 'ongoing',
+  'cn_offline': 'Offline',
+  'cn_since': 'since {t}',
+  'cn_cause_net': 'Internet down',
+  'cn_cause_local': 'Network disconnected',
+  'cn_min': '{m} min',
+  'cn_sec': '{s} s',
+ },
+ 'el': {
+  't_diskusage': 'Τι γεμίζει τον δίσκο;',
+  'desc__t_diskusage': 'Δες ποιοι φάκελοι και ποια αρχεία πιάνουν τον περισσότερο χώρο. Δεν σβήνεται τίποτα.',
+  't_batthealth': 'Υγεία μπαταρίας',
+  'desc__t_batthealth': 'Πόση από την αρχική της χωρητικότητα κρατάει ακόμα η μπαταρία σου, και πώς άλλαξε με τον καιρό.',
+  'du_sub': 'Διάλεξε δίσκο ή φάκελο. Κλικ σε φάκελο για να δεις μέσα του, το ↗ τον ανοίγει στην Εξερεύνηση αρχείων. Το PulseDeck δεν σβήνει τίποτα εδώ.',
+  'du_pick': 'Διάλεξε δίσκο ή φάκελο για σάρωση.',
+  'du_folder': 'Φάκελος…',
+  'du_scanning': 'Σάρωση… {n} αρχεία · {size}',
+  'du_done': '{size} σε {n} αρχεία · σάρωση σε {s} δ',
+  'du_cloud': 'Άλλα {size} είναι μόνο online (OneDrive) και δεν πιάνουν χώρο εδώ.',
+  'du_skipped': '{n} φάκελοι δεν διαβάστηκαν (τους κρατάνε ιδιωτικούς τα Windows).',
+  'du_up': 'Πάνω',
+  'du_files_here': 'Αρχεία σε αυτόν τον φάκελο',
+  'du_folders': 'Φάκελοι',
+  'du_largest': 'Μεγαλύτερα αρχεία',
+  'bh_sub': 'Από την αναφορά μπαταρίας των ίδιων των Windows. Χωρίς δικαιώματα διαχειριστή.',
+  'bh_loading': 'Ανάγνωση της αναφοράς μπαταρίας…',
+  'bh_err': 'Τα Windows δεν μπόρεσαν να βγάλουν αναφορά μπαταρίας.',
+  'bh_none': 'Δεν βρέθηκε μπαταρία.',
+  'bh_health': 'Υγεία',
+  'bh_good': 'Καλή',
+  'bh_fair': 'Μέτρια: έχει φθαρεί αισθητά',
+  'bh_poor': 'Φθαρμένη: αξίζει να σκεφτείς αντικατάσταση',
+  'bh_design': 'Χωρητικότητα εργοστασίου',
+  'bh_full': 'Χωρητικότητα πλήρους φόρτισης',
+  'bh_wear': 'Φθορά',
+  'bh_cycles': 'Κύκλοι φόρτισης',
+  'bh_model': 'Μπαταρία',
+  'bh_history': 'Χωρητικότητα με τον καιρό',
+  'bh_report': 'Αποθήκευση πλήρους αναφοράς μπαταρίας των Windows',
+  'wf_ssid': 'Δίκτυο',
+  'wf_band': 'Ζώνη',
+  'wf_channel': 'κανάλι',
+  'wf_standard': 'Πρότυπο',
+  'wf_link': 'Ταχύτητα σύνδεσης',
+  'wf_hidden': 'Το όνομα δικτύου κρύβεται: επίτρεψε την τοποθεσία για εφαρμογές desktop',
+  'wf_none': 'Δεν υπάρχει σύνδεση Wi-Fi',
+  'cn_title': 'Σύνδεση',
+  'cn_monitor': 'Παρακολούθηση σύνδεσης (απώλεια πακέτων και διακοπές)',
+  'cn_hint': 'Στέλνει ένα μικροσκοπικό ping στο 1.1.1.1 κάθε 3 δευτερόλεπτα (στο 8.8.8.8 αν εκείνο δεν απαντά), περίπου 2 MB τη μέρα. Τα αποτελέσματα μένουν σε αυτό το PC.',
+  'cn_collect': 'Συλλογή δεδομένων: τα πρώτα λεπτά εμφανίζονται σύντομα.',
+  'cn_ping_avg': 'μέσο ping',
+  'cn_loss': 'απώλεια πακέτων',
+  'cn_loss5': 'Απώλεια πακέτων (5 λεπτά)',
+  'cn_jitter': 'jitter',
+  'cn_outages': '{n} διακοπές',
+  'cn_recent': 'Πρόσφατες διακοπές',
+  'cn_ongoing': 'σε εξέλιξη',
+  'cn_offline': 'Χωρίς σύνδεση',
+  'cn_since': 'από τις {t}',
+  'cn_cause_net': 'Έπεσε το internet',
+  'cn_cause_local': 'Αποσυνδέθηκε το δίκτυο',
+  'cn_min': '{m} λεπτά',
+  'cn_sec': '{s} δ',
+ },
+ 'es': {
+  't_diskusage': '¿Qué está llenando el disco?',
+  'desc__t_diskusage': 'Mira qué carpetas y archivos ocupan más espacio. No se borra nada.',
+  't_batthealth': 'Salud de la batería',
+  'desc__t_batthealth': 'Cuánta de su capacidad original conserva tu batería y cómo ha cambiado con el tiempo.',
+  'du_sub': 'Elige una unidad o carpeta. Haz clic en una carpeta para ver su interior; ↗ la abre en el Explorador. PulseDeck nunca borra nada aquí.',
+  'du_pick': 'Elige una unidad o carpeta para analizar.',
+  'du_folder': 'Carpeta…',
+  'du_scanning': 'Analizando… {n} archivos · {size}',
+  'du_done': '{size} en {n} archivos · analizado en {s} s',
+  'du_cloud': 'Otros {size} solo están en línea (OneDrive) y no ocupan espacio aquí.',
+  'du_skipped': 'No se pudieron leer {n} carpetas (Windows las mantiene privadas).',
+  'du_up': 'Subir',
+  'du_files_here': 'Archivos de esta carpeta',
+  'du_folders': 'Carpetas',
+  'du_largest': 'Archivos más grandes',
+  'bh_sub': 'Leído del propio informe de batería de Windows. No requiere permisos de administrador.',
+  'bh_loading': 'Leyendo el informe de batería…',
+  'bh_err': 'Windows no pudo generar un informe de batería.',
+  'bh_none': 'No se encontró ninguna batería.',
+  'bh_health': 'Salud',
+  'bh_good': 'Buena',
+  'bh_fair': 'Regular: bastante desgastada',
+  'bh_poor': 'Desgastada: conviene pensar en cambiarla',
+  'bh_design': 'Capacidad de diseño',
+  'bh_full': 'Capacidad de carga completa',
+  'bh_wear': 'Desgaste',
+  'bh_cycles': 'Ciclos de carga',
+  'bh_model': 'Batería',
+  'bh_history': 'Capacidad a lo largo del tiempo',
+  'bh_report': 'Guardar el informe completo de batería de Windows',
+  'wf_ssid': 'Red',
+  'wf_band': 'Banda',
+  'wf_channel': 'canal',
+  'wf_standard': 'Estándar',
+  'wf_link': 'Velocidad de enlace',
+  'wf_hidden': 'Nombre de red oculto: permite la ubicación a las apps de escritorio para verlo',
+  'wf_none': 'Sin conexión Wi-Fi',
+  'cn_title': 'Conexión',
+  'cn_monitor': 'Vigilar la conexión (pérdida de paquetes y cortes)',
+  'cn_hint': 'Envía un ping diminuto a 1.1.1.1 cada 3 segundos (a 8.8.8.8 si ese no responde), unos 2 MB al día. Los resultados se quedan en este PC.',
+  'cn_collect': 'Recopilando: los primeros minutos aparecerán en breve.',
+  'cn_ping_avg': 'ping medio',
+  'cn_loss': 'pérdida de paquetes',
+  'cn_loss5': 'Pérdida de paquetes (5 min)',
+  'cn_jitter': 'jitter',
+  'cn_outages': '{n} cortes',
+  'cn_recent': 'Cortes recientes',
+  'cn_ongoing': 'en curso',
+  'cn_offline': 'Sin conexión',
+  'cn_since': 'desde las {t}',
+  'cn_cause_net': 'Internet caído',
+  'cn_cause_local': 'Red desconectada',
+  'cn_min': '{m} min',
+  'cn_sec': '{s} s',
+ },
+ 'de': {
+  't_diskusage': 'Was füllt die Festplatte?',
+  'desc__t_diskusage': 'Sieh nach, welche Ordner und Dateien am meisten Platz belegen. Es wird nichts gelöscht.',
+  't_batthealth': 'Akkuzustand',
+  'desc__t_batthealth': 'Wie viel seiner ursprünglichen Kapazität dein Akku noch hat und wie sich das entwickelt hat.',
+  'du_sub': 'Wähle ein Laufwerk oder einen Ordner. Klick auf einen Ordner zeigt seinen Inhalt, ↗ öffnet ihn im Explorer. PulseDeck löscht hier nie etwas.',
+  'du_pick': 'Wähle ein Laufwerk oder einen Ordner zum Scannen.',
+  'du_folder': 'Ordner…',
+  'du_scanning': 'Scanne… {n} Dateien · {size}',
+  'du_done': '{size} in {n} Dateien · gescannt in {s} s',
+  'du_cloud': 'Weitere {size} sind nur online (OneDrive) und belegen hier keinen Platz.',
+  'du_skipped': '{n} Ordner konnten nicht gelesen werden (Windows hält sie privat).',
+  'du_up': 'Nach oben',
+  'du_files_here': 'Dateien in diesem Ordner',
+  'du_folders': 'Ordner',
+  'du_largest': 'Größte Dateien',
+  'bh_sub': 'Aus dem eigenen Akkubericht von Windows gelesen. Keine Administratorrechte nötig.',
+  'bh_loading': 'Akkubericht wird gelesen…',
+  'bh_err': 'Windows konnte keinen Akkubericht erstellen.',
+  'bh_none': 'Kein Akku gefunden.',
+  'bh_health': 'Zustand',
+  'bh_good': 'Gut',
+  'bh_fair': 'Mittel: spürbar abgenutzt',
+  'bh_poor': 'Abgenutzt: ein Austausch lohnt sich zu überlegen',
+  'bh_design': 'Auslegungskapazität',
+  'bh_full': 'Volle Ladekapazität',
+  'bh_wear': 'Verschleiß',
+  'bh_cycles': 'Ladezyklen',
+  'bh_model': 'Akku',
+  'bh_history': 'Kapazität im Zeitverlauf',
+  'bh_report': 'Vollständigen Windows-Akkubericht speichern',
+  'wf_ssid': 'Netzwerk',
+  'wf_band': 'Band',
+  'wf_channel': 'Kanal',
+  'wf_standard': 'Standard',
+  'wf_link': 'Verbindungsrate',
+  'wf_hidden': 'Netzwerkname verborgen: Standortzugriff für Desktop-Apps erlauben, um ihn zu sehen',
+  'wf_none': 'Nicht mit WLAN verbunden',
+  'cn_title': 'Verbindung',
+  'cn_monitor': 'Verbindung überwachen (Paketverlust und Ausfälle)',
+  'cn_hint': 'Sendet alle 3 Sekunden einen winzigen Ping an 1.1.1.1 (an 8.8.8.8, falls dieser nicht antwortet), etwa 2 MB am Tag. Die Ergebnisse bleiben auf diesem PC.',
+  'cn_collect': 'Daten werden gesammelt: die ersten Minuten erscheinen gleich.',
+  'cn_ping_avg': 'Ping Ø',
+  'cn_loss': 'Paketverlust',
+  'cn_loss5': 'Paketverlust (5 Min.)',
+  'cn_jitter': 'Jitter',
+  'cn_outages': '{n} Ausfälle',
+  'cn_recent': 'Letzte Ausfälle',
+  'cn_ongoing': 'andauernd',
+  'cn_offline': 'Offline',
+  'cn_since': 'seit {t}',
+  'cn_cause_net': 'Internet ausgefallen',
+  'cn_cause_local': 'Netzwerk getrennt',
+  'cn_min': '{m} Min.',
+  'cn_sec': '{s} s',
+ },
+ 'fr': {
+  't_diskusage': "Qu'est-ce qui remplit le disque ?",
+  'desc__t_diskusage': "Voyez quels dossiers et fichiers prennent le plus de place. Rien n'est supprimé.",
+  't_batthealth': 'Santé de la batterie',
+  'desc__t_batthealth': "Quelle part de sa capacité d'origine votre batterie conserve, et son évolution dans le temps.",
+  'du_sub': "Choisissez un lecteur ou un dossier. Cliquez sur un dossier pour voir son contenu ; ↗ l'ouvre dans l'Explorateur. PulseDeck ne supprime jamais rien ici.",
+  'du_pick': 'Choisissez un lecteur ou un dossier à analyser.',
+  'du_folder': 'Dossier…',
+  'du_scanning': 'Analyse… {n} fichiers · {size}',
+  'du_done': '{size} dans {n} fichiers · analysé en {s} s',
+  'du_cloud': "{size} de plus sont uniquement en ligne (OneDrive) et n'occupent pas de place ici.",
+  'du_skipped': "{n} dossiers n'ont pas pu être lus (Windows les garde privés).",
+  'du_up': 'Remonter',
+  'du_files_here': 'Fichiers de ce dossier',
+  'du_folders': 'Dossiers',
+  'du_largest': 'Plus gros fichiers',
+  'bh_sub': "Lu dans le rapport de batterie de Windows lui-même. Aucun droit d'administrateur requis.",
+  'bh_loading': 'Lecture du rapport de batterie…',
+  'bh_err': "Windows n'a pas pu produire de rapport de batterie.",
+  'bh_none': 'Aucune batterie trouvée.',
+  'bh_health': 'Santé',
+  'bh_good': 'Bonne',
+  'bh_fair': 'Moyenne : nettement usée',
+  'bh_poor': 'Usée : un remplacement mérite réflexion',
+  'bh_design': 'Capacité nominale',
+  'bh_full': 'Capacité de charge complète',
+  'bh_wear': 'Usure',
+  'bh_cycles': 'Cycles de charge',
+  'bh_model': 'Batterie',
+  'bh_history': 'Capacité dans le temps',
+  'bh_report': 'Enregistrer le rapport de batterie complet de Windows',
+  'wf_ssid': 'Réseau',
+  'wf_band': 'Bande',
+  'wf_channel': 'canal',
+  'wf_standard': 'Norme',
+  'wf_link': 'Débit de liaison',
+  'wf_hidden': "Nom du réseau masqué : autorisez la localisation pour les applis de bureau pour l'afficher",
+  'wf_none': 'Non connecté au Wi-Fi',
+  'cn_title': 'Connexion',
+  'cn_monitor': 'Surveiller la connexion (perte de paquets et coupures)',
+  'cn_hint': "Envoie un minuscule ping à 1.1.1.1 toutes les 3 secondes (à 8.8.8.8 s'il ne répond pas), environ 2 Mo par jour. Les résultats restent sur ce PC.",
+  'cn_collect': 'Collecte en cours : les premières minutes arrivent bientôt.',
+  'cn_ping_avg': 'ping moyen',
+  'cn_loss': 'perte de paquets',
+  'cn_loss5': 'Perte de paquets (5 min)',
+  'cn_jitter': 'gigue',
+  'cn_outages': '{n} coupures',
+  'cn_recent': 'Coupures récentes',
+  'cn_ongoing': 'en cours',
+  'cn_offline': 'Hors ligne',
+  'cn_since': 'depuis {t}',
+  'cn_cause_net': 'Internet coupé',
+  'cn_cause_local': 'Réseau déconnecté',
+  'cn_min': '{m} min',
+  'cn_sec': '{s} s',
+ },
+ 'it': {
+  't_diskusage': 'Cosa riempie il disco?',
+  'desc__t_diskusage': 'Scopri quali cartelle e file occupano più spazio. Non viene eliminato nulla.',
+  't_batthealth': 'Salute della batteria',
+  'desc__t_batthealth': 'Quanta della sua capacità originale conserva la batteria e come è cambiata nel tempo.',
+  'du_sub': "Scegli un'unità o una cartella. Clic su una cartella per vederne il contenuto; ↗ la apre in Esplora file. PulseDeck qui non elimina mai nulla.",
+  'du_pick': "Scegli un'unità o una cartella da analizzare.",
+  'du_folder': 'Cartella…',
+  'du_scanning': 'Analisi… {n} file · {size}',
+  'du_done': '{size} in {n} file · analizzato in {s} s',
+  'du_cloud': 'Altri {size} sono solo online (OneDrive) e qui non occupano spazio.',
+  'du_skipped': 'Impossibile leggere {n} cartelle (Windows le tiene private).',
+  'du_up': 'Su',
+  'du_files_here': 'File in questa cartella',
+  'du_folders': 'Cartelle',
+  'du_largest': 'File più grandi',
+  'bh_sub': 'Letto dal rapporto batteria di Windows stesso. Non servono permessi di amministratore.',
+  'bh_loading': 'Lettura del rapporto batteria…',
+  'bh_err': 'Windows non è riuscito a creare un rapporto batteria.',
+  'bh_none': 'Nessuna batteria trovata.',
+  'bh_health': 'Salute',
+  'bh_good': 'Buona',
+  'bh_fair': 'Discreta: usurata in modo evidente',
+  'bh_poor': 'Usurata: vale la pena valutarne la sostituzione',
+  'bh_design': 'Capacità di progetto',
+  'bh_full': 'Capacità a carica completa',
+  'bh_wear': 'Usura',
+  'bh_cycles': 'Cicli di carica',
+  'bh_model': 'Batteria',
+  'bh_history': 'Capacità nel tempo',
+  'bh_report': 'Salva il rapporto batteria completo di Windows',
+  'wf_ssid': 'Rete',
+  'wf_band': 'Banda',
+  'wf_channel': 'canale',
+  'wf_standard': 'Standard',
+  'wf_link': 'Velocità di collegamento',
+  'wf_hidden': 'Nome rete nascosto: consenti la posizione alle app desktop per vederlo',
+  'wf_none': 'Non connesso al Wi-Fi',
+  'cn_title': 'Connessione',
+  'cn_monitor': 'Monitora la connessione (perdita di pacchetti e interruzioni)',
+  'cn_hint': 'Invia un piccolissimo ping a 1.1.1.1 ogni 3 secondi (a 8.8.8.8 se quello non risponde), circa 2 MB al giorno. I risultati restano su questo PC.',
+  'cn_collect': 'Raccolta dati: i primi minuti appariranno a breve.',
+  'cn_ping_avg': 'ping medio',
+  'cn_loss': 'perdita di pacchetti',
+  'cn_loss5': 'Perdita di pacchetti (5 min)',
+  'cn_jitter': 'jitter',
+  'cn_outages': '{n} interruzioni',
+  'cn_recent': 'Interruzioni recenti',
+  'cn_ongoing': 'in corso',
+  'cn_offline': 'Offline',
+  'cn_since': 'dalle {t}',
+  'cn_cause_net': 'Internet assente',
+  'cn_cause_local': 'Rete disconnessa',
+  'cn_min': '{m} min',
+  'cn_sec': '{s} s',
+ },
+ 'pt': {
+  't_diskusage': 'O que está a encher o disco?',
+  'desc__t_diskusage': 'Veja que pastas e ficheiros ocupam mais espaço. Nada é apagado.',
+  't_batthealth': 'Saúde da bateria',
+  'desc__t_batthealth': 'Quanto da capacidade original a sua bateria ainda tem e como isso mudou com o tempo.',
+  'du_sub': 'Escolha uma unidade ou pasta. Clique numa pasta para ver o conteúdo; ↗ abre-a no Explorador. O PulseDeck nunca apaga nada aqui.',
+  'du_pick': 'Escolha uma unidade ou pasta para analisar.',
+  'du_folder': 'Pasta…',
+  'du_scanning': 'A analisar… {n} ficheiros · {size}',
+  'du_done': '{size} em {n} ficheiros · analisado em {s} s',
+  'du_cloud': 'Mais {size} estão só online (OneDrive) e não ocupam espaço aqui.',
+  'du_skipped': 'Não foi possível ler {n} pastas (o Windows mantém-nas privadas).',
+  'du_up': 'Subir',
+  'du_files_here': 'Ficheiros nesta pasta',
+  'du_folders': 'Pastas',
+  'du_largest': 'Maiores ficheiros',
+  'bh_sub': 'Lido do próprio relatório de bateria do Windows. Não precisa de permissões de administrador.',
+  'bh_loading': 'A ler o relatório de bateria…',
+  'bh_err': 'O Windows não conseguiu criar um relatório de bateria.',
+  'bh_none': 'Nenhuma bateria encontrada.',
+  'bh_health': 'Saúde',
+  'bh_good': 'Boa',
+  'bh_fair': 'Razoável: visivelmente gasta',
+  'bh_poor': 'Gasta: vale a pena pensar em substituí-la',
+  'bh_design': 'Capacidade de fábrica',
+  'bh_full': 'Capacidade de carga completa',
+  'bh_wear': 'Desgaste',
+  'bh_cycles': 'Ciclos de carga',
+  'bh_model': 'Bateria',
+  'bh_history': 'Capacidade ao longo do tempo',
+  'bh_report': 'Guardar o relatório completo de bateria do Windows',
+  'wf_ssid': 'Rede',
+  'wf_band': 'Banda',
+  'wf_channel': 'canal',
+  'wf_standard': 'Norma',
+  'wf_link': 'Velocidade de ligação',
+  'wf_hidden': 'Nome da rede oculto: permita a localização a apps de ambiente de trabalho para o ver',
+  'wf_none': 'Sem ligação Wi-Fi',
+  'cn_title': 'Ligação',
+  'cn_monitor': 'Monitorizar a ligação (perda de pacotes e quebras)',
+  'cn_hint': 'Envia um ping minúsculo para 1.1.1.1 a cada 3 segundos (para 8.8.8.8 se esse não responder), cerca de 2 MB por dia. Os resultados ficam neste PC.',
+  'cn_collect': 'A recolher dados: os primeiros minutos aparecem em breve.',
+  'cn_ping_avg': 'ping médio',
+  'cn_loss': 'perda de pacotes',
+  'cn_loss5': 'Perda de pacotes (5 min)',
+  'cn_jitter': 'jitter',
+  'cn_outages': '{n} quebras',
+  'cn_recent': 'Quebras recentes',
+  'cn_ongoing': 'a decorrer',
+  'cn_offline': 'Sem ligação',
+  'cn_since': 'desde as {t}',
+  'cn_cause_net': 'Internet em baixo',
+  'cn_cause_local': 'Rede desligada',
+  'cn_min': '{m} min',
+  'cn_sec': '{s} s',
+ },
+ 'ru': {
+  't_diskusage': 'Чем занят диск?',
+  'desc__t_diskusage': 'Посмотрите, какие папки и файлы занимают больше всего места. Ничего не удаляется.',
+  't_batthealth': 'Состояние батареи',
+  'desc__t_batthealth': 'Сколько исходной ёмкости сохранила батарея и как это менялось со временем.',
+  'du_sub': 'Выберите диск или папку. Щёлкните папку, чтобы заглянуть внутрь; ↗ открывает её в Проводнике. PulseDeck здесь ничего не удаляет.',
+  'du_pick': 'Выберите диск или папку для анализа.',
+  'du_folder': 'Папка…',
+  'du_scanning': 'Анализ… {n} файлов · {size}',
+  'du_done': '{size} в {n} файлах · анализ за {s} с',
+  'du_cloud': 'Ещё {size} хранятся только в сети (OneDrive) и не занимают место здесь.',
+  'du_skipped': 'Не удалось прочитать папок: {n} (Windows держит их закрытыми).',
+  'du_up': 'Вверх',
+  'du_files_here': 'Файлы в этой папке',
+  'du_folders': 'Папки',
+  'du_largest': 'Самые большие файлы',
+  'bh_sub': 'Из собственного отчёта Windows о батарее. Права администратора не нужны.',
+  'bh_loading': 'Чтение отчёта о батарее…',
+  'bh_err': 'Windows не удалось создать отчёт о батарее.',
+  'bh_none': 'Батарея не найдена.',
+  'bh_health': 'Состояние',
+  'bh_good': 'Хорошее',
+  'bh_fair': 'Среднее: заметно изношена',
+  'bh_poor': 'Изношена: стоит подумать о замене',
+  'bh_design': 'Проектная ёмкость',
+  'bh_full': 'Ёмкость при полной зарядке',
+  'bh_wear': 'Износ',
+  'bh_cycles': 'Циклы зарядки',
+  'bh_model': 'Батарея',
+  'bh_history': 'Ёмкость со временем',
+  'bh_report': 'Сохранить полный отчёт Windows о батарее',
+  'wf_ssid': 'Сеть',
+  'wf_band': 'Диапазон',
+  'wf_channel': 'канал',
+  'wf_standard': 'Стандарт',
+  'wf_link': 'Скорость соединения',
+  'wf_hidden': 'Имя сети скрыто: разрешите доступ к местоположению для классических приложений',
+  'wf_none': 'Нет подключения к Wi-Fi',
+  'cn_title': 'Соединение',
+  'cn_monitor': 'Следить за соединением (потери пакетов и обрывы)',
+  'cn_hint': 'Каждые 3 секунды отправляет крошечный пинг на 1.1.1.1 (на 8.8.8.8, если тот не отвечает), около 2 МБ в день. Результаты остаются на этом ПК.',
+  'cn_collect': 'Сбор данных: первые минуты скоро появятся.',
+  'cn_ping_avg': 'средний пинг',
+  'cn_loss': 'потери пакетов',
+  'cn_loss5': 'Потери пакетов (5 мин)',
+  'cn_jitter': 'джиттер',
+  'cn_outages': 'обрывов: {n}',
+  'cn_recent': 'Недавние обрывы',
+  'cn_ongoing': 'продолжается',
+  'cn_offline': 'Нет связи',
+  'cn_since': 'с {t}',
+  'cn_cause_net': 'Нет интернета',
+  'cn_cause_local': 'Сеть отключена',
+  'cn_min': '{m} мин',
+  'cn_sec': '{s} с',
+ },
+}
+for _lng, _d in V215_I18N.items():
+    CUST_LABELS.setdefault(_lng, {}).update(_d)
+    TIP.setdefault(_lng, {}).update(_d)
+
 # Cell metadata for the Metrics tab (id -> friendly name, icon glyph, config key)
 CELL_META = (
     ('cpu',     'CPU',         '💻', 'show_cpu'),
     ('ram',     'RAM',         '🧠', 'show_ram'),
     ('gpu',     'GPU',         '🎮', 'show_gpu'),
     ('net',     'Network',     '🌐', 'show_net'),
+    ('wifi',    'Wi-Fi',       '📶', 'show_wifi'),
     ('disk',    'Disk I/O',    '💿', 'show_disk'),
     ('batt',    'Battery',     '🔋', 'show_batt'),
     ('power',   'Power',       '⚡', 'show_power'),
@@ -1784,13 +2241,28 @@ def detect_language():
         return 'en'
 
 # ── Single-instance guard ──────────────────────────────────────────────
-def already_running():
-    """Create a named mutex; if it already exists, another copy is running."""
+def already_running(wait=0.0, name='Global\\PulseDeck_SingleInstance'):
+    """Create a named mutex; if it already exists, another copy is running.
+
+    wait: seconds to keep retrying - used when we relaunch ourselves, where
+    the old process may still be shutting down and holding the mutex."""
     ERROR_ALREADY_EXISTS = 183
-    kernel32 = ctypes.windll.kernel32
-    # Global\ prefix so it's unique across the whole session
-    kernel32.CreateMutexW(None, False, 'Global\\PulseDeck_SingleInstance')
-    return kernel32.GetLastError() == ERROR_ALREADY_EXISTS
+    kernel32 = ctypes.WinDLL('kernel32', use_last_error=True)
+    kernel32.CreateMutexW.restype = ctypes.c_void_p
+    kernel32.CreateMutexW.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_wchar_p]
+    kernel32.CloseHandle.argtypes = [ctypes.c_void_p]
+    deadline = time.monotonic() + wait
+    while True:
+        # Global\ prefix so it's unique across the whole session
+        h = kernel32.CreateMutexW(None, False, name)
+        if ctypes.get_last_error() != ERROR_ALREADY_EXISTS:
+            return False        # ours now; the handle stays open for the process lifetime
+        # drop our handle to the other copy's mutex, or it could never go away
+        if h:
+            kernel32.CloseHandle(h)
+        if time.monotonic() >= deadline:
+            return True
+        time.sleep(0.25)
 
 # ── Windows work area ──────────────────────────────────────────────────
 class RECT(ctypes.Structure):
@@ -2735,6 +3207,17 @@ def _exe_dir():
         return os.path.dirname(os.path.abspath(sys.executable))
     return os.path.dirname(os.path.abspath(__file__))
 
+def _is_onefile():
+    """True for the single-file build, which unpacks itself to %TEMP% on
+    every start. The installer and Store builds are one-folder builds whose
+    files live next to the .exe (in _internal), so nothing can clean them
+    away while the app runs."""
+    if not getattr(sys, 'frozen', False):
+        return False
+    mp = os.path.normcase(os.path.abspath(getattr(sys, '_MEIPASS', '') or ''))
+    ed = os.path.normcase(_exe_dir())
+    return bool(mp) and mp not in (ed, os.path.join(ed, '_internal'))
+
 def _resolve_config_dir():
     """Portable-first config location.
 
@@ -2781,6 +3264,8 @@ DEFAULTS = {
     'show_weather': True,  # weather (Open-Meteo)
     'show_disk': False,   # disk read/write speed
     'show_batt': False,   # battery % (laptops)
+    'show_wifi': False,   # Wi-Fi signal % (v2.15)
+    'conn_monitor': True, # ping 1.1.1.1 every 3 s for packet loss / outages (v2.15)
     'cpu_freq':  False,   # (inline mode only) CPU clock speed next to CPU %
     'ram_gb':    False,   # (inline mode only) RAM used in GB next to RAM %
     'weather_unit': 'C',  # C | F | K
@@ -3025,6 +3510,24 @@ def action_flush_dns():
         _note('action_flush_dns', _swallowed)
         return False
 
+def _dir_in_use(path):
+    """True if a running program has an .exe/.dll/.pyd from `path` loaded.
+
+    A loaded module is mapped, not held open, so it doesn't stop the folder
+    from being renamed (tested) - but Windows does refuse to open a mapped
+    image for writing. Opening with 'r+b' and closing changes nothing."""
+    for root, _dirs, files in os.walk(path):
+        for fn in files:
+            if fn[-4:].lower() in ('.dll', '.pyd', '.exe'):
+                try:
+                    with open(os.path.join(root, fn), 'r+b'):
+                        pass
+                except PermissionError:
+                    return True
+                except OSError:
+                    pass
+    return False
+
 def action_clear_temp():
     """Delete what we can from %TEMP%; locked/in-use files are skipped.
     Returns bytes freed. Same scope as Disk Cleanup's temp pass."""
@@ -3033,13 +3536,30 @@ def action_clear_temp():
     if not base or not os.path.isdir(base):
         return 0
     freed = 0
+    own = os.path.normcase(os.path.abspath(getattr(sys, '_MEIPASS', '') or ''))
     for name in os.listdir(base):
         p = os.path.join(base, name)
         try:
             if os.path.isfile(p) or os.path.islink(p):
                 sz = os.path.getsize(p); os.remove(p); freed += sz
             elif os.path.isdir(p):
-                sz = _dir_size(p); shutil.rmtree(p, ignore_errors=True); freed += sz
+                # A folder a running program works from (a PyInstaller app's
+                # _MEI… dir - including our own - an installer's staging
+                # folder) must go whole or not at all: rmtree(ignore_errors)
+                # skips only the files that are locked, so it used to delete
+                # the icons and not-yet-imported modules out from under the
+                # running app and leave it broken.
+                if os.path.normcase(os.path.abspath(p)) == own or _dir_in_use(p):
+                    continue
+                # Windows refuses to rename a folder while a file inside it
+                # is open, so the rename both catches what _dir_in_use can't
+                # see and leaves a copy no one can reopen mid-delete.
+                tmp = p + '.pulsedeck-del'
+                try:
+                    os.rename(p, tmp)
+                except OSError:
+                    continue
+                sz = _dir_size(tmp); shutil.rmtree(tmp, ignore_errors=True); freed += sz
         except Exception as _swallowed:
             _note('action_clear_temp', _swallowed)
             pass   # in use → leave it
@@ -3384,6 +3904,7 @@ def action_hibernate():
 # catalog: (category_key, icon, [(tool_key, icon, (kind, target)), ...])
 TOOLS_CATALOG = [
     ('cat_cleanup', '🧹', [
+        ('t_diskusage',   '🗂', ('action', 'disk_usage')),
         ('t_diskcleanup', '🧽', ('exe', ['cleanmgr.exe'])),
         ('t_storage',     '💾', ('settings', 'ms-settings:storagesense')),
         ('t_optimize',    '🧩', ('exe', ['dfrgui.exe'])),
@@ -3399,6 +3920,7 @@ TOOLS_CATALOG = [
         ('t_msinfo',      'ℹ', ('exe', ['msinfo32.exe'])),
         ('t_reliability', '📊', ('exe', ['perfmon.exe', '/rel'])),
         ('t_dxdiag',      '🎮', ('exe', ['dxdiag.exe'])),
+        ('t_batthealth',  '🔋', ('action', 'battery_health')),
         ('t_gpureset',    '⚡', ('action', 'reset_gpu')),
     ]),
     ('cat_perf', '⚡', [
@@ -3462,6 +3984,11 @@ try:
         _hidden.add('t_classicmenu')
     if _is_msix():
         _hidden.update(('t_classicmenu', 't_lightswitch'))
+    try:
+        if psutil.sensors_battery() is None:
+            _hidden.add('t_batthealth')     # desktops: nothing to report on
+    except Exception:
+        _hidden.add('t_batthealth')
     if _hidden:
         TOOLS_CATALOG = [
             (cat, icon, [t for t in tools if t[0] not in _hidden])
@@ -3652,25 +4179,15 @@ def _wifi_signal_percent():
     return None
 
 def _ping_latency_ms(target='1.1.1.1'):
-    """Round-trip latency to `target` in ms, or None. Parsed by locating the
-    digits right before the first 'ms' in ping's output — that unit isn't
-    localized even though the surrounding label text is (e.g. Greek's
-    'χρόνος=' instead of 'time='), so this works on any Windows language."""
+    """Round-trip latency to `target` in ms, or None - one ICMP echo through
+    _Pinger (no ping.exe to launch, no localized output to parse)."""
     try:
-        si = subprocess.STARTUPINFO()
-        si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-        r = subprocess.run(['ping', '-n', '1', '-w', '800', target],
-                            capture_output=True, text=True, timeout=2, startupinfo=si)
-        out = r.stdout or ''
-        idx = out.find('ms')
-        if idx == -1:
-            return None
-        j = idx
-        digits = ''
-        while j > 0 and out[j - 1].isdigit():
-            digits = out[j - 1] + digits
-            j -= 1
-        return int(digits) if digits else None
+        p = _Pinger()
+        try:
+            rtt = p.ping(target, timeout_ms=800)
+        finally:
+            p.close()
+        return int(rtt) if rtt is not None else None
     except Exception as _swallowed:
         _note('_ping_latency_ms', _swallowed)
         return None
@@ -5134,6 +5651,691 @@ class _NetSampler(threading.Thread):
         self._stop = True
 
 
+# ── ICMP echo without ping.exe (v2.15) ────────────────────────────────
+# iphlpapi's IcmpSendEcho is what ping.exe itself calls: no admin rights, no
+# process to spawn (~12 ms each), and the result isn't localized text that
+# has to be parsed. One probe costs ~1.5 ms of a background thread.
+_iphlp = ctypes.WinDLL('iphlpapi')
+_iphlp.IcmpCreateFile.restype = ctypes.c_void_p
+_iphlp.IcmpCreateFile.argtypes = []
+_iphlp.IcmpCloseHandle.argtypes = [ctypes.c_void_p]
+_iphlp.IcmpSendEcho.restype = ctypes.c_ulong
+_iphlp.IcmpSendEcho.argtypes = [ctypes.c_void_p, ctypes.c_ulong, ctypes.c_void_p,
+                                ctypes.c_ushort, ctypes.c_void_p, ctypes.c_void_p,
+                                ctypes.c_ulong, ctypes.c_ulong]
+_INVALID_HANDLE = (1 << (8 * ctypes.sizeof(ctypes.c_void_p))) - 1
+
+class _ICMP_ECHO_REPLY(ctypes.Structure):
+    _fields_ = [('Address', ctypes.c_ulong), ('Status', ctypes.c_ulong),
+                ('RoundTripTime', ctypes.c_ulong), ('DataSize', ctypes.c_ushort),
+                ('Reserved', ctypes.c_ushort), ('Data', ctypes.c_void_p),
+                ('Ttl', ctypes.c_ubyte), ('Tos', ctypes.c_ubyte),
+                ('Flags', ctypes.c_ubyte), ('OptionsSize', ctypes.c_ubyte),
+                ('OptionsData', ctypes.c_void_p)]
+
+class _Pinger:
+    """One ICMP handle; use it from a single thread."""
+    PAYLOAD = b'PulseDeck'
+
+    def __init__(self):
+        self._h = _iphlp.IcmpCreateFile()
+        if self._h == _INVALID_HANDLE:
+            self._h = None
+        self._buf = ctypes.create_string_buffer(
+            ctypes.sizeof(_ICMP_ECHO_REPLY) + len(self.PAYLOAD) + 64)
+
+    def ping(self, ip, timeout_ms=1000):
+        """Round trip in ms (whole ms; 0 on a LAN), or None for no reply."""
+        if not self._h:
+            return None
+        addr = int.from_bytes(socket.inet_aton(ip), 'little')
+        n = _iphlp.IcmpSendEcho(self._h, addr, self.PAYLOAD, len(self.PAYLOAD), None,
+                                self._buf, len(self._buf), timeout_ms)
+        if not n:
+            return None
+        r = _ICMP_ECHO_REPLY.from_buffer(self._buf)
+        return float(r.RoundTripTime) if r.Status == 0 else None
+
+    def close(self):
+        if self._h:
+            _iphlp.IcmpCloseHandle(self._h)
+            self._h = None
+
+def _tcp_rtt(ip, port=443, timeout=1.0):
+    """Time a TCP handshake - the stand-in for ping on networks that drop
+    ICMP. Nothing is sent; the connection is closed straight away."""
+    t = time.perf_counter()
+    try:
+        s = socket.create_connection((ip, port), timeout=timeout)
+    except OSError:
+        return None
+    rtt = (time.perf_counter() - t) * 1000.0
+    try:
+        s.close()
+    except OSError:
+        pass
+    return rtt
+
+def _has_route(ip='1.1.1.1'):
+    """Is there any route to the internet at all? A routing-table lookup, no
+    traffic: False means the cable is out or Wi-Fi is off, not that the ISP
+    is down."""
+    try:
+        idx = ctypes.c_ulong()
+        dest = ctypes.c_ulong(int.from_bytes(socket.inet_aton(ip), 'little'))
+        return ctypes.windll.iphlpapi.GetBestInterface(dest, ctypes.byref(idx)) == 0
+    except Exception as _swallowed:
+        _note('_has_route', _swallowed)
+        return True
+
+# ── Connection monitor: ping, jitter, packet loss, outages (v2.15) ─────
+class _ConnMonitor(threading.Thread):
+    """Pings 1.1.1.1 every few seconds and keeps what a speed test can't
+    tell you: how steady the line is (packet loss, jitter) and when it
+    dropped out and for how long.
+
+    A probe that gets no reply from 1.1.1.1 tries 8.8.8.8 before it counts
+    the line as unreachable, so one provider having a bad minute isn't an
+    outage. An outage needs DOWN_AFTER unanswered probes in a row (~9 s);
+    it is attributed to the local network when there is no route at all.
+    """
+    PROBE_SEC   = 3.0
+    TARGETS     = ('1.1.1.1', '8.8.8.8')
+    DOWN_AFTER  = 3
+    START_GRACE = 20        # s: at boot/launch the network may still be coming up
+    WAKE_GRACE  = 45        # s: after sleep, Wi-Fi takes a while to reconnect
+    KEEP_DAYS   = 7         # per-minute quality rows
+    OUTAGE_DAYS = 30
+
+    def __init__(self, dirpath):
+        super().__init__(daemon=True, name='ConnMonitor')
+        from collections import deque
+        self.qpath = os.path.join(dirpath, 'netquality.csv')
+        self.opath = os.path.join(dirpath, 'outages.json')
+        self._halt = threading.Event()
+        self.recent = deque(maxlen=100)     # ~5 min of probes: rtt ms | None
+        self.ping_ms = None
+        self.jitter_ms = None
+        self.loss_pct = None
+        self.online = None                  # None until the first probe
+        self.down_since = None              # wall time an ongoing outage began
+        self.down_cause = None              # 'net' | 'local'
+        self.mode = 'icmp'                  # 'tcp' where ICMP is blocked
+        self.rows = []                      # [(minute_ts, avg_ms|-1, loss‰, probes)]
+        self.outages = []                   # [{'s': ts, 'e': ts, 'c': 'net'|'local'}]
+        self._min = None
+        self._macc = [0, 0, 0.0]            # probes, lost, rtt sum - current minute
+        self._fails = 0
+        self._first_fail = None
+        self._primary = 0
+        self._swap_votes = 0
+        self._icmp_seen = False
+        self._probes = 0
+        self._grace_until = time.time() + self.START_GRACE
+        self._pinger = None
+        self._load()
+
+    # ── persistence ──
+    def _load(self):
+        cutoff = time.time() - self.KEEP_DAYS * 86400
+        rows = []
+        try:
+            with open(self.qpath, 'r', encoding='utf-8-sig') as f:
+                for line in f:
+                    p = line.strip().split(',')
+                    if len(p) != 4:
+                        continue
+                    try:
+                        r = tuple(int(x) for x in p)
+                    except ValueError:
+                        continue
+                    if r[0] >= cutoff:
+                        rows.append(r)
+        except OSError:
+            pass
+        rows.sort()
+        self.rows = rows
+        if rows:
+            try:
+                _atomic_write(self.qpath, ''.join(','.join(str(v) for v in r) + '\n'
+                                                  for r in rows))
+            except Exception as _swallowed:
+                _note('_ConnMonitor._load', _swallowed)
+        ocut = time.time() - self.OUTAGE_DAYS * 86400
+        try:
+            with open(self.opath, 'r', encoding='utf-8-sig') as f:
+                data = json.load(f)
+        except (OSError, ValueError):
+            data = []
+        if isinstance(data, list):
+            for o in data:
+                if (isinstance(o, dict) and isinstance(o.get('s'), (int, float))
+                        and isinstance(o.get('e'), (int, float)) and o['e'] >= o['s']
+                        and o['e'] >= ocut):
+                    self.outages.append({'s': int(o['s']), 'e': int(o['e']),
+                                         'c': 'local' if o.get('c') == 'local' else 'net'})
+        self.outages.sort(key=lambda o: o['s'])
+
+    def _save_outages(self):
+        ocut = time.time() - self.OUTAGE_DAYS * 86400
+        self.outages = [o for o in self.outages if o['e'] >= ocut]
+        _atomic_write(self.opath, json.dumps(self.outages))
+
+    def _flush_minute(self):
+        n, lost, rsum = self._macc
+        self._macc = [0, 0, 0.0]
+        if not n or self._min is None:
+            return
+        ok = n - lost
+        row = (int(self._min), int(round(rsum / ok)) if ok else -1,
+               int(round(1000.0 * lost / n)), n)
+        self.rows.append(row)
+        cutoff = time.time() - self.KEEP_DAYS * 86400
+        if self.rows[0][0] < cutoff:
+            self.rows = [r for r in self.rows if r[0] >= cutoff]
+            _atomic_write(self.qpath, ''.join(','.join(str(v) for v in r) + '\n'
+                                              for r in self.rows))
+            return
+        try:
+            with open(self.qpath, 'a', encoding='utf-8', newline='') as f:
+                f.write(','.join(str(v) for v in row) + '\n')
+        except OSError:
+            pass
+
+    # ── probing ──
+    def _probe(self):
+        """(rtt_ms or None, reached_anything)"""
+        p = self.TARGETS[self._primary]
+        other = self.TARGETS[1 - self._primary]
+        if self.mode == 'tcp':
+            rtt = _tcp_rtt(p)
+            return rtt, rtt is not None or _tcp_rtt(other) is not None
+        rtt = self._pinger.ping(p)
+        if rtt is not None:
+            self._icmp_seen = True
+            self._swap_votes = 0
+            return rtt, True
+        if self._pinger.ping(other) is not None:
+            self._icmp_seen = True
+            self._swap_votes += 1
+            if self._swap_votes >= 5:       # the primary keeps failing, the other answers
+                self._primary = 1 - self._primary
+                self._swap_votes = 0
+            return None, True
+        # Never a single ICMP reply: some networks (offices, hotels) block
+        # ping - time a TCP handshake instead so they don't read as offline.
+        if not self._icmp_seen and self._probes >= 2:
+            t = _tcp_rtt(p)
+            if t is not None:
+                self.mode = 'tcp'
+                return t, True
+        return None, False
+
+    def _record(self, ts, rtt, reached):
+        if not reached and ts < self._grace_until:
+            # starting up or waking from sleep: not the line's fault
+            if self._fails == 0:
+                self._first_fail = ts
+            self._fails += 1
+            if self._fails >= self.DOWN_AFTER:
+                self.online = False
+            return
+        self.recent.append(rtt)
+        n = len(self.recent)
+        ok = [r for r in self.recent if r is not None]
+        self.loss_pct = 100.0 * (n - len(ok)) / n
+        if rtt is not None:
+            self.ping_ms = rtt
+        tail = [r for r in list(self.recent)[-21:] if r is not None]
+        self.jitter_ms = (sum(abs(a - b) for a, b in zip(tail, tail[1:])) / (len(tail) - 1)
+                          if len(tail) > 1 else None)
+        m = int(ts // 60) * 60
+        if self._min is None:
+            self._min = m
+        elif m != self._min:
+            self._flush_minute()
+            self._min = m
+        a = self._macc
+        a[0] += 1
+        if rtt is None:
+            a[1] += 1
+        else:
+            a[2] += rtt
+        if reached:
+            if self.down_since is not None:
+                self._end_outage(ts)
+            self._fails = 0
+            self.online = True
+            return
+        if self._fails == 0:
+            self._first_fail = ts
+        self._fails += 1
+        if self._fails >= self.DOWN_AFTER:
+            self.online = False
+            if self.down_since is None:
+                self.down_since = max(self._first_fail, self._grace_until)
+                self.down_cause = 'net' if _has_route() else 'local'
+
+    def _end_outage(self, ts):
+        if self.down_since is None:
+            return
+        self.outages.append({'s': int(self.down_since), 'e': int(max(ts, self.down_since)),
+                             'c': self.down_cause or 'net'})
+        self.down_since = None
+        self.down_cause = None
+        try:
+            self._save_outages()
+        except Exception as _swallowed:
+            _note('_ConnMonitor._end_outage', _swallowed)
+
+    def run(self):
+        self._pinger = _Pinger()
+        last = time.time()
+        try:
+            while not self._halt.is_set():
+                t0 = time.time()
+                if t0 - last > self.PROBE_SEC * 6:
+                    # The PC slept (or the clock jumped): whatever happened
+                    # meanwhile wasn't measured, so close any open outage at
+                    # the last moment we know about and start fresh.
+                    self._end_outage(last)
+                    self._fails = 0
+                    self.online = None
+                    self._grace_until = t0 + self.WAKE_GRACE
+                last = t0
+                try:
+                    rtt, reached = self._probe()
+                except Exception as e:
+                    _note('_ConnMonitor._probe', e)
+                    rtt, reached = None, False
+                self._probes += 1
+                try:
+                    self._record(t0, rtt, reached)
+                except Exception as e:
+                    _note('_ConnMonitor._record', e)
+                self._halt.wait(max(0.2, self.PROBE_SEC - (time.time() - t0)))
+        finally:
+            try:
+                self._flush_minute()
+                if self.down_since is not None:     # quitting mid-outage
+                    self._end_outage(time.time())
+            except Exception as _swallowed:
+                _note('_ConnMonitor.run', _swallowed)
+            self._pinger.close()
+
+    def stop(self):
+        self._halt.set()
+
+    # ── queries (UI thread) ──
+    def quality_since(self, seconds):
+        cutoff = time.time() - seconds
+        return [r for r in list(self.rows) if r[0] >= cutoff]
+
+    def outages_since(self, seconds):
+        cutoff = time.time() - seconds
+        out = [o for o in list(self.outages) if o['e'] >= cutoff]
+        if self.down_since is not None:
+            out.append({'s': int(self.down_since), 'e': None, 'c': self.down_cause or 'net'})
+        return out
+
+# ── Wi-Fi details through the WLAN API (v2.15) ─────────────────────────
+# Replaces parsing `netsh wlan show interfaces` once a second (a process
+# launch each time, in the display language). Since Windows 11 24H2 the
+# network NAME (SSID) is location data: without location access for desktop
+# apps Windows withholds it, and the rest still works.
+class _GUID(ctypes.Structure):
+    _fields_ = [('Data1', ctypes.c_ulong), ('Data2', ctypes.c_ushort),
+                ('Data3', ctypes.c_ushort), ('Data4', ctypes.c_ubyte * 8)]
+
+class _WLAN_INTERFACE_INFO(ctypes.Structure):
+    _fields_ = [('InterfaceGuid', _GUID), ('strInterfaceDescription', ctypes.c_wchar * 256),
+                ('isState', ctypes.c_int)]
+
+class _WLAN_INTERFACE_INFO_LIST(ctypes.Structure):
+    _fields_ = [('dwNumberOfItems', ctypes.c_ulong), ('dwIndex', ctypes.c_ulong),
+                ('InterfaceInfo', _WLAN_INTERFACE_INFO * 1)]
+
+class _DOT11_SSID(ctypes.Structure):
+    _fields_ = [('uSSIDLength', ctypes.c_ulong), ('ucSSID', ctypes.c_ubyte * 32)]
+
+class _WLAN_ASSOCIATION_ATTRIBUTES(ctypes.Structure):
+    _fields_ = [('dot11Ssid', _DOT11_SSID), ('dot11BssType', ctypes.c_int),
+                ('dot11Bssid', ctypes.c_ubyte * 6), ('dot11PhyType', ctypes.c_int),
+                ('uDot11PhyIndex', ctypes.c_ulong), ('wlanSignalQuality', ctypes.c_ulong),
+                ('ulRxRate', ctypes.c_ulong), ('ulTxRate', ctypes.c_ulong)]
+
+class _WLAN_SECURITY_ATTRIBUTES(ctypes.Structure):
+    _fields_ = [('bSecurityEnabled', ctypes.c_int), ('bOneXEnabled', ctypes.c_int),
+                ('dot11AuthAlgorithm', ctypes.c_int), ('dot11CipherAlgorithm', ctypes.c_int)]
+
+class _WLAN_CONNECTION_ATTRIBUTES(ctypes.Structure):
+    _fields_ = [('isState', ctypes.c_int), ('wlanConnectionMode', ctypes.c_int),
+                ('strProfileName', ctypes.c_wchar * 256),
+                ('wlanAssociationAttributes', _WLAN_ASSOCIATION_ATTRIBUTES),
+                ('wlanSecurityAttributes', _WLAN_SECURITY_ATTRIBUTES)]
+
+class _WLAN_RATE_SET(ctypes.Structure):
+    _fields_ = [('uRateSetLength', ctypes.c_ulong), ('usRateSet', ctypes.c_ushort * 126)]
+
+class _WLAN_BSS_ENTRY(ctypes.Structure):
+    _fields_ = [('dot11Ssid', _DOT11_SSID), ('uPhyId', ctypes.c_ulong),
+                ('dot11Bssid', ctypes.c_ubyte * 6), ('dot11BssType', ctypes.c_int),
+                ('dot11BssPhyType', ctypes.c_int), ('lRssi', ctypes.c_long),
+                ('uLinkQuality', ctypes.c_ulong), ('bInRegDomain', ctypes.c_ubyte),
+                ('usBeaconPeriod', ctypes.c_ushort), ('ullTimestamp', ctypes.c_ulonglong),
+                ('ullHostTimestamp', ctypes.c_ulonglong),
+                ('usCapabilityInformation', ctypes.c_ushort),
+                ('ulChCenterFrequency', ctypes.c_ulong), ('wlanRateSet', _WLAN_RATE_SET),
+                ('ulIeOffset', ctypes.c_ulong), ('ulIeSize', ctypes.c_ulong)]
+
+class _WLAN_BSS_LIST(ctypes.Structure):
+    _fields_ = [('dwTotalSize', ctypes.c_ulong), ('dwNumberOfItems', ctypes.c_ulong),
+                ('wlanBssEntries', _WLAN_BSS_ENTRY * 1)]
+
+_WIFI_GEN = {7: 'Wi-Fi 4', 8: 'Wi-Fi 5', 10: 'Wi-Fi 6', 11: 'Wi-Fi 7',
+             4: '802.11a', 5: '802.11b', 6: '802.11g'}
+
+def _wifi_band(mhz):
+    """(band label, channel) from a centre frequency in MHz."""
+    if 2400 <= mhz <= 2500:
+        return '2.4 GHz', (14 if mhz == 2484 else (mhz - 2407) // 5)
+    if 5150 <= mhz < 5925:
+        return '5 GHz', (mhz - 5000) // 5
+    if 5925 <= mhz <= 7125:
+        return '6 GHz', (mhz - 5950) // 5
+    return None, None
+
+class _Wlan:
+    """Current Wi-Fi connection via wlanapi. read() -> dict | None."""
+    OP_CURRENT_CONNECTION = 7
+    OP_RSSI = 0x10000102
+    STATE_CONNECTED = 1
+
+    def __init__(self):
+        self.ok = False
+        self._freq = {}                     # bssid -> MHz (a BSS doesn't move)
+        try:
+            api = ctypes.WinDLL('wlanapi')
+        except OSError:
+            return
+        api.WlanOpenHandle.argtypes = [ctypes.c_ulong, ctypes.c_void_p,
+                                       ctypes.POINTER(ctypes.c_ulong),
+                                       ctypes.POINTER(ctypes.c_void_p)]
+        api.WlanCloseHandle.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+        api.WlanEnumInterfaces.argtypes = [ctypes.c_void_p, ctypes.c_void_p,
+                                           ctypes.POINTER(ctypes.POINTER(_WLAN_INTERFACE_INFO_LIST))]
+        api.WlanQueryInterface.argtypes = [ctypes.c_void_p, ctypes.POINTER(_GUID), ctypes.c_int,
+                                           ctypes.c_void_p, ctypes.POINTER(ctypes.c_ulong),
+                                           ctypes.POINTER(ctypes.c_void_p),
+                                           ctypes.POINTER(ctypes.c_int)]
+        api.WlanGetNetworkBssList.argtypes = [ctypes.c_void_p, ctypes.POINTER(_GUID),
+                                              ctypes.c_void_p, ctypes.c_int, ctypes.c_int,
+                                              ctypes.c_void_p,
+                                              ctypes.POINTER(ctypes.POINTER(_WLAN_BSS_LIST))]
+        api.WlanFreeMemory.argtypes = [ctypes.c_void_p]
+        self.api = api
+        self.h = ctypes.c_void_p()
+        ver = ctypes.c_ulong()
+        # 1062 (service not running) on PCs without Wi-Fi: ok stays False
+        self.ok = api.WlanOpenHandle(2, None, ctypes.byref(ver), ctypes.byref(self.h)) == 0
+
+    def _query(self, guid, opcode):
+        size = ctypes.c_ulong()
+        data = ctypes.c_void_p()
+        vt = ctypes.c_int()
+        rc = self.api.WlanQueryInterface(self.h, ctypes.byref(guid), opcode, None,
+                                         ctypes.byref(size), ctypes.byref(data), ctypes.byref(vt))
+        return rc, data
+
+    def _frequency(self, guid, bssid):
+        if bssid in self._freq:
+            return self._freq[bssid]
+        lst = ctypes.POINTER(_WLAN_BSS_LIST)()
+        mhz = None
+        # NULL SSID + dot11_BSS_type_any: the cached scan list, no new scan
+        if self.api.WlanGetNetworkBssList(self.h, ctypes.byref(guid), None, 3, 0, None,
+                                          ctypes.byref(lst)) == 0 and lst:
+            try:
+                n = lst.contents.dwNumberOfItems
+                arr = ctypes.cast(ctypes.addressof(lst.contents.wlanBssEntries),
+                                  ctypes.POINTER(_WLAN_BSS_ENTRY))
+                for i in range(n):
+                    if bytes(arr[i].dot11Bssid) == bssid:
+                        mhz = arr[i].ulChCenterFrequency // 1000
+                        break
+            finally:
+                self.api.WlanFreeMemory(lst)
+        if mhz:
+            self._freq[bssid] = mhz
+        return mhz
+
+    def read(self):
+        if not self.ok:
+            return None
+        lst = ctypes.POINTER(_WLAN_INTERFACE_INFO_LIST)()
+        if self.api.WlanEnumInterfaces(self.h, None, ctypes.byref(lst)) != 0 or not lst:
+            return None
+        try:
+            n = lst.contents.dwNumberOfItems
+            arr = ctypes.cast(ctypes.addressof(lst.contents.InterfaceInfo),
+                              ctypes.POINTER(_WLAN_INTERFACE_INFO))
+            guid = None
+            for i in range(n):
+                if arr[i].isState == self.STATE_CONNECTED:
+                    guid = _GUID.from_buffer_copy(arr[i].InterfaceGuid)
+                    break
+        finally:
+            self.api.WlanFreeMemory(lst)
+        if guid is None:
+            return None
+        info = {'signal': None, 'rssi': None, 'ssid': None, 'hidden': False,
+                'band': None, 'channel': None, 'gen': None, 'rx': None, 'tx': None}
+        rc, data = self._query(guid, self.OP_CURRENT_CONNECTION)
+        if rc == 0 and data:
+            try:
+                ca = _WLAN_CONNECTION_ATTRIBUTES.from_address(data.value)
+                aa = ca.wlanAssociationAttributes
+                info['signal'] = int(aa.wlanSignalQuality)
+                info['rx'] = aa.ulRxRate // 1000          # kbps -> Mbps
+                info['tx'] = aa.ulTxRate // 1000
+                info['gen'] = _WIFI_GEN.get(aa.dot11PhyType)
+                ln = min(int(aa.dot11Ssid.uSSIDLength), 32)
+                if ln:
+                    info['ssid'] = bytes(aa.dot11Ssid.ucSSID[:ln]).decode('utf-8', 'replace')
+                bssid = bytes(aa.dot11Bssid)
+                if any(bssid):
+                    mhz = self._frequency(guid, bssid)
+                    if mhz:
+                        info['band'], info['channel'] = _wifi_band(mhz)
+            finally:
+                self.api.WlanFreeMemory(data)
+        if info['ssid'] is None:
+            info['hidden'] = True          # location access off (24H2+)
+        rc, data = self._query(guid, self.OP_RSSI)
+        if rc == 0 and data:
+            try:
+                info['rssi'] = ctypes.c_long.from_address(data.value).value
+            finally:
+                self.api.WlanFreeMemory(data)
+        if info['signal'] is None and info['rssi'] is not None:
+            # same mapping Windows uses: -100 dBm = 0 %, -50 dBm = 100 %
+            info['signal'] = max(0, min(100, 2 * (info['rssi'] + 100)))
+        return info
+
+    def close(self):
+        if self.ok:
+            try:
+                self.api.WlanCloseHandle(self.h, None)
+            except Exception as _swallowed:
+                _note('_Wlan.close', _swallowed)
+            self.ok = False
+
+# ── Battery health from Windows' own battery report (v2.15) ────────────
+def battery_report():
+    """{'batteries': [...], 'history': [(date, full, design, cycles)]}.
+
+    powercfg /batteryreport works without admin rights (the root/wmi
+    battery classes often refuse a standard user) and is what Windows itself
+    uses; its XML form is stable and not localized. Capacities are mWh
+    unless the battery only reports relative values."""
+    import tempfile, shutil
+    import xml.etree.ElementTree as ET
+    d = tempfile.mkdtemp(prefix='pulsedeck-batt-')
+    out = os.path.join(d, 'battery.xml')
+    try:
+        subprocess.run(['powercfg', '/batteryreport', '/xml', '/output', out],
+                       capture_output=True, timeout=40, startupinfo=_silent_startupinfo())
+        root = ET.parse(out).getroot()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+    return _parse_battery_report(root)
+
+def _parse_battery_report(root):
+    def ln(tag):
+        return tag.rsplit('}', 1)[-1]
+
+    def num(x):
+        try:
+            return int(float(x))
+        except (TypeError, ValueError):
+            return None
+
+    bats = []
+    for el in root.iter():
+        if ln(el.tag) != 'Battery':
+            continue
+        f = {ln(c.tag): (c.text or '').strip() for c in el}
+        bats.append({'id': f.get('Id', ''), 'maker': f.get('Manufacturer', ''),
+                     'chem': f.get('Chemistry', ''),
+                     'design': num(f.get('DesignCapacity')),
+                     'full': num(f.get('FullChargeCapacity')),
+                     'cycles': num(f.get('CycleCount')),
+                     'relative': f.get('RelativeCapacity') == '1'})
+    hist = []
+    for el in root.iter():
+        if ln(el.tag) != 'HistoryEntry':
+            continue
+        a = {ln(k): v for k, v in el.attrib.items()}
+        design, full = num(a.get('DesignCapacity')), num(a.get('FullChargeCapacity'))
+        if design and full:
+            hist.append((a.get('LocalStartDate', '')[:10], full, design, num(a.get('CycleCount'))))
+    return {'batteries': bats, 'history': hist}
+
+def _downloads_dir():
+    """The user's Downloads folder (a real folder even inside the Store
+    container, unlike AppData, so a browser can open what we put there)."""
+    try:
+        g = _GUID(0x374DE290, 0x123F, 0x4565,
+                  (ctypes.c_ubyte * 8)(0x91, 0x64, 0x39, 0xC4, 0x92, 0x5E, 0x46, 0x7B))
+        p = ctypes.c_wchar_p()
+        if ctypes.windll.shell32.SHGetKnownFolderPath(ctypes.byref(g), 0, None,
+                                                      ctypes.byref(p)) == 0:
+            path = p.value
+            ctypes.windll.ole32.CoTaskMemFree(p)
+            if path and os.path.isdir(path):
+                return path
+    except Exception as _swallowed:
+        _note('_downloads_dir', _swallowed)
+    return os.path.join(os.path.expanduser('~'), 'Downloads')
+
+# ── What's filling the disk? (v2.15) ──────────────────────────────────
+class _DiskScanner(threading.Thread):
+    """Folder sizes under one drive or folder, like WizTree/TreeSize.
+
+    scandir hands back each file's size and attributes from the directory
+    listing itself, so a scan is one listing per folder and no per-file
+    calls. Junctions and symlinks are skipped (they would count folders
+    twice, or loop); OneDrive files that are online-only are counted
+    apart, since they take no space on this disk.
+    """
+    TOP_FILES = 100
+    _REPARSE = 0x400
+    _CLOUD = 0x1000 | 0x40000 | 0x400000      # offline | recall-on-open | recall-on-data-access
+
+    def __init__(self, root):
+        super().__init__(daemon=True, name='DiskScan')
+        self.root = os.path.abspath(root)
+        # path -> [own_bytes, total_bytes, own_files, total_files, [child paths]]
+        self.nodes = {}
+        self.top = []                        # min-heap of (size, path)
+        self.files = 0
+        self.bytes = 0
+        self.cloud = 0
+        self.denied = 0
+        self.current = self.root
+        self.done = False
+        self.cancelled = False
+        self.secs = 0.0
+        self._halt = threading.Event()
+
+    def cancel(self):
+        self._halt.set()
+
+    def run(self):
+        t0 = time.monotonic()
+        try:
+            self._scan()
+        except Exception as e:
+            _note('_DiskScanner.run', e)
+        self.secs = time.monotonic() - t0
+        self.done = True
+
+    def _scan(self):
+        import heapq
+        order = []
+        nodes = self.nodes
+        nodes[self.root] = [0, 0, 0, 0, []]
+        stack = [self.root]
+        while stack:
+            if self._halt.is_set():
+                self.cancelled = True
+                return
+            d = stack.pop()
+            node = nodes[d]
+            order.append(d)
+            self.current = d
+            try:
+                it = os.scandir(d)
+            except OSError:
+                self.denied += 1
+                continue
+            with it:
+                for e in it:
+                    try:
+                        st = e.stat(follow_symlinks=False)
+                    except OSError:
+                        continue
+                    attrs = getattr(st, 'st_file_attributes', 0)
+                    if attrs & self._REPARSE:
+                        continue
+                    if e.is_dir(follow_symlinks=False):
+                        p = e.path
+                        nodes[p] = [0, 0, 0, 0, []]
+                        node[4].append(p)
+                        stack.append(p)
+                        continue
+                    sz = st.st_size
+                    if attrs & self._CLOUD:
+                        self.cloud += sz
+                        continue
+                    node[0] += sz
+                    node[2] += 1
+                    self.files += 1
+                    self.bytes += sz
+                    if len(self.top) < self.TOP_FILES:
+                        heapq.heappush(self.top, (sz, e.path))
+                    elif sz > self.top[0][0]:
+                        heapq.heapreplace(self.top, (sz, e.path))
+        # a folder is always listed before its subfolders, so walking the
+        # order backwards totals every child before its parent
+        for d in reversed(order):
+            n = nodes[d]
+            n[1] = n[0] + sum(nodes[c][1] for c in n[4])
+            n[3] = n[2] + sum(nodes[c][3] for c in n[4])
+
+    def largest_files(self, n=50):
+        return sorted(self.top, reverse=True)[:n]
+
 class _SlowPoller(threading.Thread):
     """Polls slow hardware reads (~1 s interval) off the main thread.
 
@@ -5156,6 +6358,10 @@ class _SlowPoller(threading.Thread):
         self.lhm_wanted = False
         self.net_kind     = None   # 'wifi' | 'eth' | None (default-route interface)
         self.wifi_signal  = None   # int 0-100 | None (only polled while on Wi-Fi)
+        self.wifi         = None   # _Wlan.read() dict | None
+        self.wifi_wanted  = False  # the Wi-Fi cell is on the bar
+        self._wlan        = None   # opened on first need
+        self._netsh_ts    = 0.0
         self.ping_ms      = None   # int | None (round-trip to 1.1.1.1, on demand)
         self.ping_ts      = 0.0    # when ping_ms was measured
         self._stop        = False
@@ -5192,13 +6398,39 @@ class _SlowPoller(threading.Thread):
                 _note('_SlowPoller._poll', _swallowed)
         try:
             self.net_kind = _active_net_kind()
-            self.wifi_signal = _wifi_signal_percent() if self.net_kind == 'wifi' else None
         except Exception as _swallowed:
             _note('_SlowPoller._poll', _swallowed)
+        # Wi-Fi details: while Wi-Fi carries the traffic, or while the Wi-Fi
+        # cell is on the bar (a laptop can be on Wi-Fi *and* a cable)
+        if self.net_kind == 'wifi' or self.wifi_wanted:
+            try:
+                self.wifi = self._read_wifi()
+            except Exception as _swallowed:
+                _note('_SlowPoller._poll.wifi', _swallowed)
+                self.wifi = None
+        else:
+            self.wifi = None
+        self.wifi_signal = self.wifi.get('signal') if self.wifi else None
         # Latency is measured on demand when the Network tooltip opens (see
         # Widget._request_ping) - it used to run here every ~3 s whether or
         # not anyone was looking: 28,800 ping.exe launches and round-trips to
         # 1.1.1.1 a day, for a number shown only while hovering one cell.
+
+    def _read_wifi(self):
+        if self._wlan is None:
+            self._wlan = _Wlan()
+        if self._wlan.ok:
+            return self._wlan.read()
+        # No WLAN API (service stopped, stripped-down image): the old netsh
+        # route, at most every 5 s - it launches a process each time
+        if self.net_kind != 'wifi':
+            return None
+        now = time.monotonic()
+        if now - self._netsh_ts < 5 and self.wifi is not None:
+            return self.wifi
+        self._netsh_ts = now
+        sig = _wifi_signal_percent()
+        return {'signal': sig} if sig is not None else None
 
     def request_gpu_temp(self):
         """Arm the AMD/Intel GPU-temperature reader (first caller wins).
@@ -6497,6 +7729,383 @@ class CustomizeWindow:
         btn.bind('<Destroy>', _stop_on_leave, add='+')
         show_history()
 
+    # ── What's filling the disk? (v2.15) ──
+    def _tool_header(self, icon, title_key, title_def, sub=''):
+        """Title + "← Tools" link + optional subtitle, as the speed test has."""
+        T = self.T; L = self.L
+        f = tk.Frame(self._content, bg=T['bg'])
+        f.pack(side='top', fill='x', padx=24, pady=(14, 2))
+        tk.Label(f, text=icon + '  ' + L.get(title_key, title_def), fg=T['text'], bg=T['bg'],
+                 font=('Segoe UI', 12, 'bold')).pack(side='left')
+        back = tk.Label(f, text='←  ' + L.get('tools', 'Tools'), fg=T['cyan'], bg=T['bg'],
+                        font=('Segoe UI', 9), cursor='hand2')
+        back.pack(side='right')
+        back.bind('<Button-1>', lambda e: self.show_tab('tools'))
+        if sub:
+            s = tk.Label(self._content, text=sub, fg=T['muted'], bg=T['bg'],
+                         font=('Segoe UI', 9), justify='left', wraplength=500)
+            s.pack(side='top', anchor='w', padx=24, fill='x')
+            s.bind('<Configure>', lambda e: s.configure(wraplength=max(200, e.width - 8)))
+        tk.Frame(self._content, bg=T['line'], height=1).pack(
+            side='top', fill='x', padx=24, pady=(6, 0))
+
+    def _tab_diskusage(self):
+        T = self.T; L = self.L
+        self._tool_header('🗂', 't_diskusage', "What's filling the disk?", L.get('du_sub', ''))
+
+        # ── what to scan ──
+        pick = tk.Frame(self._content, bg=T['bg'])
+        pick.pack(side='top', fill='x', padx=24, pady=(10, 4))
+        drives = []
+        try:
+            for p in psutil.disk_partitions(all=False):
+                if 'cdrom' in (p.opts or '') or not p.fstype:
+                    continue
+                try:
+                    u = psutil.disk_usage(p.mountpoint)
+                except OSError:
+                    continue
+                drives.append((p.mountpoint, u))
+        except Exception as _swallowed:
+            _note('CustomizeWindow._tab_diskusage', _swallowed)
+
+        status = tk.Label(self._content, text=L.get('du_pick', ''), fg=T['muted'], bg=T['bg'],
+                          font=('Segoe UI', 9), anchor='w', justify='left')
+        status.pack(side='top', fill='x', padx=24, pady=(2, 0))
+        crumbs = tk.Frame(self._content, bg=T['bg'])
+        crumbs.pack(side='top', fill='x', padx=24, pady=(6, 0))
+        canvas, body = self._scroll_area(pady=6)
+
+        state = {'scan': None, 'cwd': None, 'view': 'folders', 'poll': None}
+
+        def btn(parent, text, cmd, accent=False):
+            b = tk.Label(parent, text=text, fg=(T['bg'] if accent else T['text']),
+                         bg=(T['cyan'] if accent else T['panel']), font=('Segoe UI', 9),
+                         padx=12, pady=5, cursor='hand2')
+            b.bind('<Button-1>', lambda e: cmd())
+            return b
+
+        def pick_folder():
+            from tkinter import filedialog
+            d = filedialog.askdirectory(parent=self._win)
+            if d:
+                start(os.path.normpath(d))
+        # folder first, then the drives three to a row: with four or more
+        # drives a single row ran off the window and hid the buttons past it
+        btn(pick, '📁  ' + L.get('du_folder', 'Folder…'), pick_folder).pack(
+            side='left', anchor='n', padx=(0, 10))
+        dgrid = tk.Frame(pick, bg=T['bg']); dgrid.pack(side='left', anchor='n')
+        for i, (mp, u) in enumerate(drives):
+            label = f"{mp.rstrip(chr(92))}  {_human_bytes(u.used)} / {_human_bytes(u.total)}"
+            btn(dgrid, label, lambda m=mp: start(m)).grid(
+                row=i // 3, column=i % 3, padx=(0, 6), pady=(0, 4), sticky='w')
+
+        def open_in_explorer(path, select=False):
+            try:
+                if select:
+                    subprocess.Popen(['explorer', '/select,', path])
+                else:
+                    os.startfile(path)
+            except Exception as _swallowed:
+                _note('CustomizeWindow._tab_diskusage.open', _swallowed)
+
+        def start(root):
+            old = state['scan']
+            if old is not None:
+                old.cancel()
+            sc = _DiskScanner(root)
+            state.update(scan=sc, cwd=sc.root, view='folders')
+            for ch in body.winfo_children():
+                ch.destroy()
+            for ch in crumbs.winfo_children():
+                ch.destroy()
+            sc.start()
+            poll()
+
+        def poll():
+            sc = state['scan']
+            if sc is None or not status.winfo_exists():
+                return
+            if not sc.done:
+                cur = sc.current
+                if len(cur) > 70:
+                    cur = '…' + cur[-69:]
+                status.config(fg=T['muted'], text=L.get('du_scanning', 'Scanning… {n} files · {size}')
+                              .replace('{n}', f'{sc.files:,}').replace('{size}', _human_bytes(sc.bytes))
+                              + '\n' + cur)
+                state['poll'] = self._win.after(200, poll)
+                return
+            if sc.cancelled:
+                return
+            bits = [L.get('du_done', '{size} in {n} files · {s} s')
+                    .replace('{size}', _human_bytes(sc.bytes)).replace('{n}', f'{sc.files:,}')
+                    .replace('{s}', f'{sc.secs:.0f}')]
+            if sc.cloud:
+                bits.append(L.get('du_cloud', '').replace('{size}', _human_bytes(sc.cloud)))
+            if sc.denied:
+                bits.append(L.get('du_skipped', '').replace('{n}', str(sc.denied)))
+            status.config(text='\n'.join(b for b in bits if b), fg=T['text'])
+            render()
+
+        def go(path):
+            state['cwd'] = path
+            state['view'] = 'folders'
+            render()
+
+        def render():
+            sc = state['scan']
+            if sc is None or not sc.done:
+                return
+            for ch in body.winfo_children():
+                ch.destroy()
+            for ch in crumbs.winfo_children():
+                ch.destroy()
+            cwd = state['cwd']
+            # breadcrumb: root › sub › sub (each clickable)
+            parts = []
+            p = cwd
+            while True:
+                parts.append(p)
+                if p == sc.root:
+                    break
+                parent = os.path.dirname(p)
+                if parent == p or parent not in sc.nodes:
+                    break
+                p = parent
+            for i, p in enumerate(reversed(parts)):
+                name = p if p == sc.root else os.path.basename(p)
+                last = (i == len(parts) - 1)
+                lb = tk.Label(crumbs, text=name, fg=(T['text'] if last else T['cyan']), bg=T['bg'],
+                              font=('Segoe UI', 9, 'bold' if last else 'normal'),
+                              cursor='' if last else 'hand2')
+                lb.pack(side='left')
+                if not last:
+                    lb.bind('<Button-1>', lambda e, q=p: go(q))
+                    tk.Label(crumbs, text=' › ', fg=T['muted'], bg=T['bg'],
+                             font=('Segoe UI', 9)).pack(side='left')
+            tog = tk.Frame(crumbs, bg=T['bg']); tog.pack(side='right')
+            for mode, lbl in (('folders', L.get('du_folders', 'Folders')),
+                              ('files', L.get('du_largest', 'Largest files'))):
+                on = state['view'] == mode
+                b = tk.Label(tog, text=lbl, cursor='hand2', padx=10, pady=2,
+                             font=('Segoe UI', 9, 'bold' if on else 'normal'),
+                             bg=(T['cyan'] if on else T['panel']),
+                             fg=('#0d1117' if on else T['muted']))
+                b.pack(side='left', padx=1)
+                b.bind('<Button-1>', lambda e, m=mode: (state.update(view=m), render()))
+            openb = tk.Label(tog, text='↗', fg=T['cyan'], bg=T['bg'], font=('Segoe UI', 10),
+                             padx=8, cursor='hand2')
+            openb.pack(side='left')
+            openb.bind('<Button-1>', lambda e: open_in_explorer(cwd))
+
+            if state['view'] == 'files':
+                items = [(sz, path, os.path.basename(path), os.path.dirname(path))
+                         for sz, path in sc.largest_files(50)]
+                for sz, path, name, where in items:
+                    row_(sz, sc.bytes or 1, '📄', name, where,
+                         lambda q=path: open_in_explorer(q, True))
+                return
+            node = sc.nodes.get(cwd)
+            if not node:
+                return
+            total = node[1] or 1
+            entries = [(sc.nodes[c][1], c) for c in node[4] if c in sc.nodes]
+            entries.sort(reverse=True)
+            if cwd != sc.root:
+                up = tk.Label(body, text='⬑  ' + L.get('du_up', 'Up'), fg=T['cyan'],
+                              bg=T['bg'], font=('Segoe UI', 9), cursor='hand2')
+                up.pack(anchor='w', pady=(0, 4))
+                up.bind('<Button-1>', lambda e: go(os.path.dirname(cwd)))
+            shown = entries[:60]
+            if node[0]:
+                shown.append((node[0], None))
+                shown.sort(key=lambda x: -x[0])
+            for sz, path in shown:
+                if path is None:
+                    row_(sz, total, '🗎', L.get('du_files_here', 'Files in this folder'),
+                         f'{node[2]:,}', None)
+                else:
+                    n = sc.nodes[path]
+                    row_(sz, total, '📁', os.path.basename(path), f'{n[3]:,}',
+                         (lambda q=path: go(q)) if n[4] or n[2] else None,
+                         lambda q=path: open_in_explorer(q))
+            try:
+                canvas.yview_moveto(0)
+            except Exception as _swallowed:
+                _note('CustomizeWindow._tab_diskusage.render', _swallowed)
+
+        def row_(size, whole, icon, name, detail, on_click, on_open=None):
+            r = tk.Frame(body, bg=T['panel'])
+            r.pack(fill='x', pady=1)
+            pct = (size / float(whole) * 100.0) if whole else 0.0
+            tk.Label(r, text=icon, fg=T['muted'], bg=T['panel'], font=('Segoe UI', 10),
+                     width=2).pack(side='left', padx=(8, 2), pady=4)
+            nm = tk.Label(r, text=name[:44], fg=T['text'], bg=T['panel'], font=('Segoe UI', 9),
+                          anchor='w', width=30)
+            nm.pack(side='left')
+            bar = tk.Canvas(r, width=120, height=10, bg=T['bg2'], highlightthickness=0, bd=0)
+            bar.pack(side='left', padx=6)
+            colour = T['red'] if pct >= 40 else (T['orange'] if pct >= 15 else T['cyan'])
+            bar.create_rectangle(0, 0, max(1, int(120 * min(pct, 100) / 100)), 10,
+                                 fill=colour, width=0)
+            tk.Label(r, text=_human_bytes(size), fg=T['text'], bg=T['panel'],
+                     font=('Segoe UI', 9, 'bold'), width=9, anchor='e').pack(side='left')
+            tk.Label(r, text=f'{pct:4.1f}%', fg=T['muted'], bg=T['panel'],
+                     font=('Segoe UI', 8), width=6, anchor='e').pack(side='left')
+            tk.Label(r, text=str(detail)[:60], fg=T['muted'], bg=T['panel'],
+                     font=('Segoe UI', 8), anchor='w').pack(side='left', padx=(8, 4),
+                                                            fill='x', expand=True)
+            if on_open is not None:
+                ob = tk.Label(r, text='↗', fg=T['cyan'], bg=T['panel'],
+                              font=('Segoe UI', 10), padx=8, cursor='hand2')
+                ob.pack(side='right')
+                ob.bind('<Button-1>', lambda e: on_open())
+            if on_click is not None:
+                for w_ in (r, nm, bar):
+                    w_.configure(cursor='hand2')
+                    w_.bind('<Button-1>', lambda e: on_click())
+                r.bind('<Enter>', lambda e: nm.config(fg=T['cyan']))
+                r.bind('<Leave>', lambda e: nm.config(fg=T['text']))
+
+        # leaving the tab (or closing Settings) stops the scan and frees the tree
+        def _stop_on_leave(e):
+            if e.widget is not status:
+                return
+            sc = state.get('scan')
+            if sc is not None:
+                sc.cancel()
+            state['scan'] = None
+            try:
+                self._win.after(1500, _trim_working_set)
+            except Exception as _swallowed:
+                _note('CustomizeWindow._tab_diskusage._stop_on_leave', _swallowed)
+        status.bind('<Destroy>', _stop_on_leave, add='+')
+
+    # ── Battery health (v2.15) ──
+    def _tab_battery(self):
+        T = self.T; L = self.L
+        self._tool_header('🔋', 't_batthealth', 'Battery health', L.get('bh_sub', ''))
+        canvas, body = self._scroll_area(pady=8)
+        loading = tk.Label(body, text='⏳  ' + L.get('bh_loading', 'Reading the battery report…'),
+                           fg=T['cyan'], bg=T['bg'], font=('Segoe UI', 10))
+        loading.pack(anchor='w', pady=10)
+
+        def kv(parent, k, v, colour=None):
+            r = tk.Frame(parent, bg=T['panel']); r.pack(fill='x', padx=14, pady=1)
+            tk.Label(r, text=k, fg=T['muted'], bg=T['panel'], font=('Segoe UI', 9),
+                     width=22, anchor='w').pack(side='left')
+            tk.Label(r, text=v, fg=colour or T['text'], bg=T['panel'],
+                     font=('Segoe UI', 9, 'bold'), anchor='w').pack(side='left')
+
+        def cap(mwh, relative):
+            if mwh is None:
+                return '—'
+            return f'{mwh}' if relative else f'{mwh / 1000:.1f} Wh'
+
+        def show(rep):
+            if not loading.winfo_exists():
+                return
+            loading.destroy()
+            if rep is None:
+                tk.Label(body, text=L.get('bh_err', ''), fg=T['orange'], bg=T['bg'],
+                         font=('Segoe UI', 10)).pack(anchor='w', pady=10)
+                return
+            bats = [b for b in rep['batteries'] if b.get('design') and b.get('full')]
+            if not bats:
+                tk.Label(body, text=L.get('bh_none', 'No battery found.'), fg=T['muted'],
+                         bg=T['bg'], font=('Segoe UI', 10)).pack(anchor='w', pady=10)
+            for b in bats:
+                health = max(0.0, min(100.0, b['full'] / float(b['design']) * 100.0))
+                colour = T['green'] if health >= 80 else (T['orange'] if health >= 60 else T['red'])
+                verdict = L.get('bh_good' if health >= 80 else ('bh_fair' if health >= 60 else 'bh_poor'), '')
+                try:
+                    self.w._batt_health = int(round(health))
+                except Exception as _swallowed:
+                    _note('CustomizeWindow._tab_battery.show', _swallowed)
+                card = tk.Frame(body, bg=T['panel']); card.pack(fill='x', pady=(0, 10))
+                head = tk.Frame(card, bg=T['panel']); head.pack(fill='x', padx=14, pady=(12, 2))
+                tk.Label(head, text=L.get('bh_health', 'Health'), fg=T['muted'], bg=T['panel'],
+                         font=('Segoe UI', 9)).pack(anchor='w')
+                big = tk.Frame(head, bg=T['panel']); big.pack(anchor='w')
+                tk.Label(big, text=f'{health:.0f}%', fg=colour, bg=T['panel'],
+                         font=('Segoe UI', 26, 'bold')).pack(side='left')
+                tk.Label(big, text='  ' + verdict, fg=colour, bg=T['panel'],
+                         font=('Segoe UI', 10)).pack(side='left', pady=(10, 0))
+                meter = tk.Canvas(card, height=8, bg=T['bg2'], highlightthickness=0, bd=0)
+                meter.pack(fill='x', padx=14, pady=(2, 10))
+                meter.bind('<Configure>', lambda e, c=meter, h=health, col=colour: (
+                    c.delete('all'),
+                    c.create_rectangle(0, 0, int(e.width * h / 100), 8, fill=col, width=0)))
+                kv(card, L.get('bh_design', 'Design capacity'), cap(b['design'], b['relative']))
+                kv(card, L.get('bh_full', 'Full charge capacity'), cap(b['full'], b['relative']))
+                kv(card, L.get('bh_wear', 'Wear'), f'{100 - health:.0f}%')
+                if b.get('cycles'):
+                    kv(card, L.get('bh_cycles', 'Charge cycles'), f"{b['cycles']:,}")
+                name = ' · '.join(x for x in (b.get('maker'), b.get('id'), b.get('chem')) if x)
+                if name:
+                    kv(card, L.get('bh_model', 'Battery'), name[:48])
+                tk.Frame(card, bg=T['panel'], height=10).pack()
+
+            hist = rep.get('history') or []
+            if len(hist) >= 2:
+                card = tk.Frame(body, bg=T['panel']); card.pack(fill='x', pady=(0, 10))
+                tk.Label(card, text=L.get('bh_history', 'Capacity over time'), fg=T['cyan'],
+                         bg=T['panel'], font=('Segoe UI', 10, 'bold')).pack(
+                             anchor='w', padx=14, pady=(10, 2))
+                note = tk.Label(card, text='', fg=T['muted'], bg=T['panel'], font=('Segoe UI', 8))
+                note.pack(anchor='w', padx=14)
+                cv = tk.Canvas(card, height=90, bg=T['panel'], highlightthickness=0, bd=0)
+                cv.pack(fill='x', padx=14, pady=(4, 12))
+                pts = [(d, full / float(design) * 100.0) for d, full, design, _c in hist]
+                lo = max(0.0, min(p for _d, p in pts) - 5)
+                hi = max(100.0, max(p for _d, p in pts))
+                note.config(text=f"{pts[0][0]}  →  {pts[-1][0]}   ·   "
+                                 f"{pts[0][1]:.0f}%  →  {pts[-1][1]:.0f}%")
+
+                def draw(e=None, pts=pts, lo=lo, hi=hi, cv=cv):
+                    cv.delete('all')
+                    w, h = cv.winfo_width(), cv.winfo_height()
+                    if w < 10:
+                        return
+                    for f in (0.0, 0.5, 1.0):
+                        y = 4 + (h - 8) * f
+                        cv.create_line(0, y, w, y, fill=T['line'])
+                        cv.create_text(2, y, anchor='w', fill=T['muted'], font=('Segoe UI', 7),
+                                       text=f'{hi - (hi - lo) * f:.0f}%')
+                    xy = []
+                    for i, (_d, p) in enumerate(pts):
+                        x = 30 + (w - 34) * i / float(len(pts) - 1)
+                        y = 4 + (h - 8) * (hi - p) / float(hi - lo or 1)
+                        xy += [x, y]
+                    cv.create_line(*xy, fill=T['green'], width=2, smooth=True)
+                cv.bind('<Configure>', draw)
+
+            row = tk.Frame(body, bg=T['bg']); row.pack(fill='x', pady=(4, 0))
+            sv = tk.Label(row, text='💾  ' + L.get('bh_report', 'Save the full Windows battery report'),
+                          fg=T['cyan'], bg=T['panel'], font=('Segoe UI', 9), padx=12, pady=6,
+                          cursor='hand2')
+            sv.pack(side='left')
+            res = tk.Label(row, text='', fg=T['muted'], bg=T['bg'], font=('Segoe UI', 8))
+            res.pack(side='left', padx=8)
+
+            def done(path):
+                if res.winfo_exists():
+                    res.config(text=(path or L.get('bh_err', '')),
+                               fg=T['muted'] if path else T['orange'])
+            sv.bind('<Button-1>', lambda e: (res.config(text='⏳'), self._save_battery_report(done)))
+
+        inbox = queue.SimpleQueue()
+        def _bg():
+            try:
+                rep = battery_report()
+            except Exception as e:
+                _note('CustomizeWindow._tab_battery', e)
+                rep = None
+            inbox.put(lambda: show(rep))
+        t = threading.Thread(target=_bg, daemon=True, name='BattHealth')
+        t.start()
+        _ui_pump(self._win, inbox, t.is_alive)
+
     # ── History tab (v2.12) ──
     HIST_RANGES = (('1h', 3600), ('24h', 86400), ('7d', 604800))
 
@@ -6680,6 +8289,9 @@ class CustomizeWindow:
         chart(L.get('hist_net', 'Network'), T['cyan'], '#1e5a6e', 6,
               scale=None, idx2=5, color2=T['blue'])
 
+        # ── connection: ping, packet loss, outages (v2.15) ──
+        draw_conn = self._conn_card(body, view, _clock)
+
         # ── data usage ──
         self._usage_section(body, usage)
 
@@ -6721,8 +8333,178 @@ class CustomizeWindow:
                     stat.config(text=f"{L.get('hist_avg','avg')} {sum(vals)/len(vals):.0f}%"
                                      f"   {L.get('hist_peak','peak')} {pk:.0f}%")
                 view['summary'][str(cv)] = stat.cget('text')
+            try:
+                draw_conn()
+            except Exception as _swallowed:
+                _note('CustomizeWindow._tab_history.redraw', _swallowed)
 
         self._win.after(60, redraw)
+
+    # ── Connection quality + outages (v2.15) ──
+    def _conn_card(self, body, view, clock):
+        """History card: ping per minute, packet loss, and outages as shaded
+        spans, with the latest outages listed underneath. Returns the draw
+        function for the History tab's redraw()."""
+        T = self.T; L = self.L
+        card = tk.Frame(body, bg=T['panel'])
+        card.pack(fill='x', pady=(0, 10))
+        head = tk.Frame(card, bg=T['panel']); head.pack(fill='x', padx=12, pady=(8, 2))
+        tk.Label(head, text=L.get('cn_title', 'Connection'), fg=T['blue'], bg=T['panel'],
+                 font=('Segoe UI', 10, 'bold')).pack(side='left')
+        stat = tk.Label(head, text='', fg=T['muted'], bg=T['panel'], font=('Segoe UI', 9))
+        stat.pack(side='right')
+        cv = tk.Canvas(card, bg=T['panel'], height=78, highlightthickness=0, bd=0)
+        cv.pack(fill='x', padx=12, pady=(0, 4))
+        olist = tk.Frame(card, bg=T['panel']); olist.pack(fill='x', padx=12)
+        foot = tk.Frame(card, bg=T['panel']); foot.pack(fill='x', padx=12, pady=(4, 8))
+        var = tk.BooleanVar(value=bool(self.w.cfg.get('conn_monitor', True)))
+
+        def toggle():
+            self.w._set_conn_monitor(var.get())
+            draw()
+        tk.Checkbutton(foot, text=' ' + L.get('cn_monitor', 'Monitor the connection'),
+                       variable=var, command=toggle, fg=T['text'], bg=T['panel'],
+                       selectcolor=T['bg2'], activebackground=T['panel'],
+                       activeforeground=T['text'], font=('Segoe UI', 9), bd=0,
+                       highlightthickness=0).pack(anchor='w')
+        hint = tk.Label(foot, text=L.get('cn_hint', ''), fg=T['muted'], bg=T['panel'],
+                        font=('Segoe UI', 8), justify='left', wraplength=480)
+        hint.pack(anchor='w', fill='x')
+        hint.bind('<Configure>', lambda e: hint.configure(wraplength=max(200, e.width - 8)))
+        cview = {'rows': [], 'keys': [], 'outs': [], 'summary': ''}
+
+        def dur(secs):
+            secs = int(secs)
+            if secs < 90:
+                return L.get('cn_sec', '{s} s').replace('{s}', str(secs))
+            if secs < 5400:
+                return L.get('cn_min', '{m} min').replace('{m}', str(int(round(secs / 60.0))))
+            return f'{secs // 3600}h {(secs % 3600) // 60:02d}m'
+
+        def cause(o):
+            return L.get('cn_cause_local' if o['c'] == 'local' else 'cn_cause_net', '')
+
+        def draw(_e=None):
+            cv.delete('all')
+            for ch in olist.winfo_children():
+                ch.destroy()
+            conn = getattr(self.w, '_conn', None)
+            w, h = cv.winfo_width(), cv.winfo_height()
+            if w < 4:
+                return
+            t0, t1 = view.get('t0', 0.0), view.get('t1', 1.0)
+            secs = view.get('secs', 86400)
+            span = float(t1 - t0) or 1.0
+            for f in (0.25, 0.5, 0.75):
+                cv.create_line(0, h - h * f, w, h - h * f, fill=T['line'])
+            if conn is None:
+                stat.config(text=L.get('usage_cap_off', 'Off'))
+                cview.update(rows=[], keys=[], outs=[], summary=stat.cget('text'))
+                return
+            rows = conn.quality_since(secs)
+            outs = conn.outages_since(secs)
+            cview.update(rows=rows, keys=[r[0] for r in rows], outs=outs)
+
+            def X(ts):
+                return int((ts - t0) / span * (w - 1))
+            for o in outs:
+                x0 = max(0, X(o['s']))
+                x1 = min(w - 1, X(o['e'] if o['e'] else t1))
+                cv.create_rectangle(x0, 0, max(x1, x0 + 1), h, fill='#4a1c1c', width=0)
+            # one column per pixel: average ping, worst loss
+            cols = {}
+            for ts, p, loss, _n in rows:
+                x = X(ts)
+                if not 0 <= x < w:
+                    continue
+                c = cols.setdefault(x, [0.0, 0, 0])
+                if p >= 0:
+                    c[0] += p; c[1] += 1
+                c[2] = max(c[2], loss)
+            pings = sorted(c[0] / c[1] for c in cols.values() if c[1])
+            top = max(20.0, pings[int(len(pings) * 0.95)] * 1.3) if pings else 50.0
+            for x, (psum, pn, loss) in cols.items():
+                if pn:
+                    y = h - min(1.0, (psum / pn) / top) * (h - 2)
+                    cv.create_line(x, y, x, h, fill='#1e4a7a')
+                    cv.create_line(x, y, x, min(h, y + 2), fill=T['blue'])
+                if loss:
+                    lh = max(2, int(min(1.0, loss / 1000.0) * h * 0.6))
+                    cv.create_line(x, 0, x, lh, fill=T['red'])
+            cv.create_text(2, 2, anchor='nw', fill=T['muted'], font=('Segoe UI', 7),
+                           text=f'{top:.0f} ms')
+            # summary
+            ok_rows = [r for r in rows if r[1] >= 0]
+            probes = sum(r[3] for r in rows)
+            lost = sum(r[2] * r[3] / 1000.0 for r in rows)
+            down_secs = sum((o['e'] or time.time()) - o['s'] for o in outs)
+            if not rows and not outs:
+                stat.config(text=L.get('cn_collect', '—'))
+            else:
+                parts = []
+                if ok_rows:
+                    avg = sum(r[1] * r[3] for r in ok_rows) / float(sum(r[3] for r in ok_rows))
+                    parts.append(f"{L.get('cn_ping_avg', 'avg ping')} {avg:.0f} ms")
+                if probes:
+                    parts.append(f"{L.get('cn_loss', 'packet loss')} {lost / probes * 100:.1f}%")
+                parts.append(L.get('cn_outages', '{n} outages').replace('{n}', str(len(outs)))
+                             + (f' · {dur(down_secs)}' if outs else ''))
+                stat.config(text='   '.join(parts))
+            cview['summary'] = stat.cget('text')
+            # latest outages, newest first
+            if outs:
+                tk.Label(olist, text=L.get('cn_recent', 'Recent outages'), fg=T['muted'],
+                         bg=T['panel'], font=('Segoe UI', 8, 'bold')).pack(anchor='w')
+            for o in sorted(outs, key=lambda o: -o['s'])[:6]:
+                start = time.strftime('%d/%m %H:%M', time.localtime(o['s']))
+                if o['e']:
+                    end = time.strftime('%H:%M', time.localtime(o['e']))
+                    txt = f"{start} – {end}   ·   {dur(o['e'] - o['s'])}   ·   {cause(o)}"
+                    col = T['text']
+                else:
+                    txt = (f"{start}   ·   {L.get('cn_ongoing', 'ongoing')}   ·   {cause(o)}")
+                    col = T['red']
+                tk.Label(olist, text=txt, fg=col, bg=T['panel'],
+                         font=('Consolas', 9)).pack(anchor='w')
+
+        def hover(e):
+            w = cv.winfo_width()
+            if w < 4:
+                return
+            t0, t1 = view.get('t0', 0.0), view.get('t1', 1.0)
+            span = float(t1 - t0) or 1.0
+            ts = t0 + e.x / float(w - 1) * span
+            cv.delete('hover')
+            cv.create_line(e.x, 0, e.x, cv.winfo_height(), fill=T['text'], dash=(2, 2),
+                           tags='hover')
+            for o in cview['outs']:
+                if o['s'] <= ts <= (o['e'] or time.time()):
+                    stat.config(text=f"{clock(ts)}  ·  {L.get('cn_offline', 'Offline')} — "
+                                     f"{cause(o)} ({dur((o['e'] or time.time()) - o['s'])})",
+                                fg=T['red'])
+                    return
+            import bisect
+            keys = cview['keys']
+            i = bisect.bisect_left(keys, ts)
+            cands = [j for j in (i - 1, i) if 0 <= j < len(keys)]
+            j = min(cands, key=lambda k: abs(keys[k] - ts)) if cands else None
+            if j is None or abs(keys[j] - ts) > max(90.0, span / w * 1.5):
+                stat.config(text=f"{clock(ts)}  ·  {L.get('hist_nodata', 'no data')}", fg=T['muted'])
+                return
+            r = cview['rows'][j]
+            txt = clock(r[0])
+            txt += f"  ·  ping {r[1]} ms" if r[1] >= 0 else '  ·  ping —'
+            txt += f"  ·  {L.get('cn_loss', 'packet loss')} {r[2] / 10.0:.1f}%"
+            stat.config(text=txt, fg=T['red'] if r[2] >= 50 else T['text'])
+
+        def unhover(_e):
+            cv.delete('hover')
+            stat.config(text=cview['summary'], fg=T['muted'])
+
+        cv.bind('<Configure>', draw)
+        cv.bind('<Motion>', hover)
+        cv.bind('<Leave>', unhover)
+        return draw
 
     # ── Data usage (v2.12) ──
     def _usage_section(self, body, usage):
@@ -7770,6 +9552,12 @@ class CustomizeWindow:
         if target == 'speed_test':
             self.show_tab('speedtest')
             return
+        if target == 'disk_usage':
+            self.show_tab('diskusage')
+            return
+        if target == 'battery_health':
+            self.show_tab('battery')
+            return
         if target == 'bulk_rename':
             self.show_tab('rename')
             return
@@ -7856,22 +9644,32 @@ class CustomizeWindow:
             _note('CustomizeWindow._tool_toast', _swallowed)
 
     def _open_battery_report(self):
-        """Run the built-in `powercfg /batteryreport` and open the resulting
-        HTML — Windows' own multi-day usage/wear history, which complements
-        the live snapshot above (health %, cycles, capacity) rather than
-        duplicating it."""
+        """System tab's "Battery report" button: the Battery health panel,
+        which reads the same Windows report and can save the full HTML."""
+        self.show_tab('battery')
+
+    def _save_battery_report(self, on_done):
+        """Run `powercfg /batteryreport` into Downloads and open it. Downloads,
+        not %TEMP%: inside the Store container a browser can't always see
+        the app's own temp/AppData paths. on_done(path|None) runs on the
+        UI thread."""
+        inbox = queue.SimpleQueue()
         def _bg():
+            path = None
             try:
-                path = os.path.join(os.environ.get('TEMP', os.getcwd()),
-                                     'PulseDeck_battery_report.html')
-                si = subprocess.STARTUPINFO()
-                si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-                subprocess.run(['powercfg', '/batteryreport', '/output', path],
-                                capture_output=True, timeout=15, startupinfo=si)
-                webbrowser.open('file:///' + path.replace('\\', '/'))
+                dest = os.path.join(_downloads_dir(), 'battery-report.html')
+                subprocess.run(['powercfg', '/batteryreport', '/output', dest],
+                               capture_output=True, timeout=40,
+                               startupinfo=_silent_startupinfo())
+                if os.path.exists(dest):
+                    path = dest
+                    os.startfile(dest)
             except Exception as _swallowed:
-                _note('CustomizeWindow._open_battery_report._bg', _swallowed)
-        threading.Thread(target=_bg, daemon=True).start()
+                _note('CustomizeWindow._save_battery_report._bg', _swallowed)
+            inbox.put(lambda: on_done(path))
+        t = threading.Thread(target=_bg, daemon=True, name='BattReport')
+        t.start()
+        _ui_pump(self._win, inbox, t.is_alive)
 
     def _confirm(self, msg, on_yes):
         """Small modal yes/cancel dialog centered over the Customize window."""
@@ -8309,6 +10107,7 @@ class Widget:
         self._power = None             # last {'cpu','gpu','total','source','cpu_tdp','gpu_tdp'} or None
         # slow-hardware poller (keeps _update_tick non-blocking)
         self._slow = _SlowPoller()
+        self._slow.wifi_wanted = bool(self.cfg.get('show_wifi'))
         self._slow.start()
         # history + data usage (v2.12)
         try:
@@ -8319,6 +10118,24 @@ class Widget:
         self._history = _HistoryStore(os.path.join(CONFIG_DIR, 'history.csv'),
                                       self._usage, self._history_sample)
         self._history.start()
+        # connection quality + outages (v2.15)
+        self._conn = None
+        if self.cfg.get('conn_monitor', True):
+            self._start_conn_monitor()
+        # battery health for the battery tooltip: one powercfg run, off the
+        # UI thread and well after start-up (laptops only)
+        self._batt_health = None
+        if self._has_batt:
+            def _read_health():
+                time.sleep(30)
+                try:
+                    rep = battery_report()
+                    b = next((x for x in rep['batteries'] if x.get('design') and x.get('full')), None)
+                    if b:
+                        self._batt_health = int(round(min(100.0, b['full'] / float(b['design']) * 100)))
+                except Exception as _swallowed:
+                    _note('Widget.__init__._read_health', _swallowed)
+            threading.Thread(target=_read_health, daemon=True, name='BattHealthInit').start()
         # global hotkeys (v2.13) — the picker and always-on-top also have
         # Tools-tab buttons, so a chord already taken by another app just
         # shows as unavailable instead of breaking the feature
@@ -8403,7 +10220,9 @@ class Widget:
             h = max(20, self.root.winfo_height())
             img = ImageGrab.grab(bbox=(x, y, x + w, y + h))
             img = img.resize((24, 8))
-            px = [p[:3] for p in img.getdata()]
+            # getdata() is deprecated in Pillow 13 and goes away in 14
+            flat = getattr(img, 'get_flattened_data', None)
+            px = [p[:3] for p in (flat() if flat else img.getdata())]
             # Most-common colour = the taskbar surface behind us; this is what
             # made the numbers look clean. Ignores dark icon/text outliers that
             # an average would smear into a dark halo.
@@ -8473,7 +10292,7 @@ class Widget:
 
     # action helpers (always run on Tk thread)
     def _act_metric(self, key):
-        keys = ('show_cpu','show_ram','show_net','show_disk','show_batt','show_gpu','show_weather','show_power')
+        keys = ('show_cpu','show_ram','show_net','show_disk','show_batt','show_gpu','show_weather','show_power','show_wifi')
         if self.cfg.get(key) and not any(self.cfg.get(o) for o in keys if o != key):
             return
         self._set(key, not self.cfg.get(key)); self._rebuild()
@@ -8613,24 +10432,88 @@ class Widget:
 
     def _act_quit(self):
         self._user_quit = True   # deliberate exit — see run()'s watchdog
+        self._shutdown()
+
+    def _start_conn_monitor(self):
+        try:
+            self._conn = _ConnMonitor(CONFIG_DIR)
+            self._conn.start()
+        except Exception as _swallowed:
+            _note('Widget._start_conn_monitor', _swallowed)
+            self._conn = None
+
+    def _set_conn_monitor(self, on):
+        """Settings → History: turn the connection monitor on or off."""
+        self._set('conn_monitor', bool(on))
+        if on and self._conn is None:
+            self._start_conn_monitor()
+        elif not on and self._conn is not None:
+            c, self._conn = self._conn, None
+            c.stop()
+
+    def _check_runtime_files(self):
+        """Relaunch if our unpacked files have been deleted underneath us.
+
+        The single-file (portable) build unpacks itself into %TEMP%\\_MEI…
+        and runs from there for as long as the PC stays on. Storage Sense,
+        Disk Cleanup and "temp cleaner" tools delete what isn't locked in
+        there - icons, modules not imported yet - and the app then breaks
+        piece by piece (no icons after a settings change, no tray menu, no
+        weather). A fresh start unpacks a complete copy, so as soon as a
+        sentinel file is missing, quit cleanly and let run() start us again.
+        The installed and Store builds run from their own folder and never
+        need this."""
+        if not _is_onefile():
+            return
+        base = sys._MEIPASS
+        sentinels = (os.path.join(ICON_DIR, 'cpu.png'),
+                     os.path.join(ICON_DIR, 'tray.png'),
+                     os.path.join(base, 'base_library.zip'),
+                     os.path.join(base, 'PIL'))
+        missing = [s for s in sentinels if not os.path.exists(s)]
+        if not missing:
+            return
+        # A relaunch unpacks a complete copy; if files are missing within two
+        # minutes of one, restarting again won't help - never loop.
+        if '--relaunch' in sys.argv[1:] and time.monotonic() - _START_MONO < 120:
+            if not getattr(self, '_heal_given_up', False):
+                self._heal_given_up = True
+                _log(f'runtime files missing from {base} right after start - not relaunching again')
+            return
+        _log(f'runtime files deleted from {base} ({len(missing)} missing) - relaunching')
+        self._shutdown()
+
+    def _shutdown(self):
+        """Stop the background work, save, and end the main loop. run() then
+        relaunches us unless _user_quit is set."""
+        self._shutting_down = True
+        conn = getattr(self, '_conn', None)
+        if conn is not None:
+            try:
+                conn.stop()
+                # let it write the last minute and any open outage; a probe
+                # in flight can take up to ~2 s (two 1 s timeouts)
+                conn.join(timeout=2.5)
+            except Exception as _swallowed:
+                _note('Widget._shutdown', _swallowed)
         try:
             self._history.stop()
         except Exception as _swallowed:
-            _note('Widget._act_quit', _swallowed)
+            _note('Widget._shutdown', _swallowed)
         try:
             if self._hotkeys:
                 self._hotkeys.stop()
         except Exception as _swallowed:
-            _note('Widget._act_quit', _swallowed)
+            _note('Widget._shutdown', _swallowed)
         try:
             self._net.stop()
         except Exception as _swallowed:
-            _note('Widget._act_quit', _swallowed)
+            _note('Widget._shutdown', _swallowed)
         try:
             if getattr(self, '_tray', None):
                 self._tray.stop()
         except Exception as _swallowed:
-            _note('Widget._act_quit', _swallowed)
+            _note('Widget._shutdown', _swallowed)
         self.root.destroy()
 
     def _setup_tray(self):
@@ -9068,7 +10951,8 @@ class Widget:
 
         # ── helpers (operate on a given parent frame = "cell") ──
         ICON_TEXT = {'cpu.png': 'CPU', 'gpu.png': 'GPU', 'ram.png': 'RAM',
-                     'net.png': 'NET', 'disk.png': 'DISK', 'battery.png': 'BAT'}
+                     'net.png': 'NET', 'disk.png': 'DISK', 'battery.png': 'BAT',
+                     'net_wifi.png': 'WIFI'}
         text_mode = self.cfg.get('bar_labels') == 'text'
 
         def load_icon_img(name):
@@ -9164,6 +11048,7 @@ class Widget:
         self.lbl_up = self.lbl_dn = None
         self.lbl_disk_r = self.lbl_disk_w = None
         self.lbl_batt = None
+        self.lbl_wifi = self.lbl_wifi_top = None
         self.lbl_wx = self.lbl_wx_icon = None
         self.lbl_net_icon = None
         self._net_icon_imgs = {}
@@ -9234,6 +11119,10 @@ class Widget:
                 lbl.pack(side='left'); self._rgb_targets.append(lbl)
                 self._disk_lbls[drive] = lbl
                 self._tip_cells.append((fd, 'diskspace', drive))
+        def b_wifi():
+            # stacked: band on top (2.4 / 5 / 6 GHz), signal % below
+            f, self.lbl_wifi, self.lbl_wifi_top = stat('net_wifi.png', sw if stacked else 4, stacked)
+            self._tip_cells.append((f, 'wifi', None))
         def b_batt():
             if not self._has_batt: return
             # battery shows just "%" (no second metric like CPU's GHz), so it
@@ -9272,13 +11161,15 @@ class Widget:
             self.lbl_wx.pack(side='left'); self._rgb_targets.append(self.lbl_wx)
             self._tip_cells.append((f, 'weather', None))
         builders = {'cpu': b_cpu, 'ram': b_ram, 'gpu': b_gpu, 'net': b_net,
-                    'disk': b_disk, 'batt': b_batt, 'power': b_power,
+                    'wifi': b_wifi, 'disk': b_disk, 'batt': b_batt, 'power': b_power,
                     'weather': b_weather}
         visible_keys = {
             'cpu': 'show_cpu', 'ram': 'show_ram', 'gpu': 'show_gpu',
-            'net': 'show_net', 'disk': 'show_disk', 'batt': 'show_batt',
-            'power': 'show_power', 'weather': 'show_weather',
+            'net': 'show_net', 'wifi': 'show_wifi', 'disk': 'show_disk',
+            'batt': 'show_batt', 'power': 'show_power', 'weather': 'show_weather',
         }
+        if getattr(self, '_slow', None) is not None:
+            self._slow.wifi_wanted = bool(self.cfg.get('show_wifi'))
         # Resolve order, then forcibly push critical cells to the end if asked
         order = list(self.cfg.get('cell_order') or DEFAULT_CELL_ORDER)
         for cid in DEFAULT_CELL_ORDER:
@@ -9714,19 +11605,71 @@ class Widget:
                     rows.append((tp('status'),
                                  '📶 Wi-Fi' if nk == 'wifi' else '🖧 Ethernet', BLUE))
                 if nk == 'wifi':
+                    wi = getattr(self._slow, 'wifi', None) or {}
+                    if wi.get('ssid'):
+                        rows.append((tp('wf_ssid'), wi['ssid'][:24], None))
                     sig = getattr(self._slow, 'wifi_signal', None)
                     if sig is not None:
                         rows.append((tp('signal'), f'{sig}%',
                                      GREEN if sig >= 60 else (ORANGE if sig >= 30 else RED)))
-                ping = (getattr(self._slow, 'ping_ms', None)
-                        if time.time() - getattr(self._slow, 'ping_ts', 0) < 15 else None)
-                if ping is not None:
-                    rows.append((tp('ping'), f'{ping} ms',
-                                 GREEN if ping < 60 else (ORANGE if ping < 150 else RED)))
+                cm = getattr(self, '_conn', None)
+                if cm is not None and cm.online is not None:
+                    # live from the connection monitor (every 3 s)
+                    if cm.online is False:
+                        since = (time.strftime('%H:%M', time.localtime(cm.down_since))
+                                 if cm.down_since else '')
+                        what = tp('cn_cause_local' if cm.down_cause == 'local' else 'cn_offline')
+                        rows.append((what, (tp('cn_since').replace('{t}', since) if since else ''), RED))
+                    if cm.ping_ms is not None and cm.online:
+                        p = cm.ping_ms
+                        txt = f'{p:.0f} ms'
+                        if cm.jitter_ms is not None:
+                            txt += f"  ·  {tp('cn_jitter')} {cm.jitter_ms:.0f}"
+                        rows.append((tp('ping'), txt,
+                                     GREEN if p < 60 else (ORANGE if p < 150 else RED)))
+                    if cm.loss_pct is not None:
+                        lp = cm.loss_pct
+                        rows.append((tp('cn_loss5'), f'{lp:.1f}%',
+                                     GREEN if lp < 1 else (ORANGE if lp < 5 else RED)))
+                else:
+                    ping = (getattr(self._slow, 'ping_ms', None)
+                            if time.time() - getattr(self._slow, 'ping_ts', 0) < 15 else None)
+                    if ping is not None:
+                        rows.append((tp('ping'), f'{ping} ms',
+                                     GREEN if ping < 60 else (ORANGE if ping < 150 else RED)))
                 rows.append((tp('session') + ' ↑', self._hb(self._net.session_up), BLUE))
                 rows.append((tp('session') + ' ↓', self._hb(self._net.session_dn), GREEN))
                 rows.append((tp('total') + ' ↑', self._hb(self._net.total_up), None))
                 rows.append((tp('total') + ' ↓', self._hb(self._net.total_dn), None))
+            elif kind == 'wifi':
+                wi = getattr(self._slow, 'wifi', None)
+                sig = wi.get('signal') if wi else None
+                title = ('Wi-Fi', f'{sig}%' if sig is not None else '')
+                if not wi:
+                    rows.append((tp('wf_none'), '', None))
+                else:
+                    if wi.get('ssid'):
+                        rows.append((tp('wf_ssid'), wi['ssid'][:24], BLUE))
+                    if sig is not None:
+                        s_txt = f'{sig}%'
+                        if wi.get('rssi') is not None:
+                            s_txt += f"  ({wi['rssi']} dBm)"
+                        rows.append((tp('signal'), s_txt,
+                                     GREEN if sig >= 60 else (ORANGE if sig >= 30 else RED)))
+                    if wi.get('band'):
+                        b_txt = wi['band']
+                        if wi.get('channel'):
+                            b_txt += f"  ·  {tp('wf_channel')} {wi['channel']}"
+                        rows.append((tp('wf_band'), b_txt, None))
+                    if wi.get('gen'):
+                        rows.append((tp('wf_standard'), wi['gen'], None))
+                    if wi.get('rx'):
+                        l_txt = f"↓ {wi['rx']}"
+                        if wi.get('tx'):
+                            l_txt += f"  ↑ {wi['tx']}"
+                        rows.append((tp('wf_link'), l_txt + ' Mbps', PURPLE))
+                    if wi.get('hidden') and 'band' in wi:
+                        rows.append((tp('wf_hidden'), '', None))
             elif kind == 'disk':
                 title = (self.t('disk') + ' I/O', '')
                 rows.append((tp('perdisk'), '', None))
@@ -9749,6 +11692,10 @@ class Widget:
                                  tp('charging') if b.power_plugged else tp('onbatt'), None))
                     if b.secsleft and b.secsleft > 0 and not b.power_plugged:
                         rows.append((tp('timeleft'), f'{b.secsleft//3600}h {(b.secsleft%3600)//60}m', None))
+                    bh = getattr(self, '_batt_health', None)
+                    if bh is not None:
+                        rows.append((tp('bh_health'), f'{bh}%',
+                                     GREEN if bh >= 80 else (ORANGE if bh >= 60 else RED)))
             elif kind == 'weather':
                 title = (self.t('weather'), '')
                 w = self._weather or {}
@@ -9805,10 +11752,13 @@ class Widget:
         title, rows, bars = self._tip_content(kind, extra)
         self._hide_tip()
         self._tip_for = (kind, extra, frame)
-        if kind == 'net' and time.time() - getattr(self._slow, 'ping_ts', 0) > 10:
+        cm = getattr(self, '_conn', None)
+        if (kind == 'net' and (cm is None or cm.online is None)
+                and time.time() - getattr(self._slow, 'ping_ts', 0) > 10):
             self._request_ping()          # arrives in ~15 ms and redraws this tip
         PANEL='#161b22'; LINE='#2d333b'; GREY='#8b96a2'; WHITE='#ecf2f8'
         tcol = {'cpu':'#58a6ff','ram':'#3fb950','gpu':'#39d3c3','net':'#58a6ff',
+                'wifi':'#58a6ff',
                 'disk':'#a371f7','diskspace':'#a371f7','batt':'#3fb950',
                 'weather':'#ffa657'}.get(kind, '#58a6ff')
         tip = tk.Toplevel(self.root)
@@ -9869,6 +11819,8 @@ class Widget:
         except Exception as e:
             # runs twice a second: a persistent error must not flood the log
             _note('Widget._update_tick', e, tb=True)
+        if getattr(self, '_shutting_down', False):
+            return      # the window is gone; run() takes it from here
         # When a cell's text width changes (power watts, battery's ⚡ on plug-in,
         # GPU —/%, …) the layered window resizes. Windows does NOT
         # re-key the newly exposed strip, so a black band flashes unless we
@@ -9911,6 +11863,12 @@ class Widget:
                 self._check_data_cap()
             except Exception as _swallowed:
                 _note('Widget._update_tick', _swallowed)
+            try:
+                self._check_runtime_files()
+            except Exception as _swallowed:
+                _note('Widget._update_tick', _swallowed)
+            if getattr(self, '_shutting_down', False):
+                return
         self._perf_alert('cpu', cpu, 90, 80,
                           PERF_ALERT_TITLE.get(self.lang, PERF_ALERT_TITLE['en'])['cpu'],
                           f'{cpu:.0f}%')
@@ -10008,6 +11966,18 @@ class Widget:
                                    fg=self._load_color(u.percent))
                     except Exception as _swallowed:
                         _note('Widget._update_tick', _swallowed)
+        if self.lbl_wifi:
+            wi = self._slow.wifi    # pre-fetched by _SlowPoller
+            sig = wi.get('signal') if wi else None
+            if sig is None:
+                self.lbl_wifi.config(text=' —', fg=self.theme['val'])
+                if self.lbl_wifi_top is not None:
+                    self.lbl_wifi_top.config(text='')
+            else:
+                col = ('#f85149' if sig < 30 else ('#ffa657' if sig < 60 else self.theme['val']))
+                self.lbl_wifi.config(text=f'{sig:3d}%', fg=col)
+                if self.lbl_wifi_top is not None:
+                    self.lbl_wifi_top.config(text=wi.get('band') or 'Wi-Fi')
         if self.lbl_batt:
             b = self._slow.battery  # pre-fetched by _SlowPoller
             if b is not None:
@@ -10404,15 +12374,23 @@ class Widget:
         # when this process exits).
         if not getattr(self, '_user_quit', False):
             try:
+                # --relaunch: the new copy waits for this one to release the
+                # single-instance mutex instead of exiting at once.
+                # PYINSTALLER_RESET_ENVIRONMENT: without it a single-file
+                # build's child inherits our _PYI_* variables, takes itself
+                # for part of this instance and runs from OUR unpack folder -
+                # the one being deleted - instead of unpacking a fresh copy.
+                env = dict(os.environ, PYINSTALLER_RESET_ENVIRONMENT='1')
                 if getattr(sys, 'frozen', False):
-                    subprocess.Popen([sys.executable])
+                    subprocess.Popen([sys.executable, '--relaunch'], env=env)
                 else:
-                    subprocess.Popen([sys.executable, os.path.abspath(__file__)])
+                    subprocess.Popen([sys.executable, os.path.abspath(__file__), '--relaunch'],
+                                     env=env)
             except Exception as _swallowed:
                 _note('Widget.run', _swallowed)
 
 if __name__ == '__main__':
-    if already_running():
+    if already_running(wait=15.0 if '--relaunch' in sys.argv[1:] else 0.0):
         sys.exit(0)   # another copy is already on the taskbar
     sync_startup()    # keep auto-start path correct even if the .exe was moved
     Widget().run()

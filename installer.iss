@@ -1,6 +1,6 @@
 ; Inno Setup script — PulseDeck
 #define AppName "PulseDeck"
-#define AppVer "2.14.1"
+#define AppVer "2.15.0"
 #define AppPublisher "Fokion Papanikolaou"
 #define AppExe "PulseDeck.exe"
 
@@ -30,7 +30,11 @@ Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription:
 Name: "startup"; Description: "Start automatically with Windows"; GroupDescription: "Startup:"
 
 [Files]
-Source: "dist\{#AppExe}"; DestDir: "{app}"; Flags: ignoreversion
+; One-folder build (dist\PulseDeck\PulseDeck.exe + _internal\) since 2.15: it
+; runs from its own folder instead of unpacking itself to %TEMP% on every
+; start, where Storage Sense and temp cleaners deleted files out from under
+; a PulseDeck that had been running for days.
+Source: "dist\PulseDeck\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "README.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "LICENSE.txt"; DestDir: "{app}"; Flags: ignoreversion
 Source: "THIRD_PARTY.txt"; DestDir: "{app}"; Flags: ignoreversion

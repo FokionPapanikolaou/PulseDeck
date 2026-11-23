@@ -1,6 +1,6 @@
 # PulseDeck — Privacy Policy
 
-**Effective date:** 30 September 2026
+**Effective date:** 23 November 2026
 **Publisher:** Fokion Papanikolaou
 
 PulseDeck ("the app") is a desktop system-monitor for Windows 10/11. This
@@ -10,9 +10,9 @@ goes, and what we do with it.
 > **TL;DR — we don't collect anything.** No accounts, no analytics, no
 > advertising, no telemetry. Everything the app records stays on your PC. The
 > network is used only for the optional weather widget, an optional update
-> check, and features you start yourself (showing your public IP, the DNS
-> benchmark, a network latency check and the speed test) — each described
-> below.
+> check, a tiny connection-quality ping you can switch off, and features you
+> start yourself (showing your public IP, the DNS benchmark and the speed
+> test) — each described below.
 
 ---
 
@@ -34,6 +34,11 @@ executable for the portable build). **None of them is ever uploaded.**
   that was using the most (for example `chrome.exe`), so the History tab can
   show what caused it. Only process names and a percentage or size are kept —
   no window titles, file names or command lines — for 7 days.
+- `netquality.csv` — one line per minute with the average ping and the share
+  of pings that got no answer (packet loss), kept for 7 days, for the
+  *Connection* chart in the History tab.
+- `outages.json` — when the internet dropped out and came back, and whether
+  the local network was disconnected at the time, kept for 30 days.
 - `pulsedeck.log` — a diagnostics log that is written only when something goes
   wrong (an error, or a background task stopping), capped at 256 KB. You can
   open it from *Settings → About* and choose to attach it to a bug report; the
@@ -68,10 +73,16 @@ Deleting the folder, or uninstalling the app, removes all of it.
   or transmitted elsewhere. The result is cached for 30 minutes.
   → Their privacy policy: https://www.ipify.org
 
-- **Network latency (hover tooltip).** When you point at the Network cell, the
-  app pings **1.1.1.1** (Cloudflare's public DNS address) once to show your
-  current latency. It runs only while that tooltip is open, at most once every
-  10 seconds; nothing but the ping itself is sent.
+- **Connection quality (on by default, can be switched off).** To measure
+  packet loss and notice outages, the app sends a tiny ping (an ICMP echo
+  carrying the 9 bytes `PulseDeck`) to **1.1.1.1** (Cloudflare's public DNS
+  address) every 3 seconds; when that one doesn't answer it tries **8.8.8.8**
+  (Google's), and on networks that block ping it times opening a connection
+  to port 443 of the same addresses instead, then closes it without sending
+  anything. That is about 2 MB a day. Nothing but the pings themselves is
+  sent, and the results stay on your PC (see section 2). Switch it off under
+  *Settings → History → Connection*; the Network tooltip then pings 1.1.1.1
+  once only while you are hovering it, at most every 10 seconds.
 
 - **DNS Boost (Tools → Network, only when you run it).** Measures how fast 15
   well-known public DNS resolvers (Cloudflare, Google, Quad9, OpenDNS, AdGuard
@@ -84,6 +95,14 @@ Deleting the folder, or uninstalling the app, removes all of it.
   data. A test uses up to about 290 MB, which counts toward a metered plan.
   Results are kept locally only.
   → https://www.cloudflare.com/privacypolicy/
+
+Some features read information on your PC without sending anything
+anywhere: the Wi-Fi cell asks Windows for the current Wi-Fi connection (signal,
+band, link speed and — only if you allow location access for desktop apps —
+the network name); *What's filling the disk?* lists folder and file names and
+sizes on the drive or folder you pick, only while you use it, and keeps
+nothing; *Battery health* reads Windows' own battery report, and *Save the
+full report* writes that report to your Downloads folder.
 
 No other feature makes network requests, apart from the update check below.
 (The earthquake alerts that existed in older versions were removed in 2.8.5.)

@@ -8,6 +8,84 @@ All notable changes to **PulseDeck** are documented here.
 
 ---
 
+## [2.15.0] — 2026-11-23 — *Is it the internet, or is it me?*
+
+Your internet dropped out for a few minutes yesterday afternoon, and you'd
+like to know whether that was a one-off. PulseDeck now keeps watch: packet
+loss, outages and how long each one lasted, plus Wi-Fi on the bar, what is
+filling your disk and how worn your laptop battery is. And a fix for a bug
+that crept in when a PC stayed on for days.
+
+### Added
+- **Connection quality and outages.** A tiny ping to 1.1.1.1 every 3 seconds
+  (8.8.8.8 when that one doesn't answer) measures **packet loss** and
+  **jitter**, and notices when the line drops. The History tab gets a
+  *Connection* chart: ping per minute, red marks where packets were lost,
+  shaded bands for outages, and a list underneath — *"23/11 14:02 – 14:09 ·
+  7 min · Internet down"*. An outage only counts after ~9 seconds without any
+  answer, and it says whether your own network was disconnected (cable out,
+  Wi-Fi off) or the internet beyond it was down. The Network tooltip now
+  shows ping, jitter and packet loss over the last 5 minutes, or *"Offline
+  since 14:02"*. The pings go out through Windows' own ICMP API, not by
+  launching ping.exe (no process per ping, nothing to parse in the display
+  language); where a network blocks ping, it times a TCP handshake instead
+  so it doesn't read as offline. About 2 MB a day; switch it off under
+  *History → Connection*. A PC that sleeps doesn't log the sleep as an
+  outage.
+- **Wi-Fi on the bar.** A new cell with signal strength; stacked mode shows
+  the band (2.4 / 5 / 6 GHz) on top. Its tooltip has the network name,
+  signal in % and dBm, band and channel, the Wi-Fi generation (Wi-Fi 6, 7…)
+  and the link speed. Read straight from the Windows WLAN API, replacing a
+  `netsh` launch every second while on Wi-Fi. Windows 11 treats the network
+  name as location data, so it shows only if location is allowed for desktop
+  apps; everything else works regardless.
+- **What's filling the disk?** (Tools → Cleanup) Pick a drive or folder and
+  see which folders take the most space, with bars and percentages; click to
+  go deeper, ↗ to open it in File Explorer, or switch to the 50 largest
+  files. It reads folder listings only (sizes come with them), skips
+  junctions so nothing is counted twice, and counts OneDrive's online-only
+  files separately since they take no space. Scanning ~56,000 files takes
+  about 2.5 seconds. It never deletes anything.
+- **Battery health** (Tools → Diagnostics, laptops only). How much of its
+  original capacity the battery still holds, with a verdict, wear and charge
+  cycles, and a chart of how capacity fell over the months. It reads Windows'
+  own battery report, so it works without admin rights (the System tab's
+  WMI route often doesn't for a standard user). *Save the full report* puts
+  Windows' HTML report in your Downloads folder. The battery tooltip shows
+  the health too.
+
+### Fixed
+- **Icons, tray menu and weather could vanish after a few days of uptime.**
+  The installer and Store builds unpacked themselves to `%TEMP%` on every
+  start and ran from there. Storage Sense (on by default in Windows 11), Disk
+  Cleanup and temp cleaners delete what isn't locked in that folder, so a
+  PulseDeck that had been running for days lost its icons the next time you
+  changed a setting, then its tray menu (the image library was gone) and the
+  weather. The diagnostics log of one real install recorded exactly that.
+  Both builds now run from their own folder instead, which also means one
+  process instead of two and no unpacking on every start. The portable exe
+  is still a single file: it now notices when its unpacked files disappear
+  and restarts itself cleanly.
+- **PulseDeck's own *Clear Temp files* broke running programs** — including
+  PulseDeck itself. It deleted folders whose files were in use as far as it
+  could, which left a running app with half its files. Folders that a
+  running program works from are now skipped whole.
+- **Restarting itself left the new copy in the old one's folder.** When the
+  taskbar restarts, PulseDeck relaunches itself; in the single-file build
+  the new copy inherited the old one's environment and ran from the very
+  folder that was about to be deleted. It now starts as a fresh copy, waits
+  for the old one to exit instead of giving up at once, and can't get into a
+  restart loop.
+
+### Changed
+- Pillow 13, PyInstaller 6.22.3, pythonnet 3.2.1, Python 3.14.10.
+- The latency in the Network tooltip uses the same ICMP API, instead of
+  launching ping.exe and parsing its output.
+- The privacy policy describes the connection check, the two new files it
+  keeps (`netquality.csv`, `outages.json`) and what the new tools read.
+
+---
+
 ## [2.14.1] — 2026-09-30
 
 ### Fixed
