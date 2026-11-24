@@ -55,3 +55,18 @@ Filename: "{app}\{#AppExe}"; Description: "Launch {#AppName} now"; \
 
 [UninstallRun]
 Filename: "{cmd}"; Parameters: "/C taskkill /IM {#AppExe} /F"; Flags: runhidden; RunOnceId: "KillWidget"
+
+[Code]
+// "Start with Windows" switched on from inside the app writes the Run value
+// itself, so the [Registry] entry above doesn't own it: remove it here when
+// it points into the folder being uninstalled, or it is left pointing at an
+// exe that no longer exists.
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+var
+  V: String;
+begin
+  if CurUninstallStep = usPostUninstall then
+    if RegQueryStringValue(HKCU, 'Software\Microsoft\Windows\CurrentVersion\Run', 'PulseDeck', V) then
+      if Pos(Lowercase(ExpandConstant('{app}')), Lowercase(V)) > 0 then
+        RegDeleteValue(HKCU, 'Software\Microsoft\Windows\CurrentVersion\Run', 'PulseDeck');
+end;

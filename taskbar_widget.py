@@ -2169,6 +2169,53 @@ for _lng, _d in V215_I18N.items():
     CUST_LABELS.setdefault(_lng, {}).update(_d)
     TIP.setdefault(_lng, {}).update(_d)
 
+# ── Labels that used to be hardcoded English (v2.15 polish) ──────────
+POLISH_I18N = {
+ 'en': {'ap_transparent': 'Transparent background', 'ap_opacity': 'Background opacity',
+        'ap_netunit': 'Network speed in', 'wx_unit': 'Temperature unit',
+        'cell_net': 'Network', 'cell_wifi': 'Wi-Fi', 'cell_disk': 'Disk I/O',
+        'cell_batt': 'Battery', 'cell_power': 'Power', 'cell_weather': 'Weather',
+        'theme_default': 'Default'},
+ 'el': {'ap_transparent': 'Διάφανο φόντο', 'ap_opacity': 'Αδιαφάνεια φόντου',
+        'ap_netunit': 'Ταχύτητα δικτύου σε', 'wx_unit': 'Μονάδα θερμοκρασίας',
+        'cell_net': 'Δίκτυο', 'cell_wifi': 'Wi-Fi', 'cell_disk': 'Δίσκος (ανάγνωση/εγγραφή)',
+        'cell_batt': 'Μπαταρία', 'cell_power': 'Κατανάλωση', 'cell_weather': 'Καιρός',
+        'theme_default': 'Προεπιλογή', 't_gpureset': 'Επαναφορά οδηγού GPU',
+        't_awake': 'Αποτροπή ύπνου'},
+ 'es': {'ap_transparent': 'Fondo transparente', 'ap_opacity': 'Opacidad del fondo',
+        'ap_netunit': 'Velocidad de red en', 'wx_unit': 'Unidad de temperatura',
+        'cell_net': 'Red', 'cell_wifi': 'Wi-Fi', 'cell_disk': 'Disco (lectura/escritura)',
+        'cell_batt': 'Batería', 'cell_power': 'Consumo', 'cell_weather': 'Tiempo',
+        'theme_default': 'Predeterminado', 't_gpureset': 'Reiniciar el controlador de GPU'},
+ 'de': {'ap_transparent': 'Transparenter Hintergrund', 'ap_opacity': 'Deckkraft des Hintergrunds',
+        'ap_netunit': 'Netzwerktempo in', 'wx_unit': 'Temperatureinheit',
+        'cell_net': 'Netzwerk', 'cell_wifi': 'WLAN', 'cell_disk': 'Datenträger (Lesen/Schreiben)',
+        'cell_batt': 'Akku', 'cell_power': 'Leistung', 'cell_weather': 'Wetter',
+        'theme_default': 'Standard'},
+ 'fr': {'ap_transparent': 'Fond transparent', 'ap_opacity': 'Opacité du fond',
+        'ap_netunit': 'Débit réseau en', 'wx_unit': 'Unité de température',
+        'cell_net': 'Réseau', 'cell_wifi': 'Wi-Fi', 'cell_disk': 'Disque (lecture/écriture)',
+        'cell_batt': 'Batterie', 'cell_power': 'Consommation', 'cell_weather': 'Météo',
+        'theme_default': 'Par défaut'},
+ 'it': {'ap_transparent': 'Sfondo trasparente', 'ap_opacity': 'Opacità dello sfondo',
+        'ap_netunit': 'Velocità di rete in', 'wx_unit': 'Unità di temperatura',
+        'cell_net': 'Rete', 'cell_wifi': 'Wi-Fi', 'cell_disk': 'Disco (lettura/scrittura)',
+        'cell_batt': 'Batteria', 'cell_power': 'Consumo', 'cell_weather': 'Meteo',
+        'theme_default': 'Predefinito'},
+ 'pt': {'ap_transparent': 'Fundo transparente', 'ap_opacity': 'Opacidade do fundo',
+        'ap_netunit': 'Velocidade de rede em', 'wx_unit': 'Unidade de temperatura',
+        'cell_net': 'Rede', 'cell_wifi': 'Wi-Fi', 'cell_disk': 'Disco (leitura/escrita)',
+        'cell_batt': 'Bateria', 'cell_power': 'Consumo', 'cell_weather': 'Tempo',
+        'theme_default': 'Predefinido', 't_gpureset': 'Reiniciar o controlador da GPU'},
+ 'ru': {'ap_transparent': 'Прозрачный фон', 'ap_opacity': 'Непрозрачность фона',
+        'ap_netunit': 'Скорость сети в', 'wx_unit': 'Единица температуры',
+        'cell_net': 'Сеть', 'cell_wifi': 'Wi-Fi', 'cell_disk': 'Диск (чтение/запись)',
+        'cell_batt': 'Батарея', 'cell_power': 'Потребление', 'cell_weather': 'Погода',
+        'theme_default': 'По умолчанию'},
+}
+for _lng, _d in POLISH_I18N.items():
+    CUST_LABELS.setdefault(_lng, {}).update(_d)
+
 # Cell metadata for the Metrics tab (id -> friendly name, icon glyph, config key)
 CELL_META = (
     ('cpu',     'CPU',         '💻', 'show_cpu'),
@@ -3372,6 +3419,37 @@ def _is_msix():
         _note('_is_msix', _swallowed)
         return False
 
+def _real_path(path):
+    """The on-disk location of a file we wrote under AppData.
+
+    Inside the Store container, writes to %APPDATA% / %LOCALAPPDATA% land in
+    %LOCALAPPDATA%\\Packages\\<family>\\LocalCache\\Roaming|Local. Only we see
+    the redirected view; Explorer, a browser or Notepad opened for the user
+    run outside it and are handed a path that doesn't exist for them. Outside
+    the Store build (or if the mapping can't be made) the path comes back
+    unchanged."""
+    try:
+        if not path or not _is_msix():
+            return path
+        k32 = ctypes.windll.kernel32
+        n = ctypes.c_uint32(0)
+        k32.GetCurrentPackageFamilyName(ctypes.byref(n), None)
+        buf = ctypes.create_unicode_buffer(n.value or 1)
+        if k32.GetCurrentPackageFamilyName(ctypes.byref(n), buf) != 0:
+            return path
+        local = os.environ.get('LOCALAPPDATA', '')
+        cache = os.path.join(local, 'Packages', buf.value, 'LocalCache')
+        full = os.path.abspath(path)
+        for env, sub in (('APPDATA', 'Roaming'), ('LOCALAPPDATA', 'Local')):
+            base = os.environ.get(env, '')
+            if base and os.path.normcase(full).startswith(os.path.normcase(base) + os.sep):
+                cand = os.path.join(cache, sub, os.path.relpath(full, base))
+                if os.path.exists(cand):
+                    return cand
+    except Exception as _swallowed:
+        _note('_real_path', _swallowed)
+    return path
+
 def _startup_cmd():
     """The Run-key command that should launch THIS exe/script from its current
     location. Recomputed every launch so a moved portable .exe stays correct."""
@@ -3442,11 +3520,22 @@ def sync_startup():
             winreg.CloseKey(k)
     except FileNotFoundError:
         return   # auto-start is off — nothing to heal
-    if current != _startup_cmd():
-        try:
-            set_startup(True)
-        except Exception as _swallowed:
-            _note('sync_startup', _swallowed)
+    if current == _startup_cmd():
+        return
+    # Only take the entry over when what it starts is gone. Running a second
+    # copy (a portable exe tried from Downloads next to the installed one)
+    # used to hijack it, and the entry then died with that copy.
+    m = re.match(r'\s*"([^"]+)"|\s*(\S+)', current or '')
+    target = (m.group(1) or m.group(2)) if m else ''
+    if target and os.path.exists(os.path.expandvars(target)):
+        # pythonw.exe for a script copy: check the script too
+        script = re.findall(r'"([^"]+\.pyw?)"', current or '')
+        if not script or os.path.exists(script[-1]):
+            return
+    try:
+        set_startup(True)
+    except Exception as _swallowed:
+        _note('sync_startup', _swallowed)
 
 # ── Tools: safe shortcuts to built-in Windows utilities (v2.8) ─────────
 # Every entry just *opens* a tool Windows already ships — PulseDeck never
@@ -6623,6 +6712,7 @@ class CustomizeWindow:
         self._content = content
         # tab buttons
         self._tab_buttons = {}
+        self._tab_marks = {}
         for tid, key, icon in (
             ('general',    'general',    '⚙'),
             ('metrics',    'metrics',    '📊'),
@@ -6633,14 +6723,20 @@ class CustomizeWindow:
             ('tools',      'tools',      '🧰'),
             ('about',      'about',      'ℹ'),
         ):
-            b = tk.Label(tabs, text=f'  {icon}  {self.L[key]}', fg=T['muted'],
-                         bg=T['bg2'], font=('Segoe UI', 10), padx=18, pady=12,
+            # a 3 px accent strip marks the open tab (colour alone was easy to miss)
+            rowf = tk.Frame(tabs, bg=T['bg2'])
+            rowf.pack(fill='x')
+            mark = tk.Frame(rowf, bg=T['bg2'], width=3)
+            mark.pack(side='left', fill='y')
+            b = tk.Label(rowf, text=f'  {icon}  {self.L[key]}', fg=T['muted'],
+                         bg=T['bg2'], font=('Segoe UI', 10), padx=15, pady=12,
                          anchor='w', cursor='hand2')
-            b.pack(fill='x')
+            b.pack(side='left', fill='x', expand=True)
             b.bind('<Button-1>', lambda e, t=tid: self.show_tab(t))
-            b.bind('<Enter>', lambda e, b=b, t=tid: (b.config(bg='#1a2233') if t != self._active_tab else None))
-            b.bind('<Leave>', lambda e, b=b, t=tid: (b.config(bg=T['bg2']) if t != self._active_tab else None))
+            b.bind('<Enter>', lambda e, b=b, t=tid: (b.config(bg='#1a2233') if t != self._nav_tab() else None))
+            b.bind('<Leave>', lambda e, b=b, t=tid: (b.config(bg=T['bg2']) if t != self._nav_tab() else None))
             self._tab_buttons[tid] = b
+            self._tab_marks[tid] = mark
         # show initial tab (footer was packed already, above the body)
         self.show_tab(self._active_tab)
 
@@ -6796,17 +6892,27 @@ class CustomizeWindow:
         except Exception:
             self._show_tab_now(tid)
 
+    _TOOL_PANELS = ('dns', 'speedtest', 'rename', 'startup', 'diskusage', 'battery')
+
+    def _nav_tab(self):
+        """The sidebar entry for the open tab: tool panels live under Tools."""
+        t = getattr(self, '_active_tab', None)
+        return 'tools' if t in self._TOOL_PANELS else t
+
     def _show_tab_now(self, tid):
         if tid != self._active_tab:
             return  # superseded by a newer request
-        # update tab button styles
+        # update tab button styles; a tool's own panel (DNS Boost, speed
+        # test, …) keeps "Tools" lit, so the sidebar still says where you are
+        nav = self._nav_tab()
         for k, b in self._tab_buttons.items():
-            if k == tid:
-                b.config(bg=self.T['panel'], fg=self.T['cyan'],
-                         font=('Segoe UI', 10, 'bold'))
-            else:
-                b.config(bg=self.T['bg2'], fg=self.T['muted'],
-                         font=('Segoe UI', 10))
+            on = (k == nav)
+            b.config(bg=self.T['panel'] if on else self.T['bg2'],
+                     fg=self.T['cyan'] if on else self.T['muted'],
+                     font=('Segoe UI', 10, 'bold') if on else ('Segoe UI', 10))
+            mk = getattr(self, '_tab_marks', {}).get(k)
+            if mk is not None:
+                mk.config(bg=self.T['cyan'] if on else self.T['bg2'])
         # clear content (safe now — no event is being dispatched from inside)
         for c in self._content.winfo_children():
             c.destroy()
@@ -7157,6 +7263,7 @@ class CustomizeWindow:
             self._on_check(k, new, None)
         chk.bind('<Button-1>', _toggle)
         # icon + name
+        name = self.L.get('cell_' + cid, name)
         tk.Label(row, text=icon + '  ' + name, fg=T['text'], bg=T['panel'],
                  font=('Segoe UI', 10)).pack(side='left', padx=4)
         row._cell_id = cid
@@ -7287,7 +7394,8 @@ class CustomizeWindow:
                  font=('Segoe UI', 10), width=20, anchor='w').pack(side='left')
         # custom theme dropdown
         cur_theme = self._pending.get('theme', self.w.cfg.get('theme', 'default'))
-        tbtn = tk.Label(tr, text=cur_theme.capitalize() + '  ▾',
+        tname = lambda n: L.get('theme_' + n, n.capitalize())
+        tbtn = tk.Label(tr, text=tname(cur_theme) + '  ▾',
                         fg=T['text'], bg=T['panel'], padx=12, pady=4,
                         font=('Segoe UI', 10), cursor='hand2',
                         relief='solid', bd=1, highlightbackground=T['line'])
@@ -7300,13 +7408,13 @@ class CustomizeWindow:
             x = tbtn.winfo_rootx(); y = tbtn.winfo_rooty() + tbtn.winfo_height() + 2
             menu.geometry(f'+{x}+{y}')
             for name in THEMES:
-                row = tk.Label(menu, text=name.capitalize(), fg=T['text'],
+                row = tk.Label(menu, text=tname(name), fg=T['text'],
                                bg=T['panel'] if name != cur_theme else T['bg2'],
                                padx=18, pady=6, font=('Segoe UI', 10),
                                anchor='w', cursor='hand2', width=18)
                 row.pack(fill='x')
                 def _pick(n=name, m=menu, b=tbtn):
-                    b.config(text=n.capitalize() + '  ▾')
+                    b.config(text=tname(n) + '  ▾')
                     try: m.destroy()
                     except Exception as _swallowed: _note('CustomizeWindow._tab_appearance._show_theme_menu._pick', _swallowed)
                     self._on_radio('theme', n, None)
@@ -7354,19 +7462,19 @@ class CustomizeWindow:
                            ('detail', L['row_detail'])])
         self._check_row(body, L['sparklines'], 'sparklines')
         self._check_row(body, L['on_taskbar'], 'on_taskbar')
-        self._check_row(body, L['background'] + ' — transparent', 'transparent_bg')
+        self._check_row(body, L.get('ap_transparent', 'Transparent background'), 'transparent_bg')
         # opacity
-        self._radio_group(body, L['background'] + ' — ' + 'opacity',
+        self._radio_group(body, L.get('ap_opacity', 'Background opacity'),
                           'opacity', [(0.5, '50%'), (0.7, '70%'),
                                       (0.85, '85%'), (1.0, '100%')])
         # network unit
-        self._radio_group(body, 'Network', 'net_unit',
+        self._radio_group(body, L.get('ap_netunit', 'Network speed in'), 'net_unit',
                           [('bytes', 'MB/s'), ('bits', 'Mbps')])
 
     def _weather_settings(self, body):
         """Weather unit + location (a city, or auto-locate by IP)."""
         T = self.T; L = self.L
-        self._radio_group(body, L.get('weather_lbl', 'Weather') + ' °', 'weather_unit',
+        self._radio_group(body, L.get('wx_unit', 'Temperature unit'), 'weather_unit',
                           [('C', '°C'), ('F', '°F'), ('K', 'K')],
                           on_change=lambda v: setattr(self.w, '_weather_dirty', True))
         # location row: current city (or "auto by IP") + a button to change it
@@ -7440,8 +7548,9 @@ class CustomizeWindow:
             # on a right-click paste or any programmatic change, not just typing.
             row = tk.Frame(self._content, bg=T['bg'])
             row.pack(side='top', fill='x', padx=24, pady=2)
+            # width 18: "Αντικατάσταση με" / "Remplacer par" ran into the field at 14
             tk.Label(row, text=label, fg=T['muted'], bg=T['bg'], font=('Segoe UI', 9),
-                     width=14, anchor='w').pack(side='left')
+                     width=18, anchor='w').pack(side='left')
             var = tk.StringVar()
             e = tk.Entry(row, textvariable=var, bg=T['bg2'], fg=T['text'],
                          insertbackground=T['text'], relief='flat', font=('Consolas', 10))
@@ -7456,14 +7565,26 @@ class CustomizeWindow:
         v_regex = tk.BooleanVar(value=False)
         v_case  = tk.BooleanVar(value=False)
         v_ext   = tk.BooleanVar(value=False)
+        boxes = []
         for var, text in ((v_regex, L.get('rn_regex', 'Regular expression')),
                           (v_case,  L.get('rn_case', 'Match case')),
                           (v_ext,   L.get('rn_ext', 'Include file extension'))):
-            tk.Checkbutton(opts, text=' ' + text, variable=var, fg=T['text'], bg=T['bg'],
-                           selectcolor=T['bg2'], activebackground=T['bg'],
-                           activeforeground=T['text'], font=('Segoe UI', 9),
-                           bd=0, highlightthickness=0,
-                           command=lambda: refresh()).pack(side='left', padx=(0, 16))
+            boxes.append(tk.Checkbutton(opts, text=' ' + text, variable=var, fg=T['text'],
+                                        bg=T['bg'], selectcolor=T['bg2'], activebackground=T['bg'],
+                                        activeforeground=T['text'], font=('Segoe UI', 9),
+                                        bd=0, highlightthickness=0,
+                                        command=lambda: refresh()))
+
+        def _flow(_e=None):
+            # one row when they all fit, otherwise one per line: in Greek
+            # the third box ran past the window edge
+            avail = opts.winfo_width()
+            one_row = sum(b.winfo_reqwidth() + 16 for b in boxes) <= avail or avail <= 1
+            for i, b in enumerate(boxes):
+                b.grid(row=0 if one_row else i, column=i if one_row else 0,
+                       sticky='w', padx=(0, 16))
+        opts.bind('<Configure>', _flow)
+        _flow()
 
         # ── summary + apply ──
         ar = tk.Frame(self._content, bg=T['bg'])
@@ -9740,14 +9861,17 @@ class CustomizeWindow:
         # so it always stays visible at the bottom)
         bottom = tk.Frame(self._content, bg=T['bg'])
         bottom.pack(side='bottom', fill='x', padx=24, pady=(4, 12))
+        # how-to above the button, full width: beside it, a fixed 420 px
+        # wrap ran past the window and hid the end of the text
+        howto = tk.Label(bottom, text=L.get('dns_howto', ''), fg=T['muted'], bg=T['bg'],
+                         font=('Segoe UI', 8), wraplength=420, justify='left', anchor='w')
+        howto.pack(side='top', anchor='w', fill='x', pady=(0, 6))
+        howto.bind('<Configure>', lambda e: howto.configure(wraplength=max(200, e.width - 8)))
         opennet = tk.Label(bottom, text='🔧  ' + L.get('dns_opennet', 'Open network settings'),
                            fg=T['cyan'], bg=T['panel'], font=('Segoe UI', 9),
                            padx=12, pady=6, cursor='hand2')
-        opennet.pack(side='left')
+        opennet.pack(side='top', anchor='w')
         opennet.bind('<Button-1>', lambda e: launch_tool(('applet', 'ncpa.cpl')))
-        tk.Label(bottom, text=L.get('dns_howto', ''), fg=T['muted'], bg=T['bg'],
-                 font=('Segoe UI', 8), wraplength=420, justify='left').pack(
-                     side='left', padx=12)
         # results area (scrollable)
         canvas, body = self._scroll_area()
 
@@ -9969,9 +10093,9 @@ class CustomizeWindow:
         def _open_log(_e=None):
             try:
                 if lp and os.path.exists(lp):
-                    subprocess.Popen(['explorer', '/select,', lp])
+                    subprocess.Popen(['explorer', '/select,', _real_path(lp)])
                 else:
-                    os.startfile(CONFIG_DIR)
+                    os.startfile(_real_path(CONFIG_DIR))
             except Exception as _swallowed:
                 _note('CustomizeWindow._tab_about._open_log', _swallowed)
         diag.bind('<Button-1>', _open_log)
@@ -11256,6 +11380,18 @@ class Widget:
         secs = max(0.001, self.cfg['interval'] / 1000.0)
         return self._fmt_rate(delta_bytes / secs)
 
+    def _fmt_disk(self, delta_bytes):
+        """Disk throughput is always bytes/s, like Task Manager: the bits
+        setting is for the network (where ISPs quote Mbps), and "R 5.8 Mb"
+        on a disk read like nothing anyone else shows."""
+        b = delta_bytes / max(0.001, self.cfg['interval'] / 1000.0)
+        if b >= 1_073_741_824: return f'{b/1_073_741_824:.1f} GB'
+        if b >= 1_048_576:
+            mb = b / 1_048_576
+            return f'{mb:.0f} MB' if mb >= 100 else f'{mb:.1f} MB'
+        if b >= 1024:          return f'{b/1024:.0f} KB'
+        return f'{b:.0f} B'
+
     def _fmt_rate(self, per_sec):
         """Format a bytes-per-second value in the user's unit (bytes or bits)."""
         if self.cfg.get('net_unit') == 'bits':
@@ -11932,8 +12068,8 @@ class Widget:
                 if self._prev_disk:
                     rd = d.read_bytes  - self._prev_disk.read_bytes
                     wr = d.write_bytes - self._prev_disk.write_bytes
-                    self.lbl_disk_r.config(text=f'{self._fmt(rd):>6}')
-                    self.lbl_disk_w.config(text=f'{self._fmt(wr):>6}')
+                    self.lbl_disk_r.config(text=f'{self._fmt_disk(rd):>7}')
+                    self.lbl_disk_w.config(text=f'{self._fmt_disk(wr):>7}')
                 self._prev_disk = d
             except Exception as _swallowed:
                 _note('Widget._update_tick', _swallowed)
@@ -12032,7 +12168,9 @@ class Widget:
                 # ':>3' keeps "  9 W"/" 45 W"/"120 W" the same width (no resize)
                 self.lbl_power_top.config(text=f'{total:>3} W')
                 gpu_w = p.get('gpu')
-                detail = f'{int(round(gpu_w))} g' if gpu_w is not None else p.get('source','')
+                # "16 g" read like grams; and with no GPU reading this used to
+                # print the source's internal name ("estimate") on the bar
+                detail = f'GPU {int(round(gpu_w))}W' if gpu_w is not None else ''
                 self.lbl_power.config(text=detail)
             else:
                 self.lbl_power.config(text=f'{total:>3} W')

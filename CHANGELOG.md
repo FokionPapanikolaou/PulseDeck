@@ -76,8 +76,30 @@ that crept in when a PC stayed on for days.
   folder that was about to be deleted. It now starts as a fresh copy, waits
   for the old one to exit instead of giving up at once, and can't get into a
   restart loop.
+- **Disk speed on the bar was shown in bits** ("R 5.8 Mb") whenever the
+  network was set to Mbps. The bits setting is for the network, where ISPs
+  quote Mbps; disk throughput is now always MB/s, as in Task Manager.
+- **The power cell's second line read "16 g"** — it was the GPU's watts. It
+  says "GPU 16W" now, and no longer prints an internal word ("estimate") when
+  there is no GPU reading.
+- **"Start with Windows" could end up pointing at a deleted program.**
+  Running a second copy (say, a portable exe tried from Downloads next to the
+  installed one) took the auto-start entry over, and uninstalling left the
+  entry behind. A copy now only takes the entry over when the program it
+  points to is gone, and the uninstaller removes an entry that points into
+  the folder it removes.
+- In the Store build, *About → Diagnostics log* handed File Explorer a path
+  that exists only inside the app's container; it opens the real folder now.
+- *DNS Boost*'s how-to line ran off the window, and *Bulk rename*'s options
+  and "Replace with" label were cut off in longer languages.
 
 ### Changed
+- **Settings look:** the open tab is marked with an accent strip, and a
+  tool's own page (DNS Boost, the speed test, …) keeps *Tools* highlighted in
+  the sidebar instead of none.
+- Labels the settings still showed in English are translated in all 8
+  languages: the bar cells' names, the background options, the temperature
+  unit, and *Reset GPU driver* in Greek, Spanish and Portuguese.
 - Pillow 13, PyInstaller 6.22.3, pythonnet 3.2.1, Python 3.14.10.
 - The latency in the Network tooltip uses the same ICMP API, instead of
   launching ping.exe and parsing its output.

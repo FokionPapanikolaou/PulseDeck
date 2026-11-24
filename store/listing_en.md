@@ -74,6 +74,7 @@ Made by Fokion Papanikolaou.
 • **Battery health** (Tools → Diagnostics, laptops) — how much capacity is left, wear, charge cycles and a chart of how it changed
 • Fixed: on a PC left on for days, Windows' Storage Sense could delete PulseDeck's working files, so icons, the tray menu and the weather disappeared — the app now runs from its own folder
 • Fixed: the built-in "Clear Temp files" no longer breaks programs that are running
+• Tidier settings (clearer current tab, no leftover English), disk speed shown in MB/s, and auto-start no longer left pointing at a removed copy
 
 **v2.14.1**
 • Fixed: opening the System tab, running the speed test or the DNS test, or hovering the Network tooltip no longer leaves a small Windows resource behind every time
