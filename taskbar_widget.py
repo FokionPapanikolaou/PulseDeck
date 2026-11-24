@@ -6569,6 +6569,128 @@ def _safe_wheel(canvas, e):
     except Exception as _swallowed:
         _note('_safe_wheel', _swallowed)
 
+# ── Pill-shaped buttons (v2.15) ────────────────────────────────────────
+# Tk has no rounded widgets, so a button becomes a Label/Button showing an
+# anti-aliased pill image in its colour, with its text drawn on top
+# (compound='center'). Every button-like widget of the settings window is
+# converted as it first appears (<Map>), including ones a tab builds later,
+# and its config(bg=…/text=…/font=…) keeps working: hover colours and
+# relabelling repaint the pill instead of a rectangle.
+_PILL_CACHE = {}
+_PILL_ROOTS = set()          # path names of windows whose buttons become pills
+_PILL_BOUND = [False]
+
+def _pill_photo(master, w, h, fill, back, radius):
+    key = (w, h, fill, back, radius)
+    img = _PILL_CACHE.get(key)
+    if img is None:
+        from PIL import Image, ImageDraw, ImageTk
+        s = 4                                    # supersample, then shrink: smooth edges
+        im = Image.new('RGB', (w * s, h * s), back)
+        ImageDraw.Draw(im).rounded_rectangle((0, 0, w * s - 1, h * s - 1),
+                                             radius=int(radius * s), fill=fill)
+        img = ImageTk.PhotoImage(im.resize((w, h), Image.LANCZOS), master=master)
+        if len(_PILL_CACHE) > 300:
+            _PILL_CACHE.clear()                  # widgets keep their own reference
+        _PILL_CACHE[key] = img
+    return img
+
+def _pillify(w, force=False):
+    """Turn a button-like Label/Button into a pill. Button-like = hand cursor,
+    text, no image, and a background of its own (or force / _pill_force for
+    text buttons that only get a colour on hover)."""
+    if getattr(w, '_pill', None) is not None or getattr(w, '_no_pill', False):
+        return
+    try:
+        import tkinter.font as tkfont
+        if not w.winfo_exists() or not str(w.cget('text')) or str(w.cget('image')):
+            return
+        if str(w.cget('cursor')) != 'hand2' and not force:
+            return
+        back = w.master.cget('bg')
+        fill = w.cget('bg')
+        if fill == back and not (force or getattr(w, '_pill_force', False)):
+            return
+        w.winfo_rgb(fill); w.winfo_rgb(back)     # both must be real colours
+        st = {'fill': fill, 'W': max(8, w.winfo_reqwidth()), 'H': max(8, w.winfo_reqheight()),
+              'text': str(w.cget('text')), 'font': tkfont.Font(root=w, font=w.cget('font'))}
+    except Exception:
+        return
+    real_conf, real_cget = w.configure, w.cget
+    is_button = w.winfo_class() == 'Button'
+
+    def _tw(text, font):
+        return max(font.measure(line) for line in (text.split('\n') or ['']))
+
+    def paint():
+        try:
+            bk = w.master.cget('bg')
+            img = _pill_photo(w, st['W'], st['H'], st['fill'], bk, min(st['H'] / 2.0, 16))
+            w._pill_img = img
+            kw = dict(image=img, bg=bk)
+            if is_button:
+                kw.update(activebackground=bk)
+            real_conf(**kw)
+        except Exception as _swallowed:
+            _note('_pillify.paint', _swallowed)
+
+    def conf(cnf=None, **kw):
+        if cnf:
+            kw = dict(cnf, **kw)
+        if not kw:
+            return real_conf()
+        repaint = False
+        for k in ('bg', 'background'):
+            if k in kw:
+                st['fill'] = kw.pop(k); repaint = True
+        if 'font' in kw:
+            try:
+                nf = tkfont.Font(root=w, font=kw['font'])
+                st['W'] = max(st['H'], st['W'] + _tw(st['text'], nf) - _tw(st['text'], st['font']))
+                st['font'] = nf; repaint = True
+            except Exception as _swallowed:
+                _note('_pillify.conf', _swallowed)
+        if 'text' in kw and str(kw['text']) != st['text']:
+            nt = str(kw['text'])
+            st['W'] = max(st['H'], st['W'] + _tw(nt, st['font']) - _tw(st['text'], st['font']))
+            st['text'] = nt; repaint = True
+        r = real_conf(**kw) if kw else None
+        if repaint:
+            paint()
+        return r
+
+    def cget(key):
+        return st['fill'] if key in ('bg', 'background') else real_cget(key)
+
+    w.configure = w.config = conf
+    w.cget = cget
+    try:
+        opts = dict(compound='center', padx=0, pady=0, bd=0, highlightthickness=0,
+                    width=0, height=0, relief='flat')
+        if is_button:
+            opts.update(activeforeground=real_cget('fg'), overrelief='flat')
+        real_conf(**opts)
+    except Exception as _swallowed:
+        _note('_pillify', _swallowed)
+    w._pill = st
+    paint()
+
+def _pill_on_map(e):
+    w = e.widget
+    try:
+        p = str(w)
+        if any(p.startswith(r + '.') for r in _PILL_ROOTS):
+            _pillify(w)
+    except Exception as _swallowed:
+        _note('_pill_on_map', _swallowed)
+
+def _pill_register(win):
+    _PILL_ROOTS.add(str(win))
+    if not _PILL_BOUND[0]:
+        _PILL_BOUND[0] = True
+        for cls in ('Label', 'Button'):
+            win.bind_class(cls, '<Map>', _pill_on_map, add='+')
+
 # ── Customize Window (v2.6) ────────────────────────────────────────────
 class CustomizeWindow:
     """Custom-chrome settings window with tabbed sections. Live preview."""
@@ -6611,6 +6733,7 @@ class CustomizeWindow:
         try: win.iconbitmap(os.path.join(_base_dir(), 'app.ico'))
         except Exception as _swallowed: _note('CustomizeWindow.open', _swallowed)
         self._win = win
+        _pill_register(win)          # its buttons are drawn as pills
         # center on screen
         win.update_idletasks()
         sw = win.winfo_screenwidth(); sh = win.winfo_screenheight()
@@ -6723,20 +6846,20 @@ class CustomizeWindow:
             ('tools',      'tools',      '🧰'),
             ('about',      'about',      'ℹ'),
         ):
-            # a 3 px accent strip marks the open tab (colour alone was easy to miss)
-            rowf = tk.Frame(tabs, bg=T['bg2'])
-            rowf.pack(fill='x')
-            mark = tk.Frame(rowf, bg=T['bg2'], width=3)
-            mark.pack(side='left', fill='y')
-            b = tk.Label(rowf, text=f'  {icon}  {self.L[key]}', fg=T['muted'],
-                         bg=T['bg2'], font=('Segoe UI', 10), padx=15, pady=12,
-                         anchor='w', cursor='hand2')
-            b.pack(side='left', fill='x', expand=True)
-            b.bind('<Button-1>', lambda e, t=tid: self.show_tab(t))
-            b.bind('<Enter>', lambda e, b=b, t=tid: (b.config(bg='#1a2233') if t != self._nav_tab() else None))
-            b.bind('<Leave>', lambda e, b=b, t=tid: (b.config(bg=T['bg2']) if t != self._nav_tab() else None))
-            self._tab_buttons[tid] = b
-            self._tab_marks[tid] = mark
+            # each entry is a pill drawn on a canvas: filled cyan when open,
+            # a soft pill on hover (text stays left-aligned, unlike a Label pill)
+            c = tk.Canvas(tabs, height=38, bg=T['bg2'], highlightthickness=0, bd=0,
+                          cursor='hand2')
+            c.pack(fill='x', padx=10, pady=(2 if tid != 'general' else 12, 2))
+            c._label = f'{icon}   {self.L[key]}'
+            c._state = 'idle'
+            c.bind('<Configure>', lambda e, c=c: self._paint_tab(c))
+            c.bind('<Button-1>', lambda e, t=tid: self.show_tab(t))
+            c.bind('<Enter>', lambda e, c=c, t=tid: (self._paint_tab(c, 'hover')
+                                                     if t != self._nav_tab() else None))
+            c.bind('<Leave>', lambda e, c=c, t=tid: (self._paint_tab(c, 'idle')
+                                                     if t != self._nav_tab() else None))
+            self._tab_buttons[tid] = c
         # show initial tab (footer was packed already, above the body)
         self.show_tab(self._active_tab)
 
@@ -6749,6 +6872,7 @@ class CustomizeWindow:
         # Cancel button (right)
         cancel = tk.Label(foot, text=L['close'], fg=T['muted'], bg=T['titlebar'],
                           font=('Segoe UI', 10), padx=22, pady=10, cursor='hand2')
+        cancel._pill_force = True    # no fill of its own, but its hover is a pill
         cancel.pack(side='right', padx=(0, 10))
         cancel.bind('<Button-1>', lambda e: self._on_cancel())
         cancel.bind('<Enter>', lambda e: cancel.config(fg=T['text'], bg='#1a2233'))
@@ -6894,6 +7018,28 @@ class CustomizeWindow:
 
     _TOOL_PANELS = ('dns', 'speedtest', 'rename', 'startup', 'diskusage', 'battery')
 
+    def _paint_tab(self, c, state=None):
+        """Draw one sidebar entry: 'active' = cyan pill, 'hover' = soft pill."""
+        T = self.T
+        if state is not None:
+            c._state = state
+        try:
+            c.delete('all')
+            w, h = c.winfo_width(), c.winfo_height()
+            if w < 10:
+                return
+            st = c._state
+            if st in ('active', 'hover'):
+                fill = T['cyan'] if st == 'active' else '#1f2a3d'
+                img = _pill_photo(c, w, h, fill, T['bg2'], h / 2.0)
+                c._img = img
+                c.create_image(0, 0, image=img, anchor='nw')
+            fg = '#0b0f18' if st == 'active' else (T['text'] if st == 'hover' else T['muted'])
+            c.create_text(16, h // 2, text=c._label, anchor='w', fill=fg,
+                          font=('Segoe UI', 10, 'bold' if st == 'active' else 'normal'))
+        except Exception as _swallowed:
+            _note('CustomizeWindow._paint_tab', _swallowed)
+
     def _nav_tab(self):
         """The sidebar entry for the open tab: tool panels live under Tools."""
         t = getattr(self, '_active_tab', None)
@@ -6905,14 +7051,8 @@ class CustomizeWindow:
         # update tab button styles; a tool's own panel (DNS Boost, speed
         # test, …) keeps "Tools" lit, so the sidebar still says where you are
         nav = self._nav_tab()
-        for k, b in self._tab_buttons.items():
-            on = (k == nav)
-            b.config(bg=self.T['panel'] if on else self.T['bg2'],
-                     fg=self.T['cyan'] if on else self.T['muted'],
-                     font=('Segoe UI', 10, 'bold') if on else ('Segoe UI', 10))
-            mk = getattr(self, '_tab_marks', {}).get(k)
-            if mk is not None:
-                mk.config(bg=self.T['cyan'] if on else self.T['bg2'])
+        for k, c in self._tab_buttons.items():
+            self._paint_tab(c, 'active' if k == nav else 'idle')
         # clear content (safe now — no event is being dispatched from inside)
         for c in self._content.winfo_children():
             c.destroy()
@@ -7911,15 +8051,15 @@ class CustomizeWindow:
             d = filedialog.askdirectory(parent=self._win)
             if d:
                 start(os.path.normpath(d))
-        # folder first, then the drives three to a row: with four or more
-        # drives a single row ran off the window and hid the buttons past it
-        btn(pick, '📁  ' + L.get('du_folder', 'Folder…'), pick_folder).pack(
-            side='left', anchor='n', padx=(0, 10))
+        # drives three to a row, then "Folder…" as the next cell: with four
+        # or more drives a single row ran off the window and hid the rest
         dgrid = tk.Frame(pick, bg=T['bg']); dgrid.pack(side='left', anchor='n')
-        for i, (mp, u) in enumerate(drives):
-            label = f"{mp.rstrip(chr(92))}  {_human_bytes(u.used)} / {_human_bytes(u.total)}"
-            btn(dgrid, label, lambda m=mp: start(m)).grid(
-                row=i // 3, column=i % 3, padx=(0, 6), pady=(0, 4), sticky='w')
+        cells = [(f"{mp.rstrip(chr(92))}  {_human_bytes(u.used)} / {_human_bytes(u.total)}",
+                  (lambda m=mp: start(m))) for mp, u in drives]
+        cells.append(('📁  ' + L.get('du_folder', 'Folder…'), pick_folder))
+        for i, (label, cmd) in enumerate(cells):
+            btn(dgrid, label, cmd).grid(row=i // 3, column=i % 3, padx=(0, 6),
+                                        pady=(0, 4), sticky='w')
 
         def open_in_explorer(path, select=False):
             try:

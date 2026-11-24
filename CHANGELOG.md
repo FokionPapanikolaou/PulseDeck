@@ -94,9 +94,11 @@ that crept in when a PC stayed on for days.
   and "Replace with" label were cut off in longer languages.
 
 ### Changed
-- **Settings look:** the open tab is marked with an accent strip, and a
-  tool's own page (DNS Boost, the speed test, …) keeps *Tools* highlighted in
-  the sidebar instead of none.
+- **Settings look:** the open tab is a cyan pill (a soft one on hover), and
+  every button in the window is pill-shaped with smooth edges — including
+  ones a page adds later, hover colours and relabelled buttons. A tool's own
+  page (DNS Boost, the speed test, …) keeps *Tools* lit in the sidebar
+  instead of none.
 - Labels the settings still showed in English are translated in all 8
   languages: the bar cells' names, the background options, the temperature
   unit, and *Reset GPU driver* in Greek, Spanish and Portuguese.
